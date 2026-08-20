@@ -29,7 +29,7 @@ Sistema de gestión para "El Palacio de las Golosinas". Backend: **Supabase** (P
 | Tabla | Notas |
 | --- | --- |
 | `usuario` | PK `id_usuario` FK → `auth.users`. Campos: nombre, apellido, fecha_nacimiento, `dni_usuario` (unique, check > 0), telefono, mail (check email), `rol_usuario` enum (`Empleado Deposito`, `Empleado Ventas`, `Empleado Compras`, `Gerente`), `creado`, `editado`. |
-| `marca` | A-02 listo a nivel tabla. `nombre_marca` unique, no vacío + auditoría. |
+| `marca` | A-02: CRUD en `/marcas`. `nombre_marca` unique, no vacío, `activo` bool default true (baja lógica) + auditoría. |
 | `deposito` | S-01 listo a nivel tabla. `nombre_deposito` unique, `direccion_deposito`, `activo` bool default true + auditoría. |
 | `producto` | Catálogo (A-05). FK `id_marca`. Tiene nombre, descripción, `precio_producto`, `codigo_producto` unique. **Faltan** FKs/columnas a `unidad_medida`, rubro y/o categoría. |
 | `lote` | Identidad del lote (producto, usuario que cargó, número, fechas, `cantidad_inicial`, `precio_costo`). **Sin** cantidad actual. |
@@ -54,6 +54,7 @@ Todas con `security_invoker = true` (respetan RLS del consultante):
 
 - Falta trigger que valide que la suma de `lote_deposito.cantidad_actual` de un lote no supere `lote.cantidad_inicial` (cruza tablas; no se resuelve con un `CHECK` simple).
 - RLS por `rol_usuario` pendiente (otro compañero).
+- **RLS deshabilitado temporalmente en las tablas (2026-08-20)** para desarrollar y probar sin login. Cuando llegue el login: re-habilitar RLS con las 4 políticas de `authenticated`. El código de `/marcas` ya está preparado para ese regreso (mapea `42501` y detecta updates no-op).
 
 ## Backlog Sprint 1 — estado respecto a la base
 
@@ -62,7 +63,7 @@ Todas con `security_invoker = true` (respetan RLS del consultante):
 | Ítem | Estado |
 | --- | --- |
 | A-01 Unidades de medida | Falta tabla `unidad_medida` |
-| A-02 Marcas | Tabla `marca` lista → armar back/CRUD |
+| A-02 Marcas | CRUD implementado en `/marcas` (ver `docs/A-02-marcas.md`). SQL de `activo` aplicado. Pendiente: verificación e2e cuando llegue el login |
 | A-03 Rubros | Falta tabla `rubro` |
 | S-01 Depósitos | Tabla `deposito` lista → armar back/CRUD |
 | S-04 Tipos de movimiento | Falta tabla `tipo_movimiento` |
