@@ -1,23 +1,122 @@
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --palacio-red: #a61d24;
+  --palacio-red-dark: #8b181e;
+  --palacio-red-soft: #fce8ea;
+  --palacio-gold: #d4af37;
+  --palacio-gold-hover: #c4a030;
+  --palacio-bg: #f5f5f5;
+  --palacio-sidebar: #ffffff;
+  --palacio-border: #e8e8e8;
+  --palacio-muted: #6b7280;
+  --palacio-text: #1a1a1a;
+  --background: var(--palacio-bg);
+  --foreground: var(--palacio-text);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-palacio-red: var(--palacio-red);
+  --color-palacio-red-dark: var(--palacio-red-dark);
+  --color-palacio-red-soft: var(--palacio-red-soft);
+  --color-palacio-gold: var(--palacio-gold);
+  --color-palacio-gold-hover: var(--palacio-gold-hover);
+  --color-palacio-bg: var(--palacio-bg);
+  --color-palacio-border: var(--palacio-border);
+  --color-palacio-muted: var(--palacio-muted);
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--palacio-bg);
+  color: var(--palacio-text);
+  font-family: var(--font-sans);
+}
+
+.palacio-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+  border: 1px solid var(--palacio-border);
+}
+
+.palacio-btn-primary {
+  background: var(--palacio-gold);
+  color: #1a1a1a;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.palacio-btn-primary:hover:not(:disabled) {
+  background: var(--palacio-gold-hover);
+}
+
+.palacio-btn-primary:disabled {
+  opacity: 0.6;
+}
+
+.palacio-btn-secondary {
+  background: #fff;
+  color: var(--palacio-text);
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.palacio-btn-secondary:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.palacio-input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.palacio-input:focus {
+  border-color: var(--palacio-red);
+  box-shadow: 0 0 0 3px rgb(166 29 36 / 0.12);
+}
+
+.palacio-badge-hu {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: var(--palacio-gold);
+  color: #1a1a1a;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.55rem;
+}
+
+.palacio-badge-activo {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+}
+
+.palacio-badge-inactivo {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
 }
