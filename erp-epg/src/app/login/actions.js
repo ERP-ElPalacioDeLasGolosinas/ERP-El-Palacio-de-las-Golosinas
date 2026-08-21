@@ -15,6 +15,7 @@ export async function iniciarSesion(prevState, formData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    console.error("iniciarSesion: signInWithPassword error", error);
     if (error.code === "invalid_credentials") {
       return { error: "Email o contraseña incorrectos." };
     }
