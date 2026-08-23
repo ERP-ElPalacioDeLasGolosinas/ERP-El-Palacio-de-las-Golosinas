@@ -7,18 +7,26 @@ import { DEPOSITO_COLUMNS } from "@/lib/depositos/types";
 const PATH = "/depositos";
 
 /**
- * @param {FormData | { nombre_deposito?: string, direccion_deposito?: string, activo?: boolean | string }} input
+ * @param {FormData | Record<string, unknown>} input
  */
 function parsePayload(input) {
   const get = (key) =>
     typeof input.get === "function" ? input.get(key) : input[key];
+  const optionalText = (key) => {
+    const value = get(key);
+    if (value == null || String(value).trim() === "") {
+      return null;
+    }
+    return String(value).trim();
+  };
 
   const nombre = String(get("nombre_deposito") ?? "").trim();
-  const direccionRaw = get("direccion_deposito");
-  const direccion =
-    direccionRaw == null || String(direccionRaw).trim() === ""
-      ? null
-      : String(direccionRaw).trim();
+  const direccion = optionalText("direccion_deposito");
+  const telefono = optionalText("telefono_deposito");
+  const tipo = optionalText("tipo_deposito");
+  const horarioApertura = optionalText("horario_apertura");
+  const horarioCierre = optionalText("horario_cierre");
+  const idResponsable = optionalText("id_responsable");
 
   // Checkbox HTML: si no viene en FormData, está desmarcado → false.
   const activoRaw = get("activo");
@@ -27,8 +35,24 @@ function parsePayload(input) {
     activoRaw === "true" ||
     activoRaw === "on" ||
     activoRaw === "1";
+  const estaLlenoRaw = get("esta_lleno");
+  const estaLleno =
+    estaLlenoRaw === true ||
+    estaLlenoRaw === "true" ||
+    estaLlenoRaw === "on" ||
+    estaLlenoRaw === "1";
 
-  return { nombre_deposito: nombre, direccion_deposito: direccion, activo };
+  return {
+    nombre_deposito: nombre,
+    direccion_deposito: direccion,
+    telefono_deposito: telefono,
+    tipo_deposito: tipo,
+    horario_apertura: horarioApertura,
+    horario_cierre: horarioCierre,
+    id_responsable: idResponsable,
+    activo,
+    esta_lleno: estaLleno,
+  };
 }
 
 function validateNombre(nombre) {
@@ -91,7 +115,13 @@ export async function crearDeposito(formData) {
   const { error } = await supabase.from("deposito").insert({
     nombre_deposito: payload.nombre_deposito,
     direccion_deposito: payload.direccion_deposito,
+    telefono_deposito: payload.telefono_deposito,
+    tipo_deposito: payload.tipo_deposito,
+    horario_apertura: payload.horario_apertura,
+    horario_cierre: payload.horario_cierre,
+    id_responsable: payload.id_responsable,
     activo: payload.activo,
+    esta_lleno: payload.esta_lleno,
     creado_por: user?.email ?? user?.id ?? null,
   });
 
@@ -127,7 +157,13 @@ export async function actualizarDeposito(id_deposito, formData) {
     .update({
       nombre_deposito: payload.nombre_deposito,
       direccion_deposito: payload.direccion_deposito,
+      telefono_deposito: payload.telefono_deposito,
+      tipo_deposito: payload.tipo_deposito,
+      horario_apertura: payload.horario_apertura,
+      horario_cierre: payload.horario_cierre,
+      id_responsable: payload.id_responsable,
       activo: payload.activo,
+      esta_lleno: payload.esta_lleno,
     })
     .eq("id_deposito", id_deposito);
 
@@ -160,6 +196,55 @@ export async function setActivoDeposito(id_deposito, activo) {
 
   if (error) {
     return { ok: false, error: error.message };
+  }
+
+  revalidatePath(PATH);
+  return { ok: true, error: null };
+}
+
+/**
+ * @param {string} id_deposito
+ * @param {boolean} esta_lleno
+ */
+export async function setEstaLlenoDeposito(id_deposito, esta_lleno) {
+  if (!id_deposito) {
+    return { ok: false, error: "Falta el identificador del depósito." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("deposito")
+    .update({ esta_lleno: Boolean(esta_lleno) })
+    .eq("id_deposito", id_deposito);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath(PATH);
+  return { ok: true, error: null };
+}
+
+/**
+ * @param {string} id_deposito
+ */
+export async function eliminarDeposito(id_deposito) {
+  if (!id_deposito) {
+    return { ok: false, error: "Falta el identificador del depósito." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("deposito")
+    .delete()
+    .eq("id_deposito", id_deposito);
+
+  if (error) {
+    return {
+      ok: false,
+      error:
+        "No se pudo eliminar el depósito. Verificá que no tenga lotes o movimientos asociados.",
+    };
   }
 
   revalidatePath(PATH);

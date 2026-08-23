@@ -7,48 +7,11 @@ const NAV = [
   {
     section: "OPERACIÓN",
     items: [
-      { href: "/", label: "Inicio", icon: HomeIcon, match: (p) => p === "/" },
       {
         href: "/depositos",
         label: "Depósitos",
         icon: WarehouseIcon,
-        match: (p) => p.startsWith("/depositos"),
-        done: true,
-      },
-      {
-        href: "#",
-        label: "Artículos y catálogo",
-        icon: BoxIcon,
-        match: () => false,
-        disabled: true,
-      },
-      {
-        href: "#",
-        label: "Stock",
-        icon: LayersIcon,
-        match: () => false,
-        disabled: true,
-      },
-    ],
-  },
-  {
-    section: "PRÓXIMOS SPRINTS",
-    items: [
-      {
-        href: "#",
-        label: "Ventas y caja",
-        icon: CartIcon,
-        match: () => false,
-        disabled: true,
-        sprint: "S2",
-      },
-      {
-        href: "#",
-        label: "Compras",
-        icon: TruckIcon,
-        match: () => false,
-        disabled: true,
-        sprint: "S2",
+        match: (p) => p === "/" || p.startsWith("/depositos"),
       },
     ],
   },
@@ -77,9 +40,6 @@ export function AppShell({ children }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden rounded-full bg-white/15 px-3 py-1 text-xs font-medium sm:inline">
-            Sprint 1 · Stock & catálogo
-          </span>
           <div className="flex items-center gap-2">
             <div className="hidden text-right sm:block">
               <p className="text-sm font-medium leading-tight">Usuario</p>
@@ -122,16 +82,6 @@ export function AppShell({ children }) {
                         <span className="flex-1 truncate text-left">
                           {item.label}
                         </span>
-                        {item.sprint ? (
-                          <span className="rounded bg-palacio-gold/90 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">
-                            {item.sprint}
-                          </span>
-                        ) : null}
-                        {item.done ? (
-                          <span className="text-emerald-600" aria-hidden>
-                            ✓
-                          </span>
-                        ) : null}
                       </>
                     );
 
@@ -172,18 +122,6 @@ function iconProps(className) {
   };
 }
 
-function HomeIcon({ className }) {
-  return (
-    <svg {...iconProps(className)}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"
-      />
-    </svg>
-  );
-}
-
 function WarehouseIcon({ className }) {
   return (
     <svg {...iconProps(className)}>
@@ -192,58 +130,6 @@ function WarehouseIcon({ className }) {
         strokeLinejoin="round"
         d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"
       />
-    </svg>
-  );
-}
-
-function BoxIcon({ className }) {
-  return (
-    <svg {...iconProps(className)}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="m21 8-9-5-9 5v8l9 5 9-5V8Z"
-      />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9 5 9-5M12 13v8" />
-    </svg>
-  );
-}
-
-function LayersIcon({ className }) {
-  return (
-    <svg {...iconProps(className)}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="m12 3 9 5-9 5-9-5 9-5Z"
-      />
-      <path strokeLinecap="round" strokeLinejoin="round" d="m3 12 9 5 9-5M3 16l9 5 9-5" />
-    </svg>
-  );
-}
-
-function CartIcon({ className }) {
-  return (
-    <svg {...iconProps(className)}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 3h2l.4 2M7 13h10l3-8H6.4M7 13 5.4 5M7 13l-1.2 4h12.7M10 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
-      />
-    </svg>
-  );
-}
-
-function TruckIcon({ className }) {
-  return (
-    <svg {...iconProps(className)}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 7h11v10H3V7Zm11 3h4l3 3v4h-7v-7Z"
-      />
-      <circle cx="7.5" cy="18.5" r="1.5" />
-      <circle cx="17.5" cy="18.5" r="1.5" />
     </svg>
   );
 }

@@ -39,12 +39,10 @@ export default async function EditarDepositoPage({ params }) {
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8">
       <PageHeader
         crumbs={[
-          { label: "Inicio", href: "/" },
           { label: "Depósitos", href: "/depositos" },
           { label: "Editar" },
         ]}
         title="Editar depósito"
-        hu="S-01"
         description={data.nombre_deposito}
       />
       <DepositoForm deposito={data} />

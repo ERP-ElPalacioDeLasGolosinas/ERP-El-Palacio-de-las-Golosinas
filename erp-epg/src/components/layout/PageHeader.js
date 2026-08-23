@@ -4,7 +4,6 @@ import Link from "next/link";
  * @param {{
  *   crumbs?: Array<{ label: string, href?: string }>,
  *   title: string,
- *   hu?: string,
  *   description?: string,
  *   actions?: import('react').ReactNode,
  * }} props
@@ -12,7 +11,6 @@ import Link from "next/link";
 export function PageHeader({
   crumbs = [],
   title,
-  hu,
   description,
   actions,
 }) {
@@ -42,7 +40,6 @@ export function PageHeader({
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
             {title}
           </h1>
-          {hu ? <span className="palacio-badge-hu">{hu}</span> : null}
         </div>
         {description ? (
           <p className="mt-1.5 max-w-2xl text-sm text-palacio-muted">
