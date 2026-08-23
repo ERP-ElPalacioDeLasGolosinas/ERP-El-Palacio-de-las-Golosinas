@@ -65,32 +65,35 @@ export function DepositoForm({ deposito = null }) {
           />
         </Field>
 
-        <Field label="Teléfono" htmlFor="telefono_deposito">
+        <Field label="Teléfono" htmlFor="telefono_deposito" required>
           <input
             id="telefono_deposito"
             name="telefono_deposito"
             type="tel"
+            required
             defaultValue={deposito?.telefono_deposito ?? ""}
             className="palacio-input"
             placeholder="Ej. 11 5555-5555"
           />
         </Field>
 
-        <Field label="Dirección" htmlFor="direccion_deposito">
+        <Field label="Dirección" htmlFor="direccion_deposito" required>
           <input
             id="direccion_deposito"
             name="direccion_deposito"
             type="text"
+            required
             defaultValue={deposito?.direccion_deposito ?? ""}
             className="palacio-input"
             placeholder="Calle, número, localidad"
           />
         </Field>
 
-        <Field label="Tipo de depósito" htmlFor="tipo_deposito">
+        <Field label="Tipo de depósito" htmlFor="tipo_deposito" required>
           <select
             id="tipo_deposito"
             name="tipo_deposito"
+            required
             defaultValue={deposito?.tipo_deposito ?? ""}
             className="palacio-input"
           >
@@ -101,31 +104,34 @@ export function DepositoForm({ deposito = null }) {
           </select>
         </Field>
 
-        <Field label="Horario de apertura" htmlFor="horario_apertura">
+        <Field label="Horario de apertura" htmlFor="horario_apertura" required>
           <input
             id="horario_apertura"
             name="horario_apertura"
             type="time"
+            required
             defaultValue={formatTime(deposito?.horario_apertura)}
             className="palacio-input"
           />
         </Field>
 
-        <Field label="Horario de cierre" htmlFor="horario_cierre">
+        <Field label="Horario de cierre" htmlFor="horario_cierre" required>
           <input
             id="horario_cierre"
             name="horario_cierre"
             type="time"
+            required
             defaultValue={formatTime(deposito?.horario_cierre)}
             className="palacio-input"
           />
         </Field>
 
-        <Field label="Responsable" htmlFor="id_responsable">
+        <Field label="Responsable" htmlFor="id_responsable" required>
           <input
             id="id_responsable"
             name="id_responsable"
             type="text"
+            required
             defaultValue={deposito?.id_responsable ?? ""}
             className="palacio-input"
             placeholder="ID del usuario responsable"

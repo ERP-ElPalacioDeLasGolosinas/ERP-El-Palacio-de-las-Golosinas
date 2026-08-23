@@ -55,11 +55,42 @@ function parsePayload(input) {
   };
 }
 
-function validateNombre(nombre) {
-  if (!nombre || nombre.length === 0) {
-    return "El nombre del depósito es obligatorio.";
+const CAMPOS_OBLIGATORIOS = [
+  ["nombre_deposito", "Nombre"],
+  ["telefono_deposito", "Teléfono"],
+  ["direccion_deposito", "Dirección"],
+  ["tipo_deposito", "Tipo de depósito"],
+  ["horario_apertura", "Horario de apertura"],
+  ["horario_cierre", "Horario de cierre"],
+  ["id_responsable", "Responsable"],
+];
+
+const NOMBRES_COLUMNA = Object.fromEntries(CAMPOS_OBLIGATORIOS);
+
+function validatePayload(payload) {
+  const faltantes = CAMPOS_OBLIGATORIOS.filter(
+    ([key]) => !payload[key]
+  ).map(([, label]) => label);
+
+  if (faltantes.length === 0) {
+    return null;
   }
-  return null;
+
+  return `Falta completar: ${faltantes.join(", ")}`;
+}
+
+function mensajeErrorGuardado(error) {
+  if (error?.code === "23505") {
+    return "Ya existe un depósito con ese nombre.";
+  }
+
+  const columna = error?.message?.match(/column "([^"]+)"/)?.[1];
+  const campo = columna ? NOMBRES_COLUMNA[columna] : null;
+  if (campo && /null value|not-null|not null/i.test(error.message ?? "")) {
+    return `Falta completar: ${campo}`;
+  }
+
+  return "No se pudo guardar el depósito. Revisá los datos e intentá de nuevo.";
 }
 
 /**
@@ -73,7 +104,7 @@ export async function listarDepositos() {
     .order("nombre_deposito", { ascending: true });
 
   if (error) {
-    return { data: null, error: error.message };
+    return { data: null, error: "No se pudieron cargar los depósitos." };
   }
 
   return { data: data ?? [], error: null };
@@ -91,7 +122,7 @@ export async function obtenerDeposito(id_deposito) {
     .maybeSingle();
 
   if (error) {
-    return { data: null, error: error.message };
+    return { data: null, error: "No se pudo cargar el depósito." };
   }
 
   return { data, error: null };
@@ -102,7 +133,7 @@ export async function obtenerDeposito(id_deposito) {
  */
 export async function crearDeposito(formData) {
   const payload = parsePayload(formData);
-  const validationError = validateNombre(payload.nombre_deposito);
+  const validationError = validatePayload(payload);
   if (validationError) {
     return { ok: false, error: validationError };
   }
@@ -126,10 +157,7 @@ export async function crearDeposito(formData) {
   });
 
   if (error) {
-    if (error.code === "23505") {
-      return { ok: false, error: "Ya existe un depósito con ese nombre." };
-    }
-    return { ok: false, error: error.message };
+    return { ok: false, error: mensajeErrorGuardado(error) };
   }
 
   revalidatePath(PATH);
@@ -146,7 +174,7 @@ export async function actualizarDeposito(id_deposito, formData) {
   }
 
   const payload = parsePayload(formData);
-  const validationError = validateNombre(payload.nombre_deposito);
+  const validationError = validatePayload(payload);
   if (validationError) {
     return { ok: false, error: validationError };
   }
@@ -168,10 +196,7 @@ export async function actualizarDeposito(id_deposito, formData) {
     .eq("id_deposito", id_deposito);
 
   if (error) {
-    if (error.code === "23505") {
-      return { ok: false, error: "Ya existe un depósito con ese nombre." };
-    }
-    return { ok: false, error: error.message };
+    return { ok: false, error: mensajeErrorGuardado(error) };
   }
 
   revalidatePath(PATH);
@@ -195,7 +220,7 @@ export async function setActivoDeposito(id_deposito, activo) {
     .eq("id_deposito", id_deposito);
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: "No se pudo actualizar el estado del depósito." };
   }
 
   revalidatePath(PATH);
@@ -218,7 +243,7 @@ export async function setEstaLlenoDeposito(id_deposito, esta_lleno) {
     .eq("id_deposito", id_deposito);
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: "No se pudo actualizar la capacidad del depósito." };
   }
 
   revalidatePath(PATH);
