@@ -19,7 +19,6 @@ export default async function NuevaCategoriaPage() {
           { label: "Nueva" },
         ]}
         title="Nueva categoría"
-        hu="A-04"
         description="Seleccioná el rubro y registrá la categoría asociada."
       />
 
@@ -28,7 +27,7 @@ export default async function NuevaCategoriaPage() {
           <p className="font-medium">No se pudieron cargar los rubros</p>
           <p className="mt-1 text-amber-900/80">{error}</p>
           <p className="mt-2 text-amber-900/70">
-            A-04 requiere rubros (A-03).{" "}
+            Necesitás tener rubros cargados.{" "}
             <Link href="/rubros" className="font-medium underline">
               Ir a rubros
             </Link>

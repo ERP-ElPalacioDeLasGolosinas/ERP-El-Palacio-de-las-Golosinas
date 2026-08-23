@@ -66,7 +66,7 @@ export function CategoriaForm({ categoria = null, rubros }) {
       <div className="palacio-card max-w-xl border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
         <p className="font-medium">No hay rubros activos</p>
         <p className="mt-1 text-amber-900/80">
-          A-04 depende de A-03: primero registrá al menos un rubro activo.
+          Primero registrá al menos un rubro activo.
         </p>
         <Link
           href="/rubros/nuevo"
@@ -110,7 +110,7 @@ export function CategoriaForm({ categoria = null, rubros }) {
             ))}
           </select>
           <p className="text-xs text-palacio-muted">
-            Toda categoría debe pertenecer a un rubro existente (A-03).
+            Toda categoría debe pertenecer a un rubro existente.
           </p>
         </div>
 

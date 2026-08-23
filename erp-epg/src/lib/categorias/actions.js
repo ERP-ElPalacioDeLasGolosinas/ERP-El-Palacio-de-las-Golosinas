@@ -45,7 +45,7 @@ function mensajeErrorSupabase(error, accion) {
     return "Ya existe una categoría con ese nombre en el rubro seleccionado.";
   }
   if (error?.code === "23503") {
-    return "El rubro seleccionado no existe. Elegí un rubro válido (A-03).";
+    return "El rubro seleccionado no existe. Elegí un rubro válido.";
   }
   if (error?.code === "23502") {
     return "Debés seleccionar un rubro. Toda categoría debe estar asociada a un rubro.";

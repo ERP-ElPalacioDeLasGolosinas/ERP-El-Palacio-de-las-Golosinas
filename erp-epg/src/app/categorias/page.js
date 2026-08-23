@@ -19,7 +19,6 @@ export default async function CategoriasPage() {
           { label: "Categorías" },
         ]}
         title="Gestionar categorías"
-        hu="A-04"
         description="Alta, edición, inhabilitación y baja de categorías del catálogo (segundo nivel, siempre asociadas a un rubro)."
         actions={
           <Link
@@ -42,13 +41,10 @@ export default async function CategoriasPage() {
             </Link>{" "}
             con un usuario de Supabase Auth (políticas: rol{" "}
             <code className="rounded bg-amber-100 px-1">authenticated</code>
-            ). Si habla de relación inexistente, aplicá primero A-03 (
-            <code className="rounded bg-amber-100 px-1">rubro</code>) y luego la
-            migración{" "}
-            <code className="rounded bg-amber-100 px-1">
-              20260823220000_a04_categoria.sql
-            </code>
-            .
+            ). Si habla de relación inexistente, aplicá las migraciones de{" "}
+            <code className="rounded bg-amber-100 px-1">rubro</code> y{" "}
+            <code className="rounded bg-amber-100 px-1">categoria</code> en
+            Supabase.
           </p>
         </div>
       ) : (

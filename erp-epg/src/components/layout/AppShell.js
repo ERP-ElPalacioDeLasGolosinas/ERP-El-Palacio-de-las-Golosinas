@@ -89,9 +89,6 @@ export function AppShell({ children, userEmail = null }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden rounded-full bg-white/15 px-3 py-1 text-xs font-medium sm:inline">
-            Sprint 1 · Stock & catálogo
-          </span>
           {userEmail ? (
             <div className="flex items-center gap-2">
               <div className="hidden text-right sm:block">

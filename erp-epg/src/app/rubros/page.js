@@ -19,7 +19,6 @@ export default async function RubrosPage() {
           { label: "Rubros" },
         ]}
         title="Gestionar rubros"
-        hu="A-03"
         description="Alta, edición, inhabilitación y baja de rubros del catálogo (primer nivel de clasificación)."
         actions={
           <Link

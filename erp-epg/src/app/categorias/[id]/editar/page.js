@@ -48,7 +48,6 @@ export default async function EditarCategoriaPage({ params }) {
           { label: "Editar" },
         ]}
         title="Editar categoría"
-        hu="A-04"
         description={data.nombre_categoria}
       />
       {rubrosError ? (

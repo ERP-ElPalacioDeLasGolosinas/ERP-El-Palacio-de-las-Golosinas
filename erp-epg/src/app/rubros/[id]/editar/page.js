@@ -44,7 +44,6 @@ export default async function EditarRubroPage({ params }) {
           { label: "Editar" },
         ]}
         title="Editar rubro"
-        hu="A-03"
         description={data.nombre_rubro}
       />
       <RubroForm rubro={data} />
