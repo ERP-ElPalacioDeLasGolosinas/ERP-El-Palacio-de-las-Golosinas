@@ -73,8 +73,9 @@ create trigger trg_set_editado_categoria
   execute function public.set_editado_categoria();
 
 -- ---------------------------------------------------------------------
--- Guard de DELETE (HU A-04 / preparación A-05):
---   bloquear si hay productos asociados vía id_categoria
+-- Guard de DELETE (HU A-04 / AGENTS / preparación A-05):
+--   bloquear si hay CUALQUIER producto asociado vía id_categoria
+--   (activos o no). La baja operativa sigue siendo inhabilitar (activo=false).
 -- ---------------------------------------------------------------------
 create or replace function public.categoria_motivo_bloqueo_delete(p_id_categoria uuid)
 returns text
@@ -85,7 +86,6 @@ set search_path = public
 as $$
 declare
   v_tiene_articulos boolean := false;
-  v_tiene_col_activo boolean;
 begin
   if p_id_categoria is null then
     return null;
@@ -100,36 +100,15 @@ begin
          and column_name = 'id_categoria'
      )
   then
-    select exists (
-      select 1
-      from information_schema.columns
-      where table_schema = 'public'
-        and table_name = 'producto'
-        and column_name = 'activo'
-    ) into v_tiene_col_activo;
-
-    if v_tiene_col_activo then
-      execute $q$
-        select exists (
-          select 1
-          from public.producto p
-          where p.id_categoria = $1
-            and p.activo is true
-        )
-      $q$
-      into v_tiene_articulos
-      using p_id_categoria;
-    else
-      execute $q$
-        select exists (
-          select 1
-          from public.producto p
-          where p.id_categoria = $1
-        )
-      $q$
-      into v_tiene_articulos
-      using p_id_categoria;
-    end if;
+    execute $q$
+      select exists (
+        select 1
+        from public.producto p
+        where p.id_categoria = $1
+      )
+    $q$
+    into v_tiene_articulos
+    using p_id_categoria;
   end if;
 
   if coalesce(v_tiene_articulos, false) then

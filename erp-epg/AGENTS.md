@@ -31,7 +31,7 @@ Sistema de gestión para "El Palacio de las Golosinas". Backend: **Supabase** (P
 | `usuario` | PK `id_usuario` FK → `auth.users`. Campos: nombre, apellido, fecha_nacimiento, `dni_usuario` (unique, check > 0), telefono, mail (check email), `rol_usuario` enum (`Empleado Deposito`, `Empleado Ventas`, `Empleado Compras`, `Gerente`), `creado`, `editado`. |
 | `marca` | A-02 listo a nivel tabla. `nombre_marca` unique, no vacío + auditoría. |
 | `rubro` | A-03 listo a nivel tabla + CRUD (`feat/A-03-gestionar-rubros`). `nombre_rubro` unique case-insensitive, `activo`, auditoría. Baja física bloqueada si hay categorías o artículos activos asociados. |
-| `categoria` | A-04 listo a nivel tabla + CRUD (`cursor/a-04-gestionar-categorias-eb7e`, encima de A-03). FK obligatoria `id_rubro` → `rubro`. Unique `(id_rubro, lower(trim(nombre_categoria)))`. `activo` + auditoría. Baja física bloqueada si hay artículos asociados. |
+| `categoria` | A-04 listo a nivel tabla + CRUD (`feat/A-04-gestionar-categorias`, encima de A-03). FK obligatoria `id_rubro` → `rubro` (`ON DELETE RESTRICT`). Unique `(id_rubro, lower(trim(nombre_categoria)))`. `activo` + auditoría. Baja física bloqueada si hay artículos asociados (vía `id_categoria` cuando exista en A-05). |
 | `deposito` | S-01 listo a nivel tabla. `nombre_deposito` unique, `direccion_deposito`, `activo` bool default true + auditoría. |
 | `producto` | Catálogo (A-05). FK `id_marca`. Tiene nombre, descripción, `precio_producto`, `codigo_producto` unique. **Faltan** FKs/columnas a `unidad_medida`, rubro y/o categoría. |
 | `lote` | Identidad del lote (producto, usuario que cargó, número, fechas, `cantidad_inicial`, `precio_costo`). **Sin** cantidad actual. |
@@ -75,7 +75,7 @@ Todas con `security_invoker = true` (respetan RLS del consultante):
 
 | Ítem | Estado |
 | --- | --- |
-| A-04 Categorías | Tabla `categoria` lista + CRUD en `cursor/a-04-gestionar-categorias-eb7e` (depende de A-03; RLS por rol pendiente) |
+| A-04 Categorías | Tabla `categoria` lista + CRUD en `feat/A-04-gestionar-categorias` (depende de A-03; RLS por rol pendiente) |
 
 ### Oleada 3 (cuando estén A-01..A-04)
 

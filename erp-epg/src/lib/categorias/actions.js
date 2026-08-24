@@ -89,6 +89,7 @@ export async function listarCategorias() {
   const { data, error } = await supabase
     .from("categoria")
     .select(CATEGORIA_SELECT_CON_RUBRO)
+    .order("id_rubro", { ascending: true })
     .order("nombre_categoria", { ascending: true });
 
   if (error) {
@@ -141,6 +142,30 @@ async function motivoBloqueoDelete(id_categoria) {
 }
 
 /**
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} id_rubro
+ * @param {{ permitirInactivo?: boolean }} [opts]
+ */
+async function validarRubroAsociado(supabase, id_rubro, opts = {}) {
+  const { data, error } = await supabase
+    .from("rubro")
+    .select("id_rubro, activo")
+    .eq("id_rubro", id_rubro)
+    .maybeSingle();
+
+  if (error) {
+    return error.message;
+  }
+  if (!data) {
+    return "El rubro seleccionado no existe. Elegí un rubro válido.";
+  }
+  if (!opts.permitirInactivo && !data.activo) {
+    return "El rubro seleccionado está inactivo. Elegí un rubro activo.";
+  }
+  return null;
+}
+
+/**
  * @param {FormData} formData
  */
 export async function crearCategoria(formData) {
@@ -151,6 +176,11 @@ export async function crearCategoria(formData) {
   }
 
   const supabase = await createClient();
+  const rubroError = await validarRubroAsociado(supabase, payload.id_rubro);
+  if (rubroError) {
+    return { ok: false, error: rubroError };
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -191,6 +221,23 @@ export async function actualizarCategoria(id_categoria, formData) {
   }
 
   const supabase = await createClient();
+
+  // Si cambia de rubro, el destino debe estar activo. Si mantiene el mismo
+  // (aunque esté inactivo), se permite para no bloquear ediciones de nombre.
+  const { data: actual } = await supabase
+    .from("categoria")
+    .select("id_rubro")
+    .eq("id_categoria", id_categoria)
+    .maybeSingle();
+
+  const cambiaRubro = actual?.id_rubro !== payload.id_rubro;
+  const rubroError = await validarRubroAsociado(supabase, payload.id_rubro, {
+    permitirInactivo: !cambiaRubro,
+  });
+  if (rubroError) {
+    return { ok: false, error: rubroError };
+  }
+
   const { error } = await supabase
     .from("categoria")
     .update({
