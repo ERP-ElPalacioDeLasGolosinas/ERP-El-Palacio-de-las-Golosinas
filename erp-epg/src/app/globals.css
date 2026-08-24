@@ -1,23 +1,67 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Design system "El Palacio de las Golosinas" — tokens del mockup aprobado.
+ * Look claro fijo (el mockup no tiene modo oscuro).
+ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-baloo: var(--font-baloo-2), ui-rounded, ui-sans-serif, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-rojo: #d8102a;
+  --color-rojo-hondo: #a00c20;
+  --color-rojo-noche: #7c0a19;
+  --color-oro: #d6a93e;
+  --color-oro-claro: #e9c96a;
+  --color-oro-hondo: #b4842a;
+  --color-crema: #fbf7f0;
+  --color-panel: #ffffff;
+  --color-tinta: #2a211c;
+  --color-tinta-suave: #6a5e54;
+  --color-linea: #eae1d2;
+  --color-verde: #2e7d57;
+  --color-verde-bg: #e4f1ea;
+  --color-ambar: #b4842a;
+  --color-ambar-bg: #fbf0d6;
+  --color-rosado: #fce9ec;
+
+  --shadow-suave: 0 1px 2px rgba(42, 33, 28, 0.06), 0 8px 24px rgba(42, 33, 28, 0.06);
+  --radius-card: 14px;
+}
+
+:root {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-crema);
+  color: var(--color-tinta);
+}
+
+@layer components {
+  .card {
+    @apply bg-panel border border-linea rounded-card shadow-suave;
+  }
+
+  .btn-primary {
+    @apply font-baloo font-bold text-rojo-noche border border-oro-hondo rounded-[11px] px-4 py-2 text-sm inline-flex items-center justify-center gap-2 cursor-pointer select-none;
+    background: linear-gradient(180deg, var(--color-oro-claro), var(--color-oro));
+    box-shadow: 0 4px 12px rgba(182, 132, 42, 0.35);
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.04);
+  }
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply bg-panel border border-linea rounded-[9px] px-3 py-1.5 text-[13px] font-semibold text-tinta inline-flex items-center justify-center gap-1.5 cursor-pointer select-none hover:bg-rosado;
+  }
+  .btn-ghost:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 }

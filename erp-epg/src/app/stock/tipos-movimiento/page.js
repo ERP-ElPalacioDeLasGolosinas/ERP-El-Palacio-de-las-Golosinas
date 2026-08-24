@@ -18,8 +18,10 @@ export default async function TiposMovimientoPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold">Tipos de movimiento de stock</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
+        <h1 className="font-baloo text-2xl font-bold text-tinta">
+          Tipos de movimiento de stock
+        </h1>
+        <p className="text-sm text-tinta-suave">
           Catálogo de tipos de movimiento (ingreso, egreso, ajuste, etc.) que
           se usará al registrar movimientos de stock.
         </p>
@@ -28,39 +30,54 @@ export default async function TiposMovimientoPage() {
       <NuevoTipoMovimientoForm />
 
       {error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm font-medium text-rojo">
           No se pudieron cargar los tipos de movimiento.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-black/10 dark:border-white/15">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-black/10 bg-black/[.03] dark:border-white/10 dark:bg-white/[.06]">
-                <th className="p-3 font-medium">Nombre</th>
-                <th className="p-3 font-medium">Descripción</th>
-                <th className="p-3 font-medium">Signo</th>
-                <th className="p-3 font-medium">Estado</th>
-                <th className="p-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tiposMovimiento && tiposMovimiento.length > 0 ? (
-                tiposMovimiento.map((tipoMovimiento) => (
-                  <TipoMovimientoRow
-                    key={tipoMovimiento.id_tipo_movimiento}
-                    tipoMovimiento={tipoMovimiento}
-                  />
-                ))
-              ) : (
+        <section className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="p-3 text-black/60 dark:text-white/60">
-                    Todavía no hay tipos de movimiento cargados.
-                  </td>
+                  <th className="px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.6px] text-tinta-suave">
+                    Nombre
+                  </th>
+                  <th className="px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.6px] text-tinta-suave">
+                    Descripción
+                  </th>
+                  <th className="px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.6px] text-tinta-suave">
+                    Signo
+                  </th>
+                  <th className="px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.6px] text-tinta-suave">
+                    Estado
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-[10.5px] font-bold uppercase tracking-[0.6px] text-tinta-suave">
+                    Acciones
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {tiposMovimiento && tiposMovimiento.length > 0 ? (
+                  tiposMovimiento.map((tipoMovimiento) => (
+                    <TipoMovimientoRow
+                      key={tipoMovimiento.id_tipo_movimiento}
+                      tipoMovimiento={tipoMovimiento}
+                    />
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="border-t border-linea px-4 py-10 text-center text-sm text-tinta-suave"
+                    >
+                      Todavía no hay tipos de movimiento cargados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </div>
   );

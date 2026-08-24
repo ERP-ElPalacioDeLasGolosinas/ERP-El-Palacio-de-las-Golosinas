@@ -22,12 +22,14 @@ export default function NuevoTipoMovimientoForm() {
     <form
       ref={formRef}
       action={formAction}
-      className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/15"
+      className="card flex flex-col gap-3 p-4"
     >
-      <h2 className="text-lg font-semibold">Nuevo tipo de movimiento</h2>
+      <h2 className="font-baloo text-lg font-bold text-tinta">
+        Nuevo tipo de movimiento
+      </h2>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="nombre_tipo_movimiento" className="text-sm font-medium">
+        <label htmlFor="nombre_tipo_movimiento" className="text-sm font-medium text-tinta">
           Nombre
         </label>
         <input
@@ -37,14 +39,14 @@ export default function NuevoTipoMovimientoForm() {
           required
           maxLength={120}
           placeholder="Ej: Ingreso por compra"
-          className="rounded border border-black/20 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="rounded-[9px] border-[1.5px] border-linea bg-panel px-3 py-2 text-sm outline-none placeholder:text-tinta-suave/60 focus:border-oro focus:ring-2 focus:ring-ambar-bg"
         />
       </div>
 
       <div className="flex flex-col gap-1">
         <label
           htmlFor="descripcion_tipo_movimiento"
-          className="text-sm font-medium"
+          className="text-sm font-medium text-tinta"
         >
           Descripción
         </label>
@@ -54,18 +56,18 @@ export default function NuevoTipoMovimientoForm() {
           required
           rows={2}
           placeholder="Ej: Ingreso de mercadería proveniente de una compra"
-          className="rounded border border-black/20 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="rounded-[9px] border-[1.5px] border-linea bg-panel px-3 py-2 text-sm outline-none placeholder:text-tinta-suave/60 focus:border-oro focus:ring-2 focus:ring-ambar-bg"
         />
       </div>
 
       <fieldset className="flex flex-col gap-1">
-        <legend className="text-sm font-medium">Signo</legend>
+        <legend className="text-sm font-medium text-tinta">Signo</legend>
         <div className="flex gap-4">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm text-tinta">
             <input type="radio" name="signo_tipo_movimiento" value="1" required />
             Entrada (+)
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm text-tinta">
             <input type="radio" name="signo_tipo_movimiento" value="-1" required />
             Salida (-)
           </label>
@@ -73,16 +75,12 @@ export default function NuevoTipoMovimientoForm() {
       </fieldset>
 
       {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm font-medium text-rojo">
           {state.error}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
-      >
+      <button type="submit" disabled={pending} className="btn-primary self-start">
         {pending ? "Guardando..." : "Crear tipo de movimiento"}
       </button>
     </form>

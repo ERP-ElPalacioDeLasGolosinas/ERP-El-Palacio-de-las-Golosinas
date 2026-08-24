@@ -28,8 +28,8 @@ export default function TipoMovimientoRow({ tipoMovimiento }) {
 
   if (editando) {
     return (
-      <tr className="border-b border-black/10 dark:border-white/10">
-        <td colSpan={5} className="p-3">
+      <tr className="border-t border-linea bg-ambar-bg/40">
+        <td colSpan={5} className="px-4 py-2.5">
           <form onSubmit={manejarSubmit} className="flex flex-col gap-2">
             <input
               type="hidden"
@@ -43,32 +43,28 @@ export default function TipoMovimientoRow({ tipoMovimiento }) {
                 required
                 maxLength={120}
                 defaultValue={tipoMovimiento.nombre_tipo_movimiento}
-                className="min-w-[200px] flex-1 rounded border border-black/20 bg-transparent px-2 py-1 text-sm dark:border-white/20"
+                className="min-w-[200px] flex-1 rounded-[9px] border-[1.5px] border-oro bg-panel px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ambar-bg"
               />
               <input
                 name="descripcion_tipo_movimiento"
                 type="text"
                 required
                 defaultValue={tipoMovimiento.descripcion_tipo_movimiento}
-                className="min-w-[240px] flex-[2] rounded border border-black/20 bg-transparent px-2 py-1 text-sm dark:border-white/20"
+                className="min-w-[240px] flex-[2] rounded-[9px] border-[1.5px] border-oro bg-panel px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ambar-bg"
               />
-              <span className="self-center text-xs text-black/60 dark:text-white/60">
+              <span className="self-center text-xs text-tinta-suave">
                 Signo {esEntrada ? "Entrada (+)" : "Salida (-)"} (no editable)
               </span>
             </div>
 
             {error ? (
-              <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+              <p role="alert" className="text-sm font-medium text-rojo">
                 {error}
               </p>
             ) : null}
 
             <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={guardando}
-                className="rounded bg-black px-3 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
-              >
+              <button type="submit" disabled={guardando} className="btn-primary">
                 {guardando ? "Guardando..." : "Guardar"}
               </button>
               <button
@@ -77,7 +73,7 @@ export default function TipoMovimientoRow({ tipoMovimiento }) {
                   setError(null);
                   setEditando(false);
                 }}
-                className="rounded border border-black/20 px-3 py-1 text-sm dark:border-white/20"
+                className="btn-ghost"
               >
                 Cancelar
               </button>
@@ -89,23 +85,37 @@ export default function TipoMovimientoRow({ tipoMovimiento }) {
   }
 
   return (
-    <tr className="border-b border-black/10 dark:border-white/10">
-      <td className="p-3 align-top">{tipoMovimiento.nombre_tipo_movimiento}</td>
-      <td className="p-3 align-top">
+    <tr
+      className={`border-t border-linea hover:bg-crema/60 ${
+        tipoMovimiento.activo ? "" : "opacity-60"
+      }`}
+    >
+      <td className="px-4 py-3 text-sm font-medium text-tinta">
+        {tipoMovimiento.nombre_tipo_movimiento}
+      </td>
+      <td className="px-4 py-3 text-[13px] text-tinta-suave">
         {tipoMovimiento.descripcion_tipo_movimiento}
       </td>
-      <td className="p-3 align-top">
+      <td className="px-4 py-3 text-sm text-tinta">
         {esEntrada ? "Entrada (+)" : "Salida (-)"}
       </td>
-      <td className="p-3 align-top">
-        {tipoMovimiento.activo ? "Activo" : "Inactivo"}
+      <td className="px-4 py-3">
+        <span
+          className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${
+            tipoMovimiento.activo
+              ? "bg-verde-bg text-verde"
+              : "bg-ambar-bg text-ambar"
+          }`}
+        >
+          {tipoMovimiento.activo ? "Activo" : "Inactivo"}
+        </span>
       </td>
-      <td className="p-3 align-top">
-        <div className="flex gap-2">
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1.5">
           <button
             type="button"
             onClick={() => setEditando(true)}
-            className="rounded border border-black/20 px-3 py-1 text-sm dark:border-white/20"
+            className="btn-ghost"
           >
             Editar
           </button>
@@ -120,7 +130,9 @@ export default function TipoMovimientoRow({ tipoMovimiento }) {
                 )
               )
             }
-            className="rounded border border-black/20 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20"
+            className={`btn-ghost ${
+              tipoMovimiento.activo ? "text-rojo-hondo" : "text-verde"
+            }`}
           >
             {tipoMovimiento.activo ? "Dar de baja" : "Reactivar"}
           </button>
