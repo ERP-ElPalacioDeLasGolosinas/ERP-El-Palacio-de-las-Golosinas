@@ -11,9 +11,6 @@ export default function Home() {
       />
 
       <div className="palacio-card space-y-3 p-5">
-        <h2 className="text-sm font-semibold tracking-wide text-palacio-muted uppercase">
-          Sprint 1 — catálogo
-        </h2>
         <Link
           href="/rubros"
           className="flex items-center justify-between rounded-lg border border-palacio-border px-4 py-3 transition hover:border-palacio-red/30 hover:bg-palacio-red-soft/40"
@@ -24,7 +21,6 @@ export default function Home() {
               Primer nivel de clasificación del catálogo
             </p>
           </div>
-          <span className="text-xs font-medium text-palacio-muted">A-03</span>
         </Link>
         <Link
           href="/categorias"
@@ -36,7 +32,6 @@ export default function Home() {
               Segundo nivel, siempre asociadas a un rubro
             </p>
           </div>
-          <span className="text-xs font-medium text-palacio-muted">A-04</span>
         </Link>
       </div>
     </div>
