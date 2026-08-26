@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { DEPOSITO_COLUMNS } from "@/lib/depositos/types";
 
 const PATH = "/deposito";
+const DEPOSITO_COLUMNS =
+  "id_deposito, nombre_deposito, direccion_deposito, telefono_deposito, horario_apertura, horario_cierre, id_responsable, activo, esta_lleno, creado, editado, creado_por";
 
 /**
  * @param {FormData | Record<string, unknown>} input
@@ -20,35 +21,26 @@ function parsePayload(input) {
     return String(value).trim();
   };
 
-  const nombre = String(get("nombre_deposito") ?? "").trim();
-  const direccion = optionalText("direccion_deposito");
-  const telefono = optionalText("telefono_deposito");
-  const horarioApertura = optionalText("horario_apertura");
-  const horarioCierre = optionalText("horario_cierre");
-  const idResponsable = optionalText("id_responsable");
-
   const activoRaw = get("activo");
-  const activo =
-    activoRaw === true ||
-    activoRaw === "true" ||
-    activoRaw === "on" ||
-    activoRaw === "1";
   const estaLlenoRaw = get("esta_lleno");
-  const estaLleno =
-    estaLlenoRaw === true ||
-    estaLlenoRaw === "true" ||
-    estaLlenoRaw === "on" ||
-    estaLlenoRaw === "1";
 
   return {
-    nombre_deposito: nombre,
-    direccion_deposito: direccion,
-    telefono_deposito: telefono,
-    horario_apertura: horarioApertura,
-    horario_cierre: horarioCierre,
-    id_responsable: idResponsable,
-    activo,
-    esta_lleno: estaLleno,
+    nombre_deposito: String(get("nombre_deposito") ?? "").trim(),
+    direccion_deposito: optionalText("direccion_deposito"),
+    telefono_deposito: optionalText("telefono_deposito"),
+    horario_apertura: optionalText("horario_apertura"),
+    horario_cierre: optionalText("horario_cierre"),
+    id_responsable: optionalText("id_responsable"),
+    activo:
+      activoRaw === true ||
+      activoRaw === "true" ||
+      activoRaw === "on" ||
+      activoRaw === "1",
+    esta_lleno:
+      estaLlenoRaw === true ||
+      estaLlenoRaw === "true" ||
+      estaLlenoRaw === "on" ||
+      estaLlenoRaw === "1",
   };
 }
 
@@ -62,36 +54,54 @@ const CAMPOS_OBLIGATORIOS = [
 ];
 
 const NOMBRES_COLUMNA = Object.fromEntries(CAMPOS_OBLIGATORIOS);
+const ERRORES_RPC_EN_ESPANOL = [
+  "Falta completar:",
+  "Debés iniciar sesión",
+  "No se encontró el depósito indicado.",
+];
 
 function validatePayload(payload) {
   const faltantes = CAMPOS_OBLIGATORIOS.filter(([key]) => !payload[key]).map(
     ([, label]) => label
   );
 
-  if (faltantes.length === 0) {
-    return null;
+  if (faltantes.length > 0) {
+    return `Falta completar: ${faltantes.join(", ")}`;
   }
 
-  return `Falta completar: ${faltantes.join(", ")}`;
+  return null;
 }
 
 function mensajeErrorGuardado(error) {
-  if (error?.code === "23505") {
+  if (!error?.message) {
+    return "No se pudo guardar el depósito. Revisá los datos e intentá de nuevo.";
+  }
+
+  if (ERRORES_RPC_EN_ESPANOL.some((texto) => error.message.includes(texto))) {
+    return error.message;
+  }
+
+  if (error.code === "23505") {
     return "Ya existe un depósito con ese nombre.";
   }
 
-  const columna = error?.message?.match(/column "([^"]+)"/)?.[1];
+  const columna = error.message.match(/column "([^"]+)"/)?.[1];
   const campo = columna ? NOMBRES_COLUMNA[columna] : null;
-  if (campo && /null value|not-null|not null/i.test(error.message ?? "")) {
+  if (campo && /null value|not-null|not null/i.test(error.message)) {
     return `Falta completar: ${campo}`;
   }
 
   return "No se pudo guardar el depósito. Revisá los datos e intentá de nuevo.";
 }
 
-/**
- * @returns {Promise<{ data: import('@/lib/depositos/types').Deposito[] | null, error: string | null }>}
- */
+function mensajeErrorSimple(error, mensajePorDefecto) {
+  if (error?.message) {
+    return error.message;
+  }
+
+  return mensajePorDefecto;
+}
+
 export async function listarDepositos() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -135,20 +145,15 @@ export async function crearDeposito(formData) {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { error } = await supabase.from("deposito").insert({
-    nombre_deposito: payload.nombre_deposito,
-    direccion_deposito: payload.direccion_deposito,
-    telefono_deposito: payload.telefono_deposito,
-    horario_apertura: payload.horario_apertura,
-    horario_cierre: payload.horario_cierre,
-    id_responsable: payload.id_responsable,
-    activo: payload.activo,
-    esta_lleno: payload.esta_lleno,
-    creado_por: user?.email ?? user?.id ?? null,
+  const { error } = await supabase.rpc("crear_deposito", {
+    p_nombre_deposito: payload.nombre_deposito,
+    p_direccion_deposito: payload.direccion_deposito,
+    p_telefono_deposito: payload.telefono_deposito,
+    p_horario_apertura: payload.horario_apertura,
+    p_horario_cierre: payload.horario_cierre,
+    p_id_responsable: payload.id_responsable,
+    p_activo: payload.activo,
+    p_esta_lleno: payload.esta_lleno,
   });
 
   if (error) {
@@ -175,19 +180,17 @@ export async function actualizarDeposito(id_deposito, formData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("deposito")
-    .update({
-      nombre_deposito: payload.nombre_deposito,
-      direccion_deposito: payload.direccion_deposito,
-      telefono_deposito: payload.telefono_deposito,
-      horario_apertura: payload.horario_apertura,
-      horario_cierre: payload.horario_cierre,
-      id_responsable: payload.id_responsable,
-      activo: payload.activo,
-      esta_lleno: payload.esta_lleno,
-    })
-    .eq("id_deposito", id_deposito);
+  const { error } = await supabase.rpc("actualizar_deposito", {
+    p_id_deposito: id_deposito,
+    p_nombre_deposito: payload.nombre_deposito,
+    p_direccion_deposito: payload.direccion_deposito,
+    p_telefono_deposito: payload.telefono_deposito,
+    p_horario_apertura: payload.horario_apertura,
+    p_horario_cierre: payload.horario_cierre,
+    p_id_responsable: payload.id_responsable,
+    p_activo: payload.activo,
+    p_esta_lleno: payload.esta_lleno,
+  });
 
   if (error) {
     return { ok: false, error: mensajeErrorGuardado(error) };
@@ -208,13 +211,19 @@ export async function setActivoDeposito(id_deposito, activo) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("deposito")
-    .update({ activo: Boolean(activo) })
-    .eq("id_deposito", id_deposito);
+  const { error } = await supabase.rpc("set_activo_deposito", {
+    p_id_deposito: id_deposito,
+    p_activo: Boolean(activo),
+  });
 
   if (error) {
-    return { ok: false, error: "No se pudo actualizar el estado del depósito." };
+    return {
+      ok: false,
+      error: mensajeErrorSimple(
+        error,
+        "No se pudo actualizar el estado del depósito."
+      ),
+    };
   }
 
   revalidatePath(PATH);
@@ -231,15 +240,18 @@ export async function setEstaLlenoDeposito(id_deposito, esta_lleno) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("deposito")
-    .update({ esta_lleno: Boolean(esta_lleno) })
-    .eq("id_deposito", id_deposito);
+  const { error } = await supabase.rpc("set_esta_lleno_deposito", {
+    p_id_deposito: id_deposito,
+    p_esta_lleno: Boolean(esta_lleno),
+  });
 
   if (error) {
     return {
       ok: false,
-      error: "No se pudo actualizar la capacidad del depósito.",
+      error: mensajeErrorSimple(
+        error,
+        "No se pudo actualizar la capacidad del depósito."
+      ),
     };
   }
 
@@ -256,16 +268,14 @@ export async function eliminarDeposito(id_deposito) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("deposito")
-    .delete()
-    .eq("id_deposito", id_deposito);
+  const { error } = await supabase.rpc("eliminar_deposito", {
+    p_id_deposito: id_deposito,
+  });
 
   if (error) {
     return {
       ok: false,
-      error:
-        "No se pudo eliminar el depósito. Verificá que no tenga lotes o movimientos asociados.",
+      error: mensajeErrorSimple(error, "No se pudo eliminar el depósito."),
     };
   }
 

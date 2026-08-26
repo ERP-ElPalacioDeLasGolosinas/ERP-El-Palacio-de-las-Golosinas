@@ -2,7 +2,10 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { actualizarDeposito, crearDeposito } from "@/lib/depositos/actions";
+import {
+  actualizarDeposito,
+  crearDeposito,
+} from "@/lib/depositos/actions";
 
 const initialState = { ok: false, error: null };
 
