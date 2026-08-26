@@ -7,7 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 const TIMEOUT_MS = 25 * 60 * 1000;
 const WARNING_MS = 60 * 1000;
 const CHECK_INTERVAL_MS = 30_000;
-const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"];
+const ACTIVITY_EVENTS = [
+  "mousemove",
+  "mousedown",
+  "keydown",
+  "scroll",
+  "touchstart",
+  "click",
+];
 
 export function InactivityProvider({ children }) {
   const router = useRouter();
@@ -30,7 +37,10 @@ export function InactivityProvider({ children }) {
 
     function attachActivityListeners() {
       ACTIVITY_EVENTS.forEach((event) =>
-        window.addEventListener(event, resetActivity, { capture: true, passive: true })
+        window.addEventListener(event, resetActivity, {
+          capture: true,
+          passive: true,
+        })
       );
     }
 
@@ -89,7 +99,9 @@ export function InactivityProvider({ children }) {
     if (secondsLeft <= 0) return;
 
     const tick = setInterval(() => {
-      setSecondsLeft((current) => (current === null ? null : Math.max(0, current - 1)));
+      setSecondsLeft((current) =>
+        current === null ? null : Math.max(0, current - 1)
+      );
     }, 1000);
 
     return () => clearInterval(tick);
@@ -105,7 +117,7 @@ export function InactivityProvider({ children }) {
       {children}
       {secondsLeft !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-lg bg-background border border-black/15 dark:border-white/20 p-6 flex flex-col gap-4">
+          <div className="palacio-card flex w-full max-w-sm flex-col gap-4 p-6">
             <h2 className="text-lg font-semibold">Tu sesión está por expirar</h2>
             <p className="text-sm">
               Por inactividad, tu sesión se cerrará en{" "}
@@ -114,7 +126,7 @@ export function InactivityProvider({ children }) {
             <button
               type="button"
               onClick={handleStaySignedIn}
-              className="rounded bg-foreground text-background px-3 py-2 font-medium"
+              className="palacio-btn-primary px-3 py-2 text-sm"
             >
               Seguir conectado
             </button>
