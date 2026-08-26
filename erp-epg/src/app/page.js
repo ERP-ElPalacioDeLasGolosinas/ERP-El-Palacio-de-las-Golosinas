@@ -7,6 +7,9 @@ export default function Home() {
       <Link href="/unidades-medida" className="underline underline-offset-2">
         Unidades de medida
       </Link>
+      <Link href="/rubros" className="underline underline-offset-2">
+        Rubros
+      </Link>
     </div>
   );
 }

@@ -30,6 +30,7 @@ Sistema de gestión para "El Palacio de las Golosinas". Backend: **Supabase** (P
 | --- | --- |
 | `usuario` | PK `id_usuario` FK → `auth.users`. Campos: nombre, apellido, fecha_nacimiento, `dni_usuario` (unique, check > 0), telefono, mail (check email), `rol_usuario` enum (`Empleado Deposito`, `Empleado Ventas`, `Empleado Compras`, `Gerente`), `creado`, `editado`. |
 | `marca` | A-02: CRUD en `/marcas`. `nombre_marca` unique, no vacío, `activo` bool default true (baja lógica) + auditoría. |
+| `rubro` | A-03: CRUD en `/rubros`. `nombre_rubro` unique case-insensitive, `activo`, auditoría. Baja física bloqueada si hay categorías o artículos activos asociados. |
 | `deposito` | S-01 listo a nivel tabla. `nombre_deposito` unique, `direccion_deposito`, `activo` bool default true + auditoría. |
 | `producto` | Catálogo (A-05). FK `id_marca`. Tiene nombre, descripción, `precio_producto`, `codigo_producto` unique. **Faltan** FKs/columnas a `unidad_medida`, rubro y/o categoría. |
 | `lote` | Identidad del lote (producto, usuario que cargó, número, fechas, `cantidad_inicial`, `precio_costo`). **Sin** cantidad actual. |
@@ -38,6 +39,7 @@ Sistema de gestión para "El Palacio de las Golosinas". Backend: **Supabase** (P
 ### Relaciones clave
 
 - `producto` → `marca`
+- `rubro` → `categoria` (futura, A-04)
 - `lote` → `producto`, `usuario`
 - `lote_deposito` → `lote`, `deposito`
 - `usuario.id_usuario` → `auth.users.id`
@@ -64,7 +66,7 @@ Todas con `security_invoker = true` (respetan RLS del consultante):
 | --- | --- |
 | A-01 Unidades de medida | Falta tabla `unidad_medida` |
 | A-02 Marcas | CRUD implementado en `/marcas` (ver `docs/A-02-marcas.md`). SQL de `activo` aplicado. Pendiente: verificación e2e cuando llegue el login |
-| A-03 Rubros | Falta tabla `rubro` |
+| A-03 Rubros | CRUD implementado en `/rubros`. RLS por rol pendiente (otro compañero) |
 | S-01 Depósitos | Tabla `deposito` lista → armar back/CRUD |
 | S-04 Tipos de movimiento | Falta tabla `tipo_movimiento` |
 
