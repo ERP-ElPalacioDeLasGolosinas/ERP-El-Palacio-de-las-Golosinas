@@ -13,6 +13,9 @@ export default function Home() {
       <Link href="/categorias" className="underline underline-offset-2">
         Categorías
       </Link>
+      <Link href="/productos" className="underline underline-offset-2">
+        Artículos
+      </Link>
     </div>
   );
 }
