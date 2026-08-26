@@ -16,6 +16,23 @@ const NAV = [
       },
     ],
   },
+  {
+    section: "CATÁLOGO",
+    items: [
+      {
+        href: "/rubros",
+        label: "Rubros",
+        icon: TagsIcon,
+        match: (p) => p.startsWith("/rubros"),
+      },
+      {
+        href: "/categorias",
+        label: "Categorías",
+        icon: FolderIcon,
+        match: (p) => p.startsWith("/categorias"),
+      },
+    ],
+  },
 ];
 
 /**
@@ -132,6 +149,30 @@ function WarehouseIcon({ className }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"
+      />
+    </svg>
+  );
+}
+
+function TagsIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7 7h.01M3 11l8.5 8.5a1.5 1.5 0 0 0 2.12 0L21 12V3h-9L3 11z"
+      />
+    </svg>
+  );
+}
+
+function FolderIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"
       />
     </svg>
   );

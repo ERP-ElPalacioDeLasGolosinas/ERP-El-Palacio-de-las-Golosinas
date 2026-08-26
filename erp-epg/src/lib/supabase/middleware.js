@@ -7,6 +7,8 @@ const REGLAS_POR_RUTA = [
   { prefijo: "/compras", roles: ["Empleado Compras", "Gerente"] },
   { prefijo: "/ventas", roles: ["Empleado Ventas", "Gerente"] },
   { prefijo: "/deposito", roles: ["Empleado Deposito", "Gerente"] },
+  { prefijo: "/rubros", roles: ["Empleado Deposito", "Gerente"] },
+  { prefijo: "/categorias", roles: ["Empleado Deposito", "Gerente"] },
   { prefijo: "/gerencia", roles: ["Gerente"] },
 ];
 

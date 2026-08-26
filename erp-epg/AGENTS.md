@@ -30,16 +30,19 @@ Sistema de gestión para "El Palacio de las Golosinas". Backend: **Supabase** (P
 | --- | --- |
 | `usuario` | PK `id_usuario` FK → `auth.users`. Campos: nombre, apellido, fecha_nacimiento, `dni_usuario` (unique, check > 0), telefono, mail (check email), `rol_usuario` enum (`Empleado Deposito`, `Empleado Ventas`, `Empleado Compras`, `Gerente`), `creado`, `editado`. |
 | `marca` | A-02 listo a nivel tabla. `nombre_marca` unique, no vacío + auditoría. |
-| `deposito` | S-01 listo a nivel tabla. `nombre_deposito` unique, `direccion_deposito`, `activo` bool default true + auditoría. |
-| `producto` | Catálogo (A-05). FK `id_marca`. Tiene nombre, descripción, `precio_producto`, `codigo_producto` unique. **Faltan** FKs/columnas a `unidad_medida`, rubro y/o categoría. |
+| `rubro` | A-03 listo a nivel tabla + CRUD (`feat/integrar-catalogo-a03-a04`). `nombre_rubro` unique case-insensitive, `activo`, auditoría. Baja física bloqueada si hay categorías o artículos activos asociados. |
+| `categoria` | A-04: en live puede existir **sin** `id_rubro` → reparar con `20260826170000_a04_categoria_add_id_rubro.sql`. CRUD espera FK → `rubro` + unique `(id_rubro, lower(trim(nombre_categoria)))`. |
+| `unidad_medida` | A-01 migración en `supabase/migrations/`. |
+| `deposito` | S-01 listo a nivel tabla + CRUD en `(deposito)/deposito`. Incluye teléfono, horarios, `id_responsable`, `esta_lleno`. |
+| `producto` | Catálogo (A-05 parcial en live): FK `id_marca` + **`id_categoria`** → `categoria`. Falta unidad de medida / resto del formulario A-05. |
 | `lote` | Identidad del lote (producto, usuario que cargó, número, fechas, `cantidad_inicial`, `precio_costo`). **Sin** cantidad actual. |
 | `lote_deposito` | Stock real: `cantidad_actual` por lote×depósito. `UNIQUE(id_lote, id_deposito)`. |
 
 ### Relaciones clave
 
-- `producto` → `marca`
-- `lote` → `producto`, `usuario`
-- `lote_deposito` → `lote`, `deposito`
+- `producto` → `marca`, `categoria` (live ya tiene `id_categoria`)
+- `categoria` → `rubro` (obligatorio para A-04; aplicar migración de reparación si falta)
+- Live también tiene `proveedor` / `compra` / `inventario` (modelo de stock distinto al de `lote`/`lote_deposito` del doc original)
 - `usuario.id_usuario` → `auth.users.id`
 
 ## Vistas existentes
@@ -61,17 +64,17 @@ Todas con `security_invoker = true` (respetan RLS del consultante):
 
 | Ítem | Estado |
 | --- | --- |
-| A-01 Unidades de medida | Falta tabla `unidad_medida` |
+| A-01 Unidades de medida | Migración en `supabase/migrations/` → armar back/CRUD si falta |
 | A-02 Marcas | Tabla `marca` lista → armar back/CRUD |
-| A-03 Rubros | Falta tabla `rubro` |
-| S-01 Depósitos | Tabla `deposito` lista → armar back/CRUD |
+| A-03 Rubros | Tabla `rubro` + CRUD en `/rubros` (`feat/integrar-catalogo-a03-a04`; RLS por rol pendiente a nivel DB) |
+| S-01 Depósitos | Tabla `deposito` + CRUD en `/deposito` |
 | S-04 Tipos de movimiento | Falta tabla `tipo_movimiento` |
 
 ### Oleada 2 (cuando A-03 esté lista)
 
 | Ítem | Estado |
 | --- | --- |
-| A-04 Categorías | Falta tabla `categoria` (probablemente FK → `rubro`) |
+| A-04 Categorías | Tabla `categoria` + CRUD en `/categorias` (`feat/integrar-catalogo-a03-a04`) |
 
 ### Oleada 3 (cuando estén A-01..A-04)
 
