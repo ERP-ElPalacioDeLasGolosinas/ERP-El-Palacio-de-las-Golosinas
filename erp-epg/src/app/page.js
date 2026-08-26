@@ -10,6 +10,9 @@ export default function Home() {
       <Link href="/rubros" className="underline underline-offset-2">
         Rubros
       </Link>
+      <Link href="/categorias" className="underline underline-offset-2">
+        Categorías
+      </Link>
     </div>
   );
 }

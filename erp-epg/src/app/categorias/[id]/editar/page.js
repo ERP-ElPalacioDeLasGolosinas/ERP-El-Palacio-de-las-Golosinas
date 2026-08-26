@@ -1,19 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RubroForm } from "@/components/rubros/RubroForm";
+import { CategoriaForm } from "@/components/categorias/CategoriaForm";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { obtenerRubro } from "@/lib/rubros/actions";
+import {
+  listarRubrosParaCategoria,
+  obtenerCategoria,
+} from "@/lib/categorias/actions";
 
 export const metadata = {
-  title: "Editar rubro | Palacio · ERP",
+  title: "Editar categoría | Palacio · ERP",
 };
 
 /**
  * @param {{ params: Promise<{ id: string }> }} props
  */
-export default async function EditarRubroPage({ params }) {
+export default async function EditarCategoriaPage({ params }) {
   const { id } = await params;
-  const { data, error } = await obtenerRubro(id);
+  const [{ data, error }, { data: rubros, error: rubrosError }] =
+    await Promise.all([obtenerCategoria(id), listarRubrosParaCategoria()]);
 
   if (error) {
     return (
@@ -22,10 +26,10 @@ export default async function EditarRubroPage({ params }) {
           Error al cargar: {error}
         </div>
         <Link
-          href="/rubros"
+          href="/categorias"
           className="mt-4 inline-block text-sm font-medium text-primary underline"
         >
-          Volver a rubros
+          Volver a categorías
         </Link>
       </div>
     );
@@ -40,13 +44,18 @@ export default async function EditarRubroPage({ params }) {
       <PageHeader
         crumbs={[
           { label: "Inicio", href: "/" },
-          { label: "Rubros", href: "/rubros" },
+          { label: "Categorías", href: "/categorias" },
           { label: "Editar" },
         ]}
-        title="Editar rubro"
-        description={data.nombre_rubro}
+        title="Editar categoría"
+        description={data.nombre_categoria}
       />
-      <RubroForm rubro={data} />
+      {rubrosError ? (
+        <div className="mb-4 card border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
+          No se pudieron recargar los rubros activos: {rubrosError}
+        </div>
+      ) : null}
+      <CategoriaForm categoria={data} rubros={rubros ?? []} />
     </div>
   );
 }

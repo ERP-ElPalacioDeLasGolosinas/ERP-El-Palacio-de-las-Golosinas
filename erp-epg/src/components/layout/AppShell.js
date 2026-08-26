@@ -18,9 +18,16 @@ const NAV = [
       },
       {
         href: "/rubros",
-        label: "Artículos y catálogo",
+        label: "Rubros",
         icon: BoxIcon,
         match: (p) => p.startsWith("/rubros"),
+        done: true,
+      },
+      {
+        href: "/categorias",
+        label: "Categorías",
+        icon: TagsIcon,
+        match: (p) => p.startsWith("/categorias"),
         done: true,
       },
       {
@@ -82,9 +89,6 @@ export function AppShell({ children, userEmail = null }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden rounded-full bg-white/15 px-3 py-1 text-xs font-medium sm:inline">
-            Sprint 1 · Stock & catálogo
-          </span>
           {userEmail ? (
             <div className="flex items-center gap-2">
               <div className="hidden text-right sm:block">
@@ -228,6 +232,19 @@ function BoxIcon({ className }) {
         d="m21 8-9-5-9 5v8l9 5 9-5V8Z"
       />
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9 5 9-5M12 13v8" />
+    </svg>
+  );
+}
+
+function TagsIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20.5 12.5 12 4H4v8l8.5 8.5a1.5 1.5 0 0 0 2.1 0l6-6a1.5 1.5 0 0 0 0-2.1Z"
+      />
+      <circle cx="7.5" cy="7.5" r="1" fill="currentColor" stroke="none" />
     </svg>
   );
 }

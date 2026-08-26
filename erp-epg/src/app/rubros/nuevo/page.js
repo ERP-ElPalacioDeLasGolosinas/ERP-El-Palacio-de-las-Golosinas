@@ -15,7 +15,6 @@ export default function NuevoRubroPage() {
           { label: "Nuevo" },
         ]}
         title="Nuevo rubro"
-        hu="A-03"
         description="Completá el nombre para registrar un rubro del catálogo."
       />
       <RubroForm />
