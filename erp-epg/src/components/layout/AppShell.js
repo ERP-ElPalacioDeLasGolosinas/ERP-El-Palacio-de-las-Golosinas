@@ -2,28 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 const NAV = [
   {
     section: "OPERACIÓN",
     items: [
       {
-        href: "/depositos",
+        href: "/deposito",
         label: "Depósitos",
         icon: WarehouseIcon,
-        match: (p) => p === "/" || p.startsWith("/depositos"),
+        match: (p) => p.startsWith("/deposito"),
       },
     ],
   },
 ];
 
-export function AppShell({ children }) {
+/**
+ * @param {{ user?: { nombre?: string, apellido?: string, rol?: string } | null, children: import('react').ReactNode }} props
+ */
+export function AppShell({ user, children }) {
   const pathname = usePathname();
+
+  const nombreCompleto = user
+    ? [user.nombre, user.apellido].filter(Boolean).join(" ")
+    : "Usuario";
+  const iniciales =
+    [user?.nombre, user?.apellido]
+      .filter(Boolean)
+      .map((parte) => parte[0]?.toUpperCase())
+      .join("") || "U";
 
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between bg-palacio-red px-4 text-white shadow-sm md:px-6">
-        <div className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <div
             className="flex size-9 items-center justify-center rounded-full bg-white/15 text-sm font-bold"
             aria-hidden
@@ -38,17 +51,18 @@ export function AppShell({ children }) {
               Gestión & punto de venta
             </p>
           </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight">Usuario</p>
-              <p className="text-[11px] text-white/70">Sesión local</p>
-            </div>
-            <div className="flex size-8 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-              U
-            </div>
+          <div className="hidden text-right sm:block">
+            <p className="text-sm font-medium leading-tight">{nombreCompleto}</p>
+            <p className="text-[11px] text-white/70">
+              {user?.rol ?? "Sesión iniciada"}
+            </p>
           </div>
+          <div className="flex size-8 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
+            {iniciales}
+          </div>
+          <LogoutButton className="rounded-full border border-white/25 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15 disabled:opacity-60" />
         </div>
       </header>
 
@@ -69,31 +83,20 @@ export function AppShell({ children }) {
                       active
                         ? "bg-palacio-red-soft font-semibold text-palacio-red"
                         : "text-zinc-700 hover:bg-zinc-50",
-                      item.disabled ? "cursor-default opacity-55" : "",
                     ].join(" ");
-
-                    const content = (
-                      <>
-                        <Icon
-                          className={
-                            active ? "text-palacio-red" : "text-zinc-500"
-                          }
-                        />
-                        <span className="flex-1 truncate text-left">
-                          {item.label}
-                        </span>
-                      </>
-                    );
 
                     return (
                       <li key={item.label}>
-                        {item.disabled ? (
-                          <span className={className}>{content}</span>
-                        ) : (
-                          <Link href={item.href} className={className}>
-                            {content}
-                          </Link>
-                        )}
+                        <Link href={item.href} className={className}>
+                          <Icon
+                            className={
+                              active ? "text-palacio-red" : "text-zinc-500"
+                            }
+                          />
+                          <span className="flex-1 truncate text-left">
+                            {item.label}
+                          </span>
+                        </Link>
                       </li>
                     );
                   })}

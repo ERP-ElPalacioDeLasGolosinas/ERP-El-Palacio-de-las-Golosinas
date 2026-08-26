@@ -22,7 +22,7 @@ export default async function EditarDepositoPage({ params }) {
           Error al cargar: {error}
         </div>
         <Link
-          href="/depositos"
+          href="/deposito"
           className="mt-4 inline-block text-sm font-medium text-palacio-red underline"
         >
           Volver a depósitos
@@ -39,7 +39,7 @@ export default async function EditarDepositoPage({ params }) {
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8">
       <PageHeader
         crumbs={[
-          { label: "Depósitos", href: "/depositos" },
+          { label: "Depósitos", href: "/deposito" },
           { label: "Editar" },
         ]}
         title="Editar depósito"

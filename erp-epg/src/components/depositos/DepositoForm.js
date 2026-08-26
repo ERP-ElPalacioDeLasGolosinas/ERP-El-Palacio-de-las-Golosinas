@@ -2,10 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  actualizarDeposito,
-  crearDeposito,
-} from "@/lib/depositos/actions";
+import { actualizarDeposito, crearDeposito } from "@/lib/depositos/actions";
 
 const initialState = { ok: false, error: null };
 
@@ -15,7 +12,6 @@ const initialState = { ok: false, error: null };
  *   nombre_deposito: string,
  *   direccion_deposito: string | null,
  *   telefono_deposito: string | null,
- *   tipo_deposito: string | null,
  *   horario_apertura: string | null,
  *   horario_cierre: string | null,
  *   id_responsable: string | null,
@@ -41,7 +37,7 @@ export function DepositoForm({ deposito = null }) {
 
   useEffect(() => {
     if (state?.ok) {
-      router.push("/depositos");
+      router.push("/deposito");
       router.refresh();
     }
   }, [state, router]);
@@ -89,19 +85,16 @@ export function DepositoForm({ deposito = null }) {
           />
         </Field>
 
-        <Field label="Tipo de depósito" htmlFor="tipo_deposito" required>
-          <select
-            id="tipo_deposito"
-            name="tipo_deposito"
+        <Field label="Responsable" htmlFor="id_responsable" required>
+          <input
+            id="id_responsable"
+            name="id_responsable"
+            type="text"
             required
-            defaultValue={deposito?.tipo_deposito ?? ""}
+            defaultValue={deposito?.id_responsable ?? ""}
             className="palacio-input"
-          >
-            <option value="">Seleccionar tipo</option>
-            <option value="Central">Central</option>
-            <option value="Sucursal">Sucursal</option>
-            <option value="Punto de Venta">Punto de Venta</option>
-          </select>
+            placeholder="ID del usuario responsable"
+          />
         </Field>
 
         <Field label="Horario de apertura" htmlFor="horario_apertura" required>
@@ -126,19 +119,7 @@ export function DepositoForm({ deposito = null }) {
           />
         </Field>
 
-        <Field label="Responsable" htmlFor="id_responsable" required>
-          <input
-            id="id_responsable"
-            name="id_responsable"
-            type="text"
-            required
-            defaultValue={deposito?.id_responsable ?? ""}
-            className="palacio-input"
-            placeholder="ID del usuario responsable"
-          />
-        </Field>
-
-        <div className="flex flex-col justify-end gap-3 rounded-lg border border-palacio-border bg-zinc-50 px-4 py-3">
+        <div className="flex flex-col justify-end gap-3 rounded-lg border border-palacio-border bg-zinc-50 px-4 py-3 md:col-span-2">
           <label className="flex items-center gap-2.5 text-sm text-zinc-800">
             <input
               type="checkbox"
@@ -182,7 +163,7 @@ export function DepositoForm({ deposito = null }) {
         </button>
         <button
           type="button"
-          onClick={() => router.push("/depositos")}
+          onClick={() => router.push("/deposito")}
           className="palacio-btn-secondary px-4 py-2.5 text-sm"
         >
           Cancelar

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { DEPOSITO_COLUMNS } from "@/lib/depositos/types";
 
-const PATH = "/depositos";
+const PATH = "/deposito";
 
 /**
  * @param {FormData | Record<string, unknown>} input
@@ -23,12 +23,10 @@ function parsePayload(input) {
   const nombre = String(get("nombre_deposito") ?? "").trim();
   const direccion = optionalText("direccion_deposito");
   const telefono = optionalText("telefono_deposito");
-  const tipo = optionalText("tipo_deposito");
   const horarioApertura = optionalText("horario_apertura");
   const horarioCierre = optionalText("horario_cierre");
   const idResponsable = optionalText("id_responsable");
 
-  // Checkbox HTML: si no viene en FormData, está desmarcado → false.
   const activoRaw = get("activo");
   const activo =
     activoRaw === true ||
@@ -46,7 +44,6 @@ function parsePayload(input) {
     nombre_deposito: nombre,
     direccion_deposito: direccion,
     telefono_deposito: telefono,
-    tipo_deposito: tipo,
     horario_apertura: horarioApertura,
     horario_cierre: horarioCierre,
     id_responsable: idResponsable,
@@ -59,7 +56,6 @@ const CAMPOS_OBLIGATORIOS = [
   ["nombre_deposito", "Nombre"],
   ["telefono_deposito", "Teléfono"],
   ["direccion_deposito", "Dirección"],
-  ["tipo_deposito", "Tipo de depósito"],
   ["horario_apertura", "Horario de apertura"],
   ["horario_cierre", "Horario de cierre"],
   ["id_responsable", "Responsable"],
@@ -68,9 +64,9 @@ const CAMPOS_OBLIGATORIOS = [
 const NOMBRES_COLUMNA = Object.fromEntries(CAMPOS_OBLIGATORIOS);
 
 function validatePayload(payload) {
-  const faltantes = CAMPOS_OBLIGATORIOS.filter(
-    ([key]) => !payload[key]
-  ).map(([, label]) => label);
+  const faltantes = CAMPOS_OBLIGATORIOS.filter(([key]) => !payload[key]).map(
+    ([, label]) => label
+  );
 
   if (faltantes.length === 0) {
     return null;
@@ -147,7 +143,6 @@ export async function crearDeposito(formData) {
     nombre_deposito: payload.nombre_deposito,
     direccion_deposito: payload.direccion_deposito,
     telefono_deposito: payload.telefono_deposito,
-    tipo_deposito: payload.tipo_deposito,
     horario_apertura: payload.horario_apertura,
     horario_cierre: payload.horario_cierre,
     id_responsable: payload.id_responsable,
@@ -186,7 +181,6 @@ export async function actualizarDeposito(id_deposito, formData) {
       nombre_deposito: payload.nombre_deposito,
       direccion_deposito: payload.direccion_deposito,
       telefono_deposito: payload.telefono_deposito,
-      tipo_deposito: payload.tipo_deposito,
       horario_apertura: payload.horario_apertura,
       horario_cierre: payload.horario_cierre,
       id_responsable: payload.id_responsable,
@@ -243,7 +237,10 @@ export async function setEstaLlenoDeposito(id_deposito, esta_lleno) {
     .eq("id_deposito", id_deposito);
 
   if (error) {
-    return { ok: false, error: "No se pudo actualizar la capacidad del depósito." };
+    return {
+      ok: false,
+      error: "No se pudo actualizar la capacidad del depósito.",
+    };
   }
 
   revalidatePath(PATH);

@@ -15,7 +15,6 @@ import {
  *   nombre_deposito: string,
  *   direccion_deposito: string | null,
  *   telefono_deposito: string | null,
- *   tipo_deposito: string | null,
  *   horario_apertura: string | null,
  *   horario_cierre: string | null,
  *   id_responsable: string | null,
@@ -74,7 +73,7 @@ export function DepositosTable({ depositos }) {
         <p className="text-sm text-palacio-muted">
           No hay depósitos cargados.{" "}
           <Link
-            href="/depositos/nuevo"
+            href="/deposito/nuevo"
             className="font-medium text-palacio-red underline underline-offset-2"
           >
             Crear el primero
@@ -98,9 +97,6 @@ export function DepositosTable({ depositos }) {
             <tr className="border-b border-palacio-border bg-zinc-50/80">
               <th className="px-5 py-3 text-left text-[11px] font-semibold tracking-wider text-palacio-muted uppercase">
                 Nombre
-              </th>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold tracking-wider text-palacio-muted uppercase">
-                Tipo
               </th>
               <th className="px-5 py-3 text-left text-[11px] font-semibold tracking-wider text-palacio-muted uppercase">
                 Contacto
@@ -133,13 +129,12 @@ export function DepositosTable({ depositos }) {
                     {d.direccion_deposito || "Sin dirección"}
                   </p>
                 </td>
-                <td className="px-5 py-3.5 text-palacio-muted">
-                  {d.tipo_deposito || "Sin tipo"}
-                </td>
                 <td className="px-5 py-4 align-middle text-palacio-muted">
                   <p>{d.telefono_deposito || "Sin teléfono"}</p>
                   {d.id_responsable ? (
-                    <p className="text-xs">Resp. {d.id_responsable.slice(0, 8)}…</p>
+                    <p className="text-xs">
+                      Resp. {d.id_responsable.slice(0, 8)}…
+                    </p>
                   ) : null}
                 </td>
                 <td className="px-5 py-4 text-center align-middle text-palacio-muted">
@@ -170,7 +165,7 @@ export function DepositosTable({ depositos }) {
                 <td className="px-5 py-4 align-middle">
                   <div className="flex flex-wrap justify-end gap-2">
                     <Link
-                      href={`/depositos/${d.id_deposito}/editar`}
+                      href={`/deposito/${d.id_deposito}/editar`}
                       className="palacio-action-btn palacio-action-primary"
                     >
                       Editar
@@ -196,9 +191,7 @@ export function DepositosTable({ depositos }) {
                     <button
                       type="button"
                       disabled={pending}
-                      onClick={() =>
-                        eliminar(d.id_deposito, d.nombre_deposito)
-                      }
+                      onClick={() => eliminar(d.id_deposito, d.nombre_deposito)}
                       className="palacio-action-btn palacio-action-danger"
                     >
                       Eliminar

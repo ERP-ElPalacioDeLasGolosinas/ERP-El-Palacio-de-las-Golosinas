@@ -1,5 +1,5 @@
 import "./globals.css";
-import { AppShell } from "@/components/layout/AppShell";
+import { InactivityProvider } from "@/components/auth/InactivityProvider";
 
 export const metadata = {
   title: "Palacio · ERP",
@@ -10,7 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es" className="h-full antialiased">
       <body className="flex min-h-full flex-col font-sans">
-        <AppShell>{children}</AppShell>
+        <InactivityProvider>{children}</InactivityProvider>
       </body>
     </html>
   );

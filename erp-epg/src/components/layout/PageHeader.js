@@ -8,12 +8,7 @@ import Link from "next/link";
  *   actions?: import('react').ReactNode,
  * }} props
  */
-export function PageHeader({
-  crumbs = [],
-  title,
-  description,
-  actions,
-}) {
+export function PageHeader({ crumbs = [], title, description, actions }) {
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
@@ -47,7 +42,9 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+      ) : null}
     </div>
   );
 }

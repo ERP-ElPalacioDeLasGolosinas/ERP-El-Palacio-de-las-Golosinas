@@ -13,14 +13,12 @@ export default async function DepositosPage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8">
       <PageHeader
-        crumbs={[
-          { label: "Depósitos" },
-        ]}
+        crumbs={[{ label: "Depósitos" }]}
         title="Gestionar depósitos"
         description="Alta, edición y administración operativa de depósitos."
         actions={
           <Link
-            href="/depositos/nuevo"
+            href="/deposito/nuevo"
             className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
           >
             Nuevo depósito
