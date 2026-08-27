@@ -45,6 +45,7 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 | Vista | Contenido |
 |---|---|
 | `vista_diferencias_recepcion` | Compara `cantidad_pedida` (de `compra_producto`) vs `cantidad_recibida` (de `inventario_producto`) por compra/producto/marca, con `diferencia` calculada |
+| `vw_usuario_resumen` | Vista blindada de usuarios: `id_usuario` + `nombre_completo` (`nombre_usuario \|\| ' ' \|\| apellido_usuario`). `security_invoker = false` (default) → corre con privilegios del owner, así que sigue resolviendo el nombre aunque a futuro se cierre/restrinja el RLS de `usuario`. Expone solo id + nombre (nada de dni, mail, teléfono, rol). Pensada para resolver `creado_por` → nombre dentro de los `fn_*_listar` vía `LEFT JOIN` + `COALESCE`. `SELECT` concedido a `authenticated`, `service_role` |
 
 > No existen `vista_stock_producto`, `vista_stock_producto_deposito` ni `vista_lote_detalle` mencionadas en el doc anterior.
 
@@ -93,7 +94,10 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 `categoria_motivo_bloqueo_delete` (no se ve `fn_categoria_crear/modificar/listar` — posible faltante o no relevado como función `fn_`, revisar si el CRUD de categoría está resuelto directo contra la tabla)
 
 ### Unidad de medida
-`fn_unidad_medida_crear`, `fn_unidad_medida_modificar`, `fn_unidad_medida_listar(p_incluir_inactivas)`, `fn_unidad_medida_habilitar`, `fn_unidad_medida_inhabilitar`, `fn_unidad_medida_eliminar`
+`fn_unidad_medida_crear(p_nombre, p_abreviatura, p_creado_por)`, `fn_unidad_medida_modificar(p_id_unidad_medida, p_nombre, p_abreviatura)`, `fn_unidad_medida_listar(p_incluir_inactivas)`, `fn_unidad_medida_habilitar(p_id_unidad_medida)`, `fn_unidad_medida_inhabilitar(p_id_unidad_medida)`, `fn_unidad_medida_eliminar(p_id_unidad_medida)`
+
+- **`fn_unidad_medida_listar(p_incluir_inactivas boolean default true)`** → `TABLE(id_unidad_medida, nombre, abreviatura, activo, creado, editado, creado_por, creado_por_nombre)`, `ORDER BY nombre`. `creado_por_nombre` sale de `LEFT JOIN vw_usuario_resumen` + `COALESCE(..., 'Usuario no disponible')`, así que una fila con `creado_por` huérfano/nulo igual aparece. Filtra por `activo` salvo que `p_incluir_inactivas` sea `true`. (Migración `unidad_medida_listar_con_creado_por`; antes devolvía `SETOF unidad_medida`.)
+- Validaciones server-side ya resueltas (mensajes en español, no errores crudos de Postgres): `crear`/`modificar` validan nombre no vacío (`UMD01`), abreviatura `^[a-z]{3}$` (`UMD06`) y unicidad de nombre/abreviatura (`UMD02`/`UMD03`). `eliminar` cuenta `producto.id_unidad_medida` y bloquea con `UMD05` si hay artículos asociados ("Solo puede inhabilitarse"). `modificar`/`habilitar`/`inhabilitar` setean `editado = now()` explícitamente (la columna `editado` es confiable acá). El alta nace `activo = true` por el default de la tabla.
 
 ### Depósito
 `fn_deposito_crear`, `fn_deposito_modificar`, `fn_deposito_listar(p_incluir_inactivos)`, `fn_deposito_habilitar`, `fn_deposito_inhabilitar`, `fn_deposito_eliminar`, `fn_deposito_marcar_lleno`, `fn_deposito_desmarcar_lleno`, `set_activo_deposito`, `set_esta_lleno_deposito`, `eliminar_deposito`
