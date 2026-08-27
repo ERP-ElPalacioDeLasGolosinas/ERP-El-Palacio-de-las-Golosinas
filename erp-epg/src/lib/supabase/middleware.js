@@ -3,12 +3,9 @@ import { NextResponse } from "next/server";
 
 const RUTAS_PUBLICAS = ["/login"];
 
-const REGLAS_POR_RUTA = [
-  { prefijo: "/compras", roles: ["Empleado Compras", "Gerente"] },
-  { prefijo: "/ventas", roles: ["Empleado Ventas", "Gerente"] },
-  { prefijo: "/deposito", roles: ["Empleado Deposito", "Gerente"] },
-  { prefijo: "/gerencia", roles: ["Gerente"] },
-];
+// DEV: restricción por rol desactivada a propósito — cualquier usuario
+// autenticado puede ver todas las rutas. Reactivar antes de producción.
+const REGLAS_POR_RUTA = [];
 
 export async function updateSession(request) {
   let supabaseResponse = NextResponse.next({ request });

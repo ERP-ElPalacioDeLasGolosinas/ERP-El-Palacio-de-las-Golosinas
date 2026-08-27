@@ -73,7 +73,7 @@ export function DepositosTable({ depositos }) {
         <p className="text-sm text-palacio-muted">
           No hay depósitos cargados.{" "}
           <Link
-            href="/deposito/nuevo"
+            href="/inventario/depositos/nuevo"
             className="font-medium text-palacio-red underline underline-offset-2"
           >
             Crear el primero
@@ -165,7 +165,7 @@ export function DepositosTable({ depositos }) {
                 <td className="px-5 py-4 align-middle">
                   <div className="flex flex-wrap justify-end gap-2">
                     <Link
-                      href={`/deposito/${d.id_deposito}/editar`}
+                      href={`/inventario/depositos/${d.id_deposito}/editar`}
                       className="palacio-action-btn palacio-action-primary"
                     >
                       Editar

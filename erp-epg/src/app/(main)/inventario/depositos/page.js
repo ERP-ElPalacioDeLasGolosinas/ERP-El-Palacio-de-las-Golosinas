@@ -18,7 +18,7 @@ export default async function DepositosPage() {
         description="Alta, edición y administración operativa de depósitos."
         actions={
           <Link
-            href="/deposito/nuevo"
+            href="/inventario/depositos/nuevo"
             className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
           >
             Nuevo depósito

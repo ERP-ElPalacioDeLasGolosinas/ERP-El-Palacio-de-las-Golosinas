@@ -40,7 +40,7 @@ export function DepositoForm({ deposito = null }) {
 
   useEffect(() => {
     if (state?.ok) {
-      router.push("/deposito");
+      router.push("/inventario/depositos");
       router.refresh();
     }
   }, [state, router]);
@@ -166,7 +166,7 @@ export function DepositoForm({ deposito = null }) {
         </button>
         <button
           type="button"
-          onClick={() => router.push("/deposito")}
+          onClick={() => router.push("/inventario/depositos")}
           className="palacio-btn-secondary px-4 py-2.5 text-sm"
         >
           Cancelar
