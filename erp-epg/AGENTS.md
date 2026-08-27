@@ -1,94 +1,165 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# El Palacio de las Golosinas — Contexto ERP (actualizado desde la base real)
 
-# This is NOT the Next.js you know
+Sistema de gestión para "El Palacio de las Golosinas". Backend: **Supabase** (Postgres 17 + Auth + RLS), proyecto `ERP-ElPalacioDeLasGolosinas`, región `sa-east-1`.
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+Este documento reemplaza al doc de contexto anterior para todo lo referido al **modelo de datos**: fue generado relevando directamente el esquema real de la base (`information_schema`, `pg_catalog`), no a partir de un diseño planeado. El doc anterior (basado en `lote` / `lote_deposito` / vistas de stock) **no coincide** con lo que existe hoy — ver sección de discrepancias al final.
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+---
 
-<!-- END:nextjs-agent-rules -->
+## Convenciones observadas en la base real
 
-# El Palacio de las Golosinas — Contexto ERP
+- **PK**: `uuid`, default `gen_random_uuid()` (excepto `usuario.id_usuario`, que es FK 1:1 a `auth.users.id` sin default propio).
+- **Nombres de columnas** en español, mayormente con sufijo de la entidad (`nombre_marca`, `nombre_producto`, `nombre_deposito`), aunque hay excepciones (`unidad_medida.nombre`, `tipo_movimiento.nombre`, sin sufijo).
+- Columnas de **texto obligatorias** casi siempre llevan `check (length(trim(columna)) > 0)`.
+- **Auditoría**: la mayoría de las tablas tiene `creado` / `editado` (`timestamptz default now()`) y `creado_por` (`uuid default auth.uid()`). Las tablas de tipo "detalle" (`compra`, `compra_producto`, `inventario`, `inventario_producto`) usan además `editado_por` y `fecha_registro`.
+- **Cantidades**: `numeric` (no `integer`) con `check (>= 0)` o `check (> 0)` según el caso. **Precios/costos**: `numeric` con `check (>= 0)`, default `0`.
+- **El stock SÍ es una tabla suelta**: `stock(id_producto, id_deposito, cantidad)`, con `UNIQUE(id_producto, id_deposito)`. No se calcula desde lotes vía vistas — es un valor sincronizado directamente, con `movimiento_stock` como registro de auditoría de los cambios.
+- **RLS**: habilitado en las 16 tablas de `public`, pero **no todas tienen políticas** (ver sección RLS).
+- Casi toda la lógica de negocio (altas, bajas, habilitar/inhabilitar, listados) está implementada como **funciones RPC** en Postgres (`fn_*`), no como acceso directo a tablas desde el frontend.
 
-Sistema de gestión para "El Palacio de las Golosinas". Backend: **Supabase** (Postgres + Auth + RLS). Este documento es la fuente de verdad del estado actual de la base y del backlog del Sprint 1. Seguirlo al generar migraciones, SQL, APIs o pantallas.
-
-## Convenciones de la base (obligatorias en TODO lo nuevo)
-
-- **PK**: `uuid`, default `gen_random_uuid()`.
-- **Nombres de columnas** en español, con sufijo de la entidad (`nombre_marca`, `nombre_producto`), no genéricos (`nombre`).
-- Toda columna de **texto obligatoria** lleva `check (length(trim(columna)) > 0)` — no basta con `NOT NULL`.
-- **Auditoría** en todas las tablas: `creado timestamptz default now()`, `editado timestamptz default now()`, `creado_por text`.
-- **Trigger** `BEFORE UPDATE` por tabla (`set_editado_<tabla>()`) que actualiza `editado` y evita que se pisen `creado` / `creado_por`. La función debe llevar `set search_path = public`.
-- **RLS** habilitado en toda tabla nueva, con 4 políticas para `authenticated`: `SELECT` / `INSERT` / `UPDATE` / `DELETE`, todas con `using (true)` / `with check (true)` por ahora.
-  - El control de acceso por `rol_usuario` **NO** está implementado a nivel RLS todavía (lo hace otro compañero). No bloquea el resto del desarrollo.
-- **Cantidades**: `integer` con `check (>= 0)`. **Precios/costos**: `numeric` con `check (>= 0)`, default `0`.
-- **Nada de tablas de stock sueltas**: el stock se calcula desde lotes/movimientos vía **vistas**, nunca como número suelto a sincronizar a mano.
+---
 
 ## Tablas existentes
 
-| Tabla | Notas |
-| --- | --- |
-| `usuario` | PK `id_usuario` FK → `auth.users`. Campos: nombre, apellido, fecha_nacimiento, `dni_usuario` (unique, check > 0), telefono, mail (check email), `rol_usuario` enum (`Empleado Deposito`, `Empleado Ventas`, `Empleado Compras`, `Gerente`), `creado`, `editado`. |
-| `marca` | A-02 listo a nivel tabla. `nombre_marca` unique, no vacío + auditoría. |
-| `deposito` | S-01 listo a nivel tabla. `nombre_deposito` unique, `direccion_deposito`, `activo` bool default true + auditoría. |
-| `producto` | Catálogo (A-05). FK `id_marca`. Tiene nombre, descripción, `precio_producto`, `codigo_producto` unique. **Faltan** FKs/columnas a `unidad_medida`, rubro y/o categoría. |
-| `lote` | Identidad del lote (producto, usuario que cargó, número, fechas, `cantidad_inicial`, `precio_costo`). **Sin** cantidad actual. |
-| `lote_deposito` | Stock real: `cantidad_actual` por lote×depósito. `UNIQUE(id_lote, id_deposito)`. |
-
-### Relaciones clave
-
-- `producto` → `marca`
-- `lote` → `producto`, `usuario`
-- `lote_deposito` → `lote`, `deposito`
-- `usuario.id_usuario` → `auth.users.id`
+| Tabla | Rol | PK | Notas clave |
+|---|---|---|---|
+| `usuario` | Usuarios del sistema | `id_usuario` (uuid, FK → `auth.users.id`) | `nombre_usuario`, `apellido_usuario`, `fecha_nacimiento_usuario`, `dni_usuario` (unique, >0), `telefono_usuario`, `mail_usuario` (check regex), `rol_usuario` (enum `rol_usuario_enum`) |
+| `marca` | Marcas de producto | `id_marca` | `nombre_marca`, `activo` |
+| `rubro` | Rubro de producto | `id_rubro` | `nombre_rubro`, `activo` |
+| `categoria` | Categoría de producto | `id_categoria` | `nombre_categoria`, `activo`, FK → `rubro` |
+| `unidad_medida` | Unidades (peso/medida específica del producto) | `id_unidad_medida` | `nombre`, `abreviatura` (check: 3 letras minúsculas), `activo` |
+| `deposito` | Depósitos físicos | `id_deposito` | `nombre_deposito` (no unique a nivel constraint, ojo), `direccion_deposito`, `telefono_deposito`, `horario_apertura`/`horario_cierre` (check cierre > apertura), `activo`, `esta_lleno`, `id_responsable` (FK → `usuario`) |
+| `producto` | Catálogo de artículos | `id_producto` | `nombre_producto`, `descripcion_producto`, `codigo_producto` (**unique**), `precio_producto`, `costo_producto`, `precio_mayorista_producto`, `precio_minorista_producto`, `numero_medida` (>0), FK → `marca`, `unidad_medida`, `categoria` (nullable), `rubro` (nullable, sincronizado desde `categoria` por trigger) |
+| `proveedor` | Proveedores | `id_proveedor` | `nombre_proveedor`, `rs_proveedor` (enum `tipo_razon_social`), `cuit_proveedor` (unique, check formato XX-XXXXXXXX-X), `telefono_proveedor` (bigint), `mail_proveedor` (unique, check regex) |
+| `compra` | Cabecera de compra a proveedor | `id_compra` | FK → `proveedor`; `sub_total`, `descuento_total`, `impuesto_total`, `total` (checks de consistencia); `estado` (enum `estado_compra`); `stock_aplicado` (bool) |
+| `compra_producto` | Detalle de productos de una compra | `id_compra_producto` | FK → `compra`, `producto`, `marca`; `cantidad_producto` (>0), `total_unit_prod`, `descuento_producto`, `impuesto_producto`, `subtotal_producto`, `total_producto` |
+| `inventario` | Cabecera de recepción/lote de mercadería | `id_lote` | FK → `proveedor`, `deposito`, `compra` (**unique**, 1:1 con `compra`); `detalle_lote` |
+| `inventario_producto` | Detalle por producto de un `inventario` (lote) | `id_inventario_producto` | FK → `inventario`, `producto`, `marca`; `cantidad_inventario` (≥0), `fecha_vencimiento`/`fecha_fabricacion` (check vencimiento > fabricación), `stock_disponible` (≥0), `observaciones` |
+| `stock` | **Stock actual por producto × depósito** | `id_stock` | FK → `producto`, `deposito`; `cantidad` (numeric, default 0); `UNIQUE(id_producto, id_deposito)` |
+| `tipo_movimiento` | Tipos de movimiento de stock | `id_tipo_movimiento` | `nombre`, `signo` (check: solo `1` o `-1`), `requiere_control_stock`, `activo` |
+| `movimiento_stock` | Auditoría de movimientos sobre `stock` | `id_movimiento` | FK → `tipo_movimiento`, `producto`, `deposito`; `cantidad` (>0), `stock_anterior`, `stock_nuevo`, `fecha_movimiento`, `remito` |
+| `movimiento_stock_detalle` | Detalle de qué lote (`inventario_producto`) aportó a un movimiento | `id_detalle` | FK → `movimiento_stock`, `inventario_producto`; `cantidad_aplicada` (>0) |
 
 ## Vistas existentes
 
-Todas con `security_invoker = true` (respetan RLS del consultante):
+| Vista | Contenido |
+|---|---|
+| `vista_diferencias_recepcion` | Compara `cantidad_pedida` (de `compra_producto`) vs `cantidad_recibida` (de `inventario_producto`) por compra/producto/marca, con `diferencia` calculada |
+| `vw_usuario_resumen` | Vista blindada de usuarios: `id_usuario` + `nombre_completo` (`nombre_usuario \|\| ' ' \|\| apellido_usuario`). `security_invoker = false` (default) → corre con privilegios del owner, así que sigue resolviendo el nombre aunque a futuro se cierre/restrinja el RLS de `usuario`. Expone solo id + nombre (nada de dni, mail, teléfono, rol). Pensada para resolver `creado_por` → nombre dentro de los `fn_*_listar` vía `LEFT JOIN` + `COALESCE`. `SELECT` concedido a `authenticated`, `service_role`. **Ya la usan:** `fn_unidad_medida_listar`, `fn_rubro_listar`, `fn_categoria_listar`. **Falta aplicarla en:** `fn_marca_listar`, `fn_deposito_listar` (y las tablas "detalle" con `editado_por`, con un 2º `LEFT JOIN` de alias distinto) |
 
-- `vista_stock_producto` — stock total por producto (todos los depósitos) + próximo vencimiento.
-- `vista_stock_producto_deposito` — stock por producto desglosado por depósito.
-- `vista_lote_detalle` — lote×depósito con `estado_lote` (`Vigente` / `Por vencer` ≤15 días / `Vencido` / `Agotado`).
+> No existen `vista_stock_producto`, `vista_stock_producto_deposito` ni `vista_lote_detalle` mencionadas en el doc anterior.
 
-## Pendiente conocido (no bloqueante)
+## Enums
 
-- Falta trigger que valide que la suma de `lote_deposito.cantidad_actual` de un lote no supere `lote.cantidad_inicial` (cruza tablas; no se resuelve con un `CHECK` simple).
-- RLS por `rol_usuario` pendiente (otro compañero).
+| Enum | Valores |
+|---|---|
+| `rol_usuario_enum` | `Empleado Deposito`, `Empleado Ventas`, `Empleado Compras`, `Gerente` |
+| `estado_compra` | `Pendiente`, `Enviada`, `Recibida`, `Cancelada` |
+| `tipo_razon_social` | `S.A.`, `S.R.L.`, `S.A.U.`, `S.A.S.`, `S.H.`, `Responsable Inscripto`, `Monotributista` |
 
-## Backlog Sprint 1 — estado respecto a la base
+---
 
-### Oleada 1 (en paralelo)
+## Row Level Security (RLS)
 
-| Ítem | Estado |
-| --- | --- |
-| A-01 Unidades de medida | Falta tabla `unidad_medida` |
-| A-02 Marcas | Tabla `marca` lista → armar back/CRUD |
-| A-03 Rubros | Falta tabla `rubro` |
-| S-01 Depósitos | Tabla `deposito` lista → armar back/CRUD |
-| S-04 Tipos de movimiento | Falta tabla `tipo_movimiento` |
+RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas es dispar:
 
-### Oleada 2 (cuando A-03 esté lista)
+### Con políticas abiertas para `authenticated` (`using (true)` / `with check (true)`)
 
-| Ítem | Estado |
-| --- | --- |
-| A-04 Categorías | Falta tabla `categoria` (probablemente FK → `rubro`) |
+`categoria`, `marca`, `rubro`, `deposito`, `producto`, `stock`, `tipo_movimiento`, `unidad_medida` → tienen las 4 políticas (`SELECT`/`INSERT`/`UPDATE`/`DELETE`).
 
-### Oleada 3 (cuando estén A-01..A-04)
+`movimiento_stock`, `movimiento_stock_detalle` → solo `SELECT` e `INSERT` (no `UPDATE`/`DELETE`, tiene sentido tratándose de una tabla de auditoría).
 
-| Ítem | Estado |
-| --- | --- |
-| A-05 Registrar artículo | `producto` existe; faltan columnas/FKs a unidad, rubro y/o categoría |
+### Con políticas por rol (ya implementado, a diferencia de lo que decía el doc anterior)
 
-### Oleada 4 (al final, con A-05 + S-01)
+`usuario`:
+- `SELECT`: cualquier `authenticated` puede ver todos los usuarios.
+- `UPDATE`: un usuario puede editar su propia fila, o un `Gerente` puede editar cualquiera.
+- No hay políticas de `INSERT`/`DELETE` (probablemente se gestiona vía Auth / triggers, o está pendiente).
 
-| Ítem | Estado |
-| --- | --- |
-| S-03 Consultar stock | Datos OK vía vistas; falta pantalla/endpoint |
-| S-05 Movimiento de stock | Falta tabla `movimiento_stock` (auditoría de cambios sobre `lote_deposito`) |
+### ⚠️ Sin ninguna política (RLS habilitado = acceso denegado por completo)
 
-## Al generar código / SQL
+`compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor` → **RLS bloquea todo acceso** (ni siquiera lectura) para cualquier rol, salvo que se acceda a través de una función `SECURITY DEFINER` (ninguna de las funciones relevadas tiene `security_definer = true`, así que hoy **nadie puede leer ni escribir estas tablas directamente**, ni siquiera vía RPC estándar). Esto es probablemente un pendiente a resolver antes de que las pantallas de compras/proveedores/recepción de mercadería funcionen.
 
-1. Respetar convenciones de arriba al pie.
-2. No inventar tablas de stock ni columnas de stock sincronizadas a mano.
-3. No implementar RLS por rol hasta que el compañero a cargo lo haga; usar las 4 políticas abiertas de `authenticated`.
-4. Extender el modelo existente (`lote` / `lote_deposito` / vistas) en lugar de reemplazarlo.
+---
+
+## Funciones RPC disponibles (`public.fn_*` y afines)
+
+### Marca
+`fn_marca_crear`, `fn_marca_modificar`, `fn_marca_listar(p_incluir_inactivas)`, `fn_marca_habilitar`, `fn_marca_inhabilitar`
+
+### Rubro
+`fn_rubro_crear(p_nombre_rubro, p_creado_por)`, `fn_rubro_modificar(p_id_rubro, p_nombre_rubro)`, `fn_rubro_listar(p_incluir_inactivos)`, `fn_rubro_habilitar(p_id_rubro)`, `fn_rubro_inhabilitar(p_id_rubro)`, `fn_rubro_eliminar(p_id_rubro)`, `rubro_tiene_articulos_activos(p_id_rubro)`, `rubro_motivo_bloqueo_delete(p_id_rubro)`
+
+- **`fn_rubro_listar(p_incluir_inactivos boolean default true)`** → `TABLE(id_rubro, nombre_rubro, activo, creado, editado, creado_por, creado_por_nombre)`, `ORDER BY nombre_rubro`. `creado_por_nombre` sale de `LEFT JOIN vw_usuario_resumen` + `COALESCE(..., 'Usuario no disponible')`. Filtra por `activo` salvo que `p_incluir_inactivos` sea `true`. (Migración `rubro_listar_con_creado_por`, versión `20260827221035`; antes devolvía `SETOF rubro`.)
+- Validaciones server-side con mensajes en español (ERRCODE custom): `crear`/`modificar` → `RUB01` nombre vacío, `RUB02` nombre duplicado (case-insensitive); `modificar`/`habilitar`/`inhabilitar`/`eliminar` → `RUB03` si el rubro no existe. `habilitar`/`inhabilitar` setean `editado = now()` explícitamente.
+- **`fn_rubro_eliminar`**: `RUB04` si el rubro tiene productos **activos** asociados (vía `categoria` → `producto`), `RUB05` si tiene categorías asociadas (sin productos activos); ambos mensajes incluyen la cantidad. Si no hay categorías, hace `DELETE` directo.
+- **`rubro_motivo_bloqueo_delete(p_id_rubro)`** → `text` con el motivo de bloqueo ("...tiene artículos activos asociados." / "...tiene categorías asociadas.") o `null` si se puede eliminar. Pensada para el chequeo previo de UX; la validación real la hace igual `fn_rubro_eliminar`. `rubro_tiene_articulos_activos` es un wrapper booleano sobre el primer caso.
+
+### Categoría
+`fn_categoria_crear(p_nombre_categoria, p_id_rubro, p_creado_por)`, `fn_categoria_modificar(p_id_categoria, p_nombre_categoria, p_id_rubro)`, `fn_categoria_listar(p_incluir_inactivos)`, `fn_categoria_habilitar(p_id_categoria)`, `fn_categoria_inhabilitar(p_id_categoria)`, `fn_categoria_eliminar(p_id_categoria)`, `categoria_tiene_articulos_activos(p_id_categoria)`, `categoria_motivo_bloqueo_delete(p_id_categoria)` — CRUD completo (migración `categoria_crud_rpc`, 27/08/2026).
+
+- **`fn_categoria_listar(p_incluir_inactivos boolean default true)`** → `TABLE(id_categoria, nombre_categoria, activo, id_rubro, nombre_rubro, creado, editado, creado_por, creado_por_nombre)`, `ORDER BY nombre_categoria`. `nombre_rubro` sale de `JOIN rubro` (inner — `categoria.id_rubro` es `NOT NULL`); `creado_por_nombre` de `LEFT JOIN vw_usuario_resumen` + `COALESCE`.
+- `categoria.id_rubro` es **obligatorio** (`NOT NULL`, FK `ON UPDATE CASCADE ON DELETE RESTRICT`). No se puede "desasociar", solo reasociar a otro rubro vía `fn_categoria_modificar`.
+- **`fn_categoria_modificar`**: si cambia `p_id_rubro`, además del `UPDATE` de la categoría hace `UPDATE producto SET id_rubro = p_id_rubro WHERE id_categoria = ... AND id_rubro IS DISTINCT FROM ...` en la misma transacción — resincroniza los productos ya cargados (el trigger `trg_producto_sync_id_rubro` solo actúa sobre `INSERT/UPDATE` de `producto`, no cuando cambia la categoría).
+- Códigos de error (ERRCODE custom, mensajes en español): `CAT01` nombre vacío, `CAT02` nombre duplicado **dentro del mismo rubro** (unicidad por rubro, no global; no hay constraint `UNIQUE` en la tabla), `CAT03` categoría no existe, `CAT04` bloqueada por borrado (tiene productos asociados), `CAT06` rubro faltante / inexistente / inactivo. `crear`/`modificar` exigen que el rubro destino esté `activo = true`. `modificar`/`habilitar`/`inhabilitar` setean `editado = now()` explícitamente.
+- **`categoria_motivo_bloqueo_delete`** → `text` con el motivo o `null`. **Criterio distinto al de Rubro**: bloquea con *cualquier* producto asociado a la categoría, activo o inactivo (no filtra `p.activo`). `categoria_tiene_articulos_activos` es el wrapper booleano (`... IS NOT NULL`).
+- Existen dos funciones trigger escritas pero **sin enganchar** en `categoria`: `fn_categoria_bloquear_delete_con_articulos` y `set_editado_categoria` (la lógica vive inline en los `fn_categoria_*`, mismo patrón que Rubro).
+
+### Unidad de medida
+`fn_unidad_medida_crear(p_nombre, p_abreviatura, p_creado_por)`, `fn_unidad_medida_modificar(p_id_unidad_medida, p_nombre, p_abreviatura)`, `fn_unidad_medida_listar(p_incluir_inactivas)`, `fn_unidad_medida_habilitar(p_id_unidad_medida)`, `fn_unidad_medida_inhabilitar(p_id_unidad_medida)`, `fn_unidad_medida_eliminar(p_id_unidad_medida)`
+
+- **`fn_unidad_medida_listar(p_incluir_inactivas boolean default true)`** → `TABLE(id_unidad_medida, nombre, abreviatura, activo, creado, editado, creado_por, creado_por_nombre)`, `ORDER BY nombre`. `creado_por_nombre` sale de `LEFT JOIN vw_usuario_resumen` + `COALESCE(..., 'Usuario no disponible')`, así que una fila con `creado_por` huérfano/nulo igual aparece. Filtra por `activo` salvo que `p_incluir_inactivas` sea `true`. (Migración `unidad_medida_listar_con_creado_por`; antes devolvía `SETOF unidad_medida`.)
+- Validaciones server-side ya resueltas (mensajes en español, no errores crudos de Postgres): `crear`/`modificar` validan nombre no vacío (`UMD01`), abreviatura `^[a-z]{3}$` (`UMD06`) y unicidad de nombre/abreviatura (`UMD02`/`UMD03`). `eliminar` cuenta `producto.id_unidad_medida` y bloquea con `UMD05` si hay artículos asociados ("Solo puede inhabilitarse"). `modificar`/`habilitar`/`inhabilitar` setean `editado = now()` explícitamente (la columna `editado` es confiable acá). El alta nace `activo = true` por el default de la tabla.
+
+### Depósito
+`fn_deposito_crear`, `fn_deposito_modificar`, `fn_deposito_listar(p_incluir_inactivos)`, `fn_deposito_habilitar`, `fn_deposito_inhabilitar`, `fn_deposito_eliminar`, `fn_deposito_marcar_lleno`, `fn_deposito_desmarcar_lleno`, `set_activo_deposito`, `set_esta_lleno_deposito`, `eliminar_deposito`
+
+### Producto
+`fn_producto_crear`, `fn_producto_modificar`, `fn_producto_listar(p_incluir_inactivos, p_id_marca, p_id_categoria, p_id_rubro, p_busqueda)`, `fn_producto_eliminar`, `fn_producto_validar_codigo_unico`, `_fn_producto_validar_referencias` (interna)
+
+### Tipo de movimiento
+`fn_tipo_movimiento_crear`, `fn_tipo_movimiento_modificar`, `fn_tipo_movimiento_listar(p_incluir_inactivos)`, `fn_tipo_movimiento_habilitar`, `fn_tipo_movimiento_inhabilitar`
+
+### Stock y movimientos
+- **`fn_stock_consultar(p_id_producto, p_id_deposito)`** → `TABLE(id_stock, id_producto, codigo_producto, producto, id_unidad_medida, unidad_medida, id_deposito, nombre_deposito, cantidad, editado)`. Filtra `cantidad > 0`. **Esta es la función que usamos para la vista de listado de stock.**
+- `fn_movimiento_stock_registrar(p_id_tipo_movimiento, p_id_producto, p_id_deposito, p_cantidad, p_creado_por, p_fecha_movimiento, p_remito)` → alta de movimiento (impacta `stock`)
+- `fn_movimiento_stock_listar(p_id_producto, p_id_deposito, p_id_tipo_movimiento, p_fecha_desde, p_fecha_hasta)` → histórico de movimientos
+- `fn_movimiento_stock_validar_stock_disponible(p_id_producto, p_id_deposito, p_cantidad)` → `TABLE(stock_actual, alcanza)`
+- `fn_aplicar_stock_compra(p_id_compra, p_id_deposito, p_detalle_lote, p_items)` → aplica stock desde una recepción de compra
+
+### Compras / inventario (recepción de mercadería)
+`fn_items_esperados_compra(p_id_compra)` — el resto de la lógica de compras parece resolverse por triggers (`validar_cambio_estado_compra`, `validar_y_marcar_stock_aplicado`, `revertir_stock_aplicado`) más que por funciones `fn_*` explícitas de CRUD.
+
+---
+
+## Triggers relevantes
+
+| Tabla | Trigger | Qué hace |
+|---|---|---|
+| `usuario` | `trigger_actualizar_editado_usuario` | Actualiza `editado` en cada `UPDATE` |
+| `marca` | `trg_set_editado_marca` | Ídem |
+| `deposito` | `trg_set_editado_deposito` | Ídem |
+| `producto` | `trg_producto_sync_id_rubro` | Sincroniza `id_rubro` del producto a partir de `id_categoria` (INSERT/UPDATE) |
+| `compra` | `trg_compra_set_editado_por`, `trg_compra_validar_estado` | Auditoría + valida transición de `estado` |
+| `compra_producto` | `trg_cprod_set_editado_por`, `trg_cprod_validar_marca` | Auditoría + valida que la marca coincida con la del producto |
+| `inventario` | `trg_inventario_set_editado_por`, `trg_inventario_validar_compra`, `trg_inventario_revertir_stock` | Auditoría + valida/marca `stock_aplicado` en `compra` + revierte stock si se borra el lote |
+| `inventario_producto` | `trg_inventario_producto_init_stock_disponible`, `trg_iprod_set_editado_por`, `trg_iprod_validar_marca` | Inicializa `stock_disponible` + auditoría + valida marca |
+
+> Nota: existen funciones `set_editado_categoria`, `set_editado_tipo_movimiento` pero **no aparecen triggers que las invoquen** sobre `categoria` ni `tipo_movimiento` — posible pendiente (esas tablas podrían no estar actualizando `editado` automáticamente).
+
+---
+
+## ⚠️ Discrepancias con el documento de contexto anterior
+
+El doc anterior (el que traía la sección de login/roles con Next.js) describe un modelo que **no es el que está implementado**:
+
+| Doc anterior decía | Realidad en la base |
+|---|---|
+| Tablas `lote` / `lote_deposito` | No existen. El equivalente real es `inventario` / `inventario_producto` (para lotes con vencimiento) + `stock` (para el total disponible por depósito) |
+| Vistas `vista_stock_producto`, `vista_stock_producto_deposito`, `vista_lote_detalle` | No existen. Solo existe `vista_diferencias_recepcion` |
+| "Nada de tablas de stock sueltas, se calcula vía vistas" | Falso en la práctica: `stock` es una tabla con `cantidad` sincronizada directamente, mantenida por `movimiento_stock` + triggers |
+| RLS deshabilitado en `usuario`, `marca`, `producto`, `deposito`, etc. | RLS está **habilitado** en las 16 tablas, con políticas ya definidas en la mayoría |
+| "RLS por rol no implementado todavía" | Parcialmente falso: `usuario` ya tiene una política que distingue `Gerente` del resto |
+| No se menciona nada de `compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`, `rubro`, `categoria`, `tipo_movimiento` | Estas tablas existen y tienen bastante desarrollo (funciones, triggers), pero 5 de ellas (`compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`) están **sin políticas RLS**, por lo que hoy nadie puede leerlas ni escribirlas |
+
+**Recomendación:** confirmar con el equipo si el doc anterior es de un sprint/diseño descartado, o si describe un rediseño pendiente de migrar. Mientras tanto, todo el trabajo de backend/frontend debería apoyarse en el esquema real documentado arriba, no en el doc de `lote`/`lote_deposito`.

@@ -1,67 +1,183 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
 @import "tailwindcss";
 
-/*
- * Design system "El Palacio de las Golosinas" — tokens del mockup aprobado.
- * Look claro fijo (el mockup no tiene modo oscuro).
- */
+:root {
+  --palacio-red: #a61d24;
+  --palacio-red-dark: #8b181e;
+  --palacio-red-soft: #fce8ea;
+  --palacio-gold: #d4af37;
+  --palacio-gold-hover: #c4a030;
+  --palacio-bg: #f5f5f5;
+  --palacio-sidebar: #ffffff;
+  --palacio-border: #e8e8e8;
+  --palacio-muted: #6b7280;
+  --palacio-text: #1a1a1a;
+  --background: var(--palacio-bg);
+  --foreground: var(--palacio-text);
+}
 
 @theme inline {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-baloo: var(--font-baloo-2), ui-rounded, ui-sans-serif, sans-serif;
-}
-
-@theme {
-  --color-rojo: #d8102a;
-  --color-rojo-hondo: #a00c20;
-  --color-rojo-noche: #7c0a19;
-  --color-oro: #d6a93e;
-  --color-oro-claro: #e9c96a;
-  --color-oro-hondo: #b4842a;
-  --color-crema: #fbf7f0;
-  --color-panel: #ffffff;
-  --color-tinta: #2a211c;
-  --color-tinta-suave: #6a5e54;
-  --color-linea: #eae1d2;
-  --color-verde: #2e7d57;
-  --color-verde-bg: #e4f1ea;
-  --color-ambar: #b4842a;
-  --color-ambar-bg: #fbf0d6;
-  --color-rosado: #fce9ec;
-
-  --shadow-suave: 0 1px 2px rgba(42, 33, 28, 0.06), 0 8px 24px rgba(42, 33, 28, 0.06);
-  --radius-card: 14px;
-}
-
-:root {
-  color-scheme: light;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-palacio-red: var(--palacio-red);
+  --color-palacio-red-dark: var(--palacio-red-dark);
+  --color-palacio-red-soft: var(--palacio-red-soft);
+  --color-palacio-gold: var(--palacio-gold);
+  --color-palacio-gold-hover: var(--palacio-gold-hover);
+  --color-palacio-bg: var(--palacio-bg);
+  --color-palacio-border: var(--palacio-border);
+  --color-palacio-muted: var(--palacio-muted);
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
-  background: var(--color-crema);
-  color: var(--color-tinta);
+  background: var(--palacio-bg);
+  color: var(--palacio-text);
+  font-family: var(--font-sans);
 }
 
-@layer components {
-  .card {
-    @apply bg-panel border border-linea rounded-card shadow-suave;
-  }
+.palacio-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+  border: 1px solid var(--palacio-border);
+}
 
-  .btn-primary {
-    @apply font-baloo font-bold text-rojo-noche border border-oro-hondo rounded-[11px] px-4 py-2 text-sm inline-flex items-center justify-center gap-2 cursor-pointer select-none;
-    background: linear-gradient(180deg, var(--color-oro-claro), var(--color-oro));
-    box-shadow: 0 4px 12px rgba(182, 132, 42, 0.35);
-  }
-  .btn-primary:hover:not(:disabled) {
-    filter: brightness(1.04);
-  }
-  .btn-primary:disabled {
-    @apply opacity-50 cursor-not-allowed;
-  }
+.palacio-btn-primary {
+  background: var(--palacio-gold);
+  color: #1a1a1a;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
 
-  .btn-ghost {
-    @apply bg-panel border border-linea rounded-[9px] px-3 py-1.5 text-[13px] font-semibold text-tinta inline-flex items-center justify-center gap-1.5 cursor-pointer select-none hover:bg-rosado;
-  }
-  .btn-ghost:disabled {
-    @apply opacity-50 cursor-not-allowed;
-  }
+.palacio-btn-primary:hover:not(:disabled) {
+  background: var(--palacio-gold-hover);
+}
+
+.palacio-btn-primary:disabled {
+  opacity: 0.6;
+}
+
+.palacio-btn-secondary {
+  background: #fff;
+  color: var(--palacio-text);
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.palacio-btn-secondary:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.palacio-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.875rem;
+  border-radius: 9999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.45rem 0.7rem;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.palacio-action-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.palacio-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.palacio-action-primary {
+  border-color: rgb(166 29 36 / 0.25);
+  background: var(--palacio-red-soft);
+  color: var(--palacio-red);
+}
+
+.palacio-action-primary:hover:not(:disabled) {
+  border-color: rgb(166 29 36 / 0.4);
+  background: #f8d6da;
+}
+
+.palacio-action-danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.palacio-action-danger:hover:not(:disabled) {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.palacio-input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.palacio-input:focus {
+  border-color: var(--palacio-red);
+  box-shadow: 0 0 0 3px rgb(166 29 36 / 0.12);
+}
+
+.palacio-badge-activo {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+}
+
+.palacio-badge-disponible {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+}
+
+.palacio-badge-lleno {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+}
+
+.palacio-badge-inactivo {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
 }
