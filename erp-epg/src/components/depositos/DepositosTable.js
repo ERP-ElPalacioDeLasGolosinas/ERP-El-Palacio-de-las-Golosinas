@@ -4,9 +4,11 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  desmarcarLlenoDeposito,
   eliminarDeposito,
-  setActivoDeposito,
-  setEstaLlenoDeposito,
+  habilitarDeposito,
+  inhabilitarDeposito,
+  marcarLlenoDeposito,
 } from "@/lib/depositos/actions";
 
 /**
@@ -28,7 +30,9 @@ export function DepositosTable({ depositos }) {
 
   function toggleActivo(id, activoActual) {
     startTransition(async () => {
-      const result = await setActivoDeposito(id, !activoActual);
+      const result = activoActual
+        ? await inhabilitarDeposito(id)
+        : await habilitarDeposito(id);
       if (result.error) {
         window.alert(result.error);
         return;
@@ -39,7 +43,9 @@ export function DepositosTable({ depositos }) {
 
   function toggleEstaLleno(id, estaLlenoActual) {
     startTransition(async () => {
-      const result = await setEstaLlenoDeposito(id, !estaLlenoActual);
+      const result = estaLlenoActual
+        ? await desmarcarLlenoDeposito(id)
+        : await marcarLlenoDeposito(id);
       if (result.error) {
         window.alert(result.error);
         return;

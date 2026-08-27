@@ -88,15 +88,14 @@ export function DepositoForm({ deposito = null }) {
           />
         </Field>
 
-        <Field label="Responsable" htmlFor="id_responsable" required>
+        <Field label="Responsable" htmlFor="id_responsable">
           <input
             id="id_responsable"
             name="id_responsable"
             type="text"
-            required
             defaultValue={deposito?.id_responsable ?? ""}
             className="palacio-input"
-            placeholder="ID del usuario responsable"
+            placeholder="ID del usuario responsable (opcional)"
           />
         </Field>
 
@@ -121,29 +120,6 @@ export function DepositoForm({ deposito = null }) {
             className="palacio-input"
           />
         </Field>
-
-        <div className="flex flex-col justify-end gap-3 rounded-lg border border-palacio-border bg-zinc-50 px-4 py-3 md:col-span-2">
-          <label className="flex items-center gap-2.5 text-sm text-zinc-800">
-            <input
-              type="checkbox"
-              name="activo"
-              value="true"
-              defaultChecked={deposito?.activo ?? true}
-              className="size-4 rounded border-zinc-300 accent-palacio-red"
-            />
-            Depósito activo
-          </label>
-          <label className="flex items-center gap-2.5 text-sm text-zinc-800">
-            <input
-              type="checkbox"
-              name="esta_lleno"
-              value="true"
-              defaultChecked={deposito?.esta_lleno ?? false}
-              className="size-4 rounded border-zinc-300 accent-palacio-red"
-            />
-            Está lleno
-          </label>
-        </div>
       </div>
 
       {state?.error ? (
