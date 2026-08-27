@@ -83,8 +83,6 @@ src/
     (main)/
       layout.js         — envuelve con AppShell + getUserWithRole()
       page.js           — dashboard, tarjetas a todos los módulos (implementados y placeholder)
-      deposito/
-        page.js          — redirect de compatibilidad → /inventario/depositos
       inventario/
         depositos/
           page.js          — listado
@@ -122,7 +120,7 @@ src/
   proxy.js               — invoca updateSession() del middleware de Supabase
 ```
 
-**Único módulo de negocio con CRUD real: Depósitos (S-01)**, ahora en `/inventario/depositos` (la ruta vieja `/deposito` quedó como redirect de compatibilidad). El resto de las entidades (marca, rubro, categoría, unidad de medida, producto, proveedor, compras, movimientos de stock) tiene ruta y entrada en el sidebar bajo `/inventario/*` y `/catalogo/*`, pero cada página es un placeholder (`PlaceholderModule`) — la base y las funciones RPC ya existen, falta la pantalla real.
+**Único módulo de negocio con CRUD real: Depósitos (S-01)**, en `/inventario/depositos`. El resto de las entidades (marca, rubro, categoría, unidad de medida, producto, proveedor, compras, movimientos de stock) tiene ruta y entrada en el sidebar bajo `/inventario/*` y `/catalogo/*`, pero cada página es un placeholder (`PlaceholderModule`) — la base y las funciones RPC ya existen, falta la pantalla real.
 
 **`REGLAS_POR_RUTA` en `middleware.js` está vacío a propósito (decisión de dev, 2026-08-27)**: cualquier usuario autenticado, sin importar `rol_usuario`, puede ver todas las rutas bajo `(main)` (`/inventario/*`, `/catalogo/*`) — solo se exige sesión iniciada, no rol. Antes de producción hay que reintroducir reglas por prefijo (el código para hacerlo ya está, solo falta llenar el array) y decidir qué rol corresponde a cada módulo.
 
