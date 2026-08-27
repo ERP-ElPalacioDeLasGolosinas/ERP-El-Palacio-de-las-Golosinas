@@ -6,6 +6,7 @@ import {
   actualizarUnidadMedida,
   crearUnidadMedida,
 } from "@/lib/unidades-medida/actions";
+import { mapErrorUnidadMedida } from "@/lib/unidades-medida/errores";
 
 const ABREVIATURA_RE = /^[a-z]{3}$/;
 
@@ -76,7 +77,16 @@ export function UnidadMedidaFormModal({ onClose, unidad = null }) {
         : await crearUnidadMedida(formData);
 
       if (!result.ok) {
-        setErrorServer(result.error);
+        const ui = mapErrorUnidadMedida(result);
+        if (ui.field === "nombre") {
+          setErrores((prev) => ({ ...prev, nombre: ui.message }));
+        } else if (ui.field === "abreviatura") {
+          setErrores((prev) => ({ ...prev, abreviatura: ui.message }));
+        } else {
+          setErrorServer(ui.message);
+        }
+        // UMD04: la unidad ya no existe; refrescar la tabla de fondo.
+        if (ui.reload) router.refresh();
         return;
       }
 

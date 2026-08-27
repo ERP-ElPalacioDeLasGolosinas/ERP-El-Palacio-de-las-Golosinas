@@ -6,14 +6,18 @@ import { createClient } from "@/lib/supabase/server";
 const PATH = "/catalogo/unidades-medida";
 
 /**
- * Los mensajes de las funciones `fn_unidad_medida_*` ya vienen en español y
- * listos para mostrar (ver ERRCODE UMD01..UMD06). Se propaga `error.message`
- * tal cual, con un fallback sólo por si el error no trae mensaje.
- * @param {{ message?: string } | null | undefined} error
+ * Arma el resultado de error de una Server Action. Propaga el `code` (ERRCODE
+ * custom UMD01..UMD06) para que el frontend pueda mapearlo por campo, y el
+ * `message` del RPC tal cual (ya viene en español), con un fallback.
+ * @param {{ message?: string, code?: string } | null | undefined} error
  * @param {string} fallback
  */
-function mensajeError(error, fallback) {
-  return error?.message || fallback;
+function errorResult(error, fallback) {
+  return {
+    ok: false,
+    code: error?.code ?? null,
+    error: error?.message || fallback,
+  };
 }
 
 /**
@@ -29,8 +33,8 @@ function texto(input, key) {
 
 /**
  * Lista las unidades de medida vía RPC `fn_unidad_medida_listar`.
- * Cuando la migración `unidad_medida_listar_con_creado_por` esté aplicada,
- * cada fila trae además `creado_por_nombre` ya resuelto.
+ * Cada fila trae `creado_por_nombre` ya resuelto (LEFT JOIN vw_usuario_resumen
+ * + COALESCE) desde la migración `unidad_medida_listar_con_creado_por`.
  *
  * @param {boolean} [incluirInactivas=false]
  * @returns {Promise<{ data: Array<{
@@ -59,6 +63,7 @@ export async function listarUnidadesMedida(incluirInactivas = false) {
 
 /**
  * @param {FormData} formData
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
  */
 export async function crearUnidadMedida(formData) {
   const supabase = await createClient();
@@ -70,6 +75,7 @@ export async function crearUnidadMedida(formData) {
   if (!user) {
     return {
       ok: false,
+      code: null,
       error: "Debés iniciar sesión para crear una unidad de medida.",
     };
   }
@@ -81,23 +87,25 @@ export async function crearUnidadMedida(formData) {
   });
 
   if (error) {
-    return {
-      ok: false,
-      error: mensajeError(error, "No se pudo crear la unidad de medida."),
-    };
+    return errorResult(error, "No se pudo crear la unidad de medida.");
   }
 
   revalidatePath(PATH);
-  return { ok: true, error: null };
+  return { ok: true, error: null, code: null };
 }
 
 /**
  * @param {string} id_unidad_medida
  * @param {FormData} formData
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
  */
 export async function actualizarUnidadMedida(id_unidad_medida, formData) {
   if (!id_unidad_medida) {
-    return { ok: false, error: "Falta el identificador de la unidad de medida." };
+    return {
+      ok: false,
+      code: null,
+      error: "Falta el identificador de la unidad de medida.",
+    };
   }
 
   const supabase = await createClient();
@@ -108,14 +116,11 @@ export async function actualizarUnidadMedida(id_unidad_medida, formData) {
   });
 
   if (error) {
-    return {
-      ok: false,
-      error: mensajeError(error, "No se pudo guardar la unidad de medida."),
-    };
+    return errorResult(error, "No se pudo guardar la unidad de medida.");
   }
 
   revalidatePath(PATH);
-  return { ok: true, error: null };
+  return { ok: true, error: null, code: null };
 }
 
 /**
@@ -123,7 +128,11 @@ export async function actualizarUnidadMedida(id_unidad_medida, formData) {
  */
 export async function habilitarUnidadMedida(id_unidad_medida) {
   if (!id_unidad_medida) {
-    return { ok: false, error: "Falta el identificador de la unidad de medida." };
+    return {
+      ok: false,
+      code: null,
+      error: "Falta el identificador de la unidad de medida.",
+    };
   }
 
   const supabase = await createClient();
@@ -132,14 +141,11 @@ export async function habilitarUnidadMedida(id_unidad_medida) {
   });
 
   if (error) {
-    return {
-      ok: false,
-      error: mensajeError(error, "No se pudo habilitar la unidad de medida."),
-    };
+    return errorResult(error, "No se pudo habilitar la unidad de medida.");
   }
 
   revalidatePath(PATH);
-  return { ok: true, error: null };
+  return { ok: true, error: null, code: null };
 }
 
 /**
@@ -147,7 +153,11 @@ export async function habilitarUnidadMedida(id_unidad_medida) {
  */
 export async function inhabilitarUnidadMedida(id_unidad_medida) {
   if (!id_unidad_medida) {
-    return { ok: false, error: "Falta el identificador de la unidad de medida." };
+    return {
+      ok: false,
+      code: null,
+      error: "Falta el identificador de la unidad de medida.",
+    };
   }
 
   const supabase = await createClient();
@@ -156,14 +166,11 @@ export async function inhabilitarUnidadMedida(id_unidad_medida) {
   });
 
   if (error) {
-    return {
-      ok: false,
-      error: mensajeError(error, "No se pudo inhabilitar la unidad de medida."),
-    };
+    return errorResult(error, "No se pudo inhabilitar la unidad de medida.");
   }
 
   revalidatePath(PATH);
-  return { ok: true, error: null };
+  return { ok: true, error: null, code: null };
 }
 
 /**
@@ -171,7 +178,11 @@ export async function inhabilitarUnidadMedida(id_unidad_medida) {
  */
 export async function eliminarUnidadMedida(id_unidad_medida) {
   if (!id_unidad_medida) {
-    return { ok: false, error: "Falta el identificador de la unidad de medida." };
+    return {
+      ok: false,
+      code: null,
+      error: "Falta el identificador de la unidad de medida.",
+    };
   }
 
   const supabase = await createClient();
@@ -182,15 +193,12 @@ export async function eliminarUnidadMedida(id_unidad_medida) {
   if (error) {
     // `fn_unidad_medida_eliminar` ya lanza un mensaje claro (UMD05) cuando la
     // unidad tiene productos asociados; se muestra tal cual.
-    return {
-      ok: false,
-      error: mensajeError(
-        error,
-        "No se pudo eliminar la unidad de medida porque está siendo utilizada por uno o más productos. Podés inhabilitarla en su lugar."
-      ),
-    };
+    return errorResult(
+      error,
+      "No se pudo eliminar la unidad de medida porque está siendo utilizada por uno o más productos. Podés inhabilitarla en su lugar."
+    );
   }
 
   revalidatePath(PATH);
-  return { ok: true, error: null };
+  return { ok: true, error: null, code: null };
 }

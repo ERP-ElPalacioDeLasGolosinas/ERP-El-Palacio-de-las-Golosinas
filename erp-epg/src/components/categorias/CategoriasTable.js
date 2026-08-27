@@ -3,11 +3,12 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
-  eliminarUnidadMedida,
-  habilitarUnidadMedida,
-  inhabilitarUnidadMedida,
-} from "@/lib/unidades-medida/actions";
-import { UnidadMedidaFormModal } from "./UnidadMedidaFormModal";
+  eliminarCategoria,
+  habilitarCategoria,
+  inhabilitarCategoria,
+  motivoBloqueoEliminarCategoria,
+} from "@/lib/categorias/actions";
+import { CategoriaFormModal } from "./CategoriaFormModal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -25,44 +26,46 @@ function formatFecha(valor) {
 
 /**
  * @param {{
- *   unidades: Array<{
- *     id_unidad_medida: string,
- *     nombre: string,
- *     abreviatura: string,
+ *   categorias: Array<{
+ *     id_categoria: string,
+ *     nombre_categoria: string,
  *     activo: boolean,
+ *     id_rubro: string,
+ *     nombre_rubro: string,
  *     creado: string,
- *     editado: string,
+ *     editado: string | null,
  *     creado_por: string | null,
- *     creado_por_nombre?: string | null,
+ *     creado_por_nombre: string | null,
  *   }>,
- *   incluirInactivas: boolean,
+ *   rubros: Array<{ id_rubro: string, nombre_rubro: string }>,
+ *   incluirInactivos: boolean,
  * }} props
  */
-export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
+export function CategoriasTable({ categorias, rubros, incluirInactivos }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [busqueda, setBusqueda] = useState("");
+  const [filtroRubro, setFiltroRubro] = useState("");
   const [modalAbierto, setModalAbierto] = useState(false);
   const [enEdicion, setEnEdicion] = useState(null);
 
   const filtradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return unidades;
-    return unidades.filter(
-      (u) =>
-        u.nombre.toLowerCase().includes(q) ||
-        u.abreviatura.toLowerCase().includes(q)
-    );
-  }, [unidades, busqueda]);
+    return categorias.filter((c) => {
+      if (filtroRubro && c.id_rubro !== filtroRubro) return false;
+      if (q && !c.nombre_categoria.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [categorias, busqueda, filtroRubro]);
 
-  function toggleInactivas(checked) {
+  function toggleInactivos(checked) {
     const params = new URLSearchParams(searchParams);
     if (checked) {
-      params.set("inactivas", "1");
+      params.set("inactivos", "1");
     } else {
-      params.delete("inactivas");
+      params.delete("inactivos");
     }
     const qs = params.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
@@ -73,22 +76,21 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
     setModalAbierto(true);
   }
 
-  function abrirEdicion(unidad) {
-    setEnEdicion(unidad);
+  function abrirEdicion(categoria) {
+    setEnEdicion(categoria);
     setModalAbierto(true);
   }
 
-  /** Muestra el error y, si la unidad ya no existe (UMD04), refresca la tabla. */
   function manejarErrorAccion(result) {
     window.alert(result.error);
-    if (result.code === "UMD04") router.refresh();
+    if (result.code === "CAT03") router.refresh();
   }
 
-  function toggleActivo(unidad) {
+  function toggleActivo(categoria) {
     startTransition(async () => {
-      const result = unidad.activo
-        ? await inhabilitarUnidadMedida(unidad.id_unidad_medida)
-        : await habilitarUnidadMedida(unidad.id_unidad_medida);
+      const result = categoria.activo
+        ? await inhabilitarCategoria(categoria.id_categoria)
+        : await habilitarCategoria(categoria.id_categoria);
       if (!result.ok) {
         manejarErrorAccion(result);
         return;
@@ -97,16 +99,27 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
     });
   }
 
-  function eliminar(unidad) {
-    const confirmado = window.confirm(
-      `¿Eliminar la unidad de medida "${unidad.nombre}"? Esta acción no se puede deshacer.`
-    );
-    if (!confirmado) return;
-
+  function eliminar(categoria) {
     startTransition(async () => {
-      const result = await eliminarUnidadMedida(unidad.id_unidad_medida);
+      const { motivo, error } = await motivoBloqueoEliminarCategoria(
+        categoria.id_categoria
+      );
+      if (error) {
+        window.alert(error);
+        return;
+      }
+      if (motivo) {
+        window.alert(`${motivo}\n\nPodés inhabilitarla en su lugar.`);
+        return;
+      }
+
+      const confirmado = window.confirm(
+        `¿Eliminar la categoría "${categoria.nombre_categoria}"? Esta acción no se puede deshacer.`
+      );
+      if (!confirmado) return;
+
+      const result = await eliminarCategoria(categoria.id_categoria);
       if (!result.ok) {
-        // UMD05 trae el mensaje con el conteo de productos ya armado.
         manejarErrorAccion(result);
         return;
       }
@@ -122,14 +135,27 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
             type="search"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre o abreviatura"
+            placeholder="Buscar por nombre"
             className="palacio-input max-w-xs"
           />
+          <select
+            value={filtroRubro}
+            onChange={(e) => setFiltroRubro(e.target.value)}
+            className="palacio-input max-w-xs"
+            aria-label="Filtrar por rubro"
+          >
+            <option value="">Todos los rubros</option>
+            {rubros.map((r) => (
+              <option key={r.id_rubro} value={r.id_rubro}>
+                {r.nombre_rubro}
+              </option>
+            ))}
+          </select>
           <label className="flex items-center gap-2 text-sm text-zinc-700">
             <input
               type="checkbox"
-              checked={incluirInactivas}
-              onChange={(e) => toggleInactivas(e.target.checked)}
+              checked={incluirInactivos}
+              onChange={(e) => toggleInactivos(e.target.checked)}
               className="size-4 accent-palacio-red"
             />
             Incluir inactivas
@@ -140,16 +166,16 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
           onClick={abrirAlta}
           className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
         >
-          Nueva unidad
+          Nueva categoría
         </button>
       </div>
 
       {filtradas.length === 0 ? (
         <div className="palacio-card px-6 py-12 text-center">
           <p className="text-sm text-palacio-muted">
-            {unidades.length === 0
-              ? "No hay unidades de medida cargadas."
-              : "Ninguna unidad coincide con la búsqueda."}
+            {categorias.length === 0
+              ? "No hay categorías cargadas."
+              : "Ninguna categoría coincide con los filtros."}
           </p>
         </div>
       ) : (
@@ -157,7 +183,7 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Listado</h2>
             <span className="text-xs text-palacio-muted">
-              {filtradas.length} unidad{filtradas.length === 1 ? "" : "es"}
+              {filtradas.length} categoría{filtradas.length === 1 ? "" : "s"}
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -165,8 +191,8 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
                   <Th>Nombre</Th>
-                  <Th>Abreviatura</Th>
                   <Th className="text-center">Estado</Th>
+                  <Th>Rubro asociado</Th>
                   <Th>Creado</Th>
                   <Th>Editado</Th>
                   <Th>Creado por</Th>
@@ -174,48 +200,46 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.map((u) => (
+                {filtradas.map((c) => (
                   <tr
-                    key={u.id_unidad_medida}
+                    key={c.id_categoria}
                     className={[
                       "border-b border-palacio-border last:border-0",
-                      u.activo ? "" : "opacity-60",
+                      c.activo ? "" : "opacity-60",
                     ].join(" ")}
                   >
                     <td className="px-5 py-4 align-middle font-medium text-zinc-900">
-                      {u.nombre}
-                    </td>
-                    <td className="px-5 py-4 align-middle">
-                      <span className="font-mono text-xs tracking-wider text-zinc-700 uppercase">
-                        {u.abreviatura}
-                      </span>
+                      {c.nombre_categoria}
                     </td>
                     <td className="px-5 py-4 text-center align-middle">
                       <span
                         className={
-                          u.activo
+                          c.activo
                             ? "palacio-badge-activo"
                             : "palacio-badge-inactivo"
                         }
                       >
-                        {u.activo ? "Activo" : "Inactivo"}
+                        {c.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {formatFecha(u.creado)}
+                    <td className="px-5 py-4 align-middle text-zinc-700">
+                      {c.nombre_rubro}
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {formatFecha(u.editado)}
+                      {formatFecha(c.creado)}
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {u.creado_por_nombre ??
-                        (u.creado_por ? `${u.creado_por.slice(0, 8)}…` : "—")}
+                      {formatFecha(c.editado)}
+                    </td>
+                    <td className="px-5 py-4 align-middle text-palacio-muted">
+                      {c.creado_por_nombre ??
+                        (c.creado_por ? `${c.creado_por.slice(0, 8)}…` : "—")}
                     </td>
                     <td className="px-5 py-4 align-middle">
                       <div className="flex flex-wrap justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => abrirEdicion(u)}
+                          onClick={() => abrirEdicion(c)}
                           className="palacio-action-btn palacio-action-primary"
                         >
                           Editar
@@ -223,15 +247,15 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
                         <button
                           type="button"
                           disabled={pending}
-                          onClick={() => toggleActivo(u)}
+                          onClick={() => toggleActivo(c)}
                           className="palacio-action-btn"
                         >
-                          {u.activo ? "Inhabilitar" : "Habilitar"}
+                          {c.activo ? "Inhabilitar" : "Habilitar"}
                         </button>
                         <button
                           type="button"
                           disabled={pending}
-                          onClick={() => eliminar(u)}
+                          onClick={() => eliminar(c)}
                           className="palacio-action-btn palacio-action-danger"
                         >
                           Eliminar
@@ -247,10 +271,11 @@ export function UnidadesMedidaTable({ unidades, incluirInactivas }) {
       )}
 
       {modalAbierto ? (
-        <UnidadMedidaFormModal
-          key={enEdicion?.id_unidad_medida ?? "nuevo"}
+        <CategoriaFormModal
+          key={enEdicion?.id_categoria ?? "nueva"}
           onClose={() => setModalAbierto(false)}
-          unidad={enEdicion}
+          categoria={enEdicion}
+          rubros={rubros}
         />
       ) : null}
     </>
