@@ -1,234 +1,149 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# El Palacio de las Golosinas — Contexto ERP (actualizado desde la base real)
 
-# This is NOT the Next.js you know
+Sistema de gestión para "El Palacio de las Golosinas". Backend: **Supabase** (Postgres 17 + Auth + RLS), proyecto `ERP-ElPalacioDeLasGolosinas`, región `sa-east-1`.
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
-
-# El Palacio de las Golosinas — Contexto ERP
-
-Sistema de gestión para "El Palacio de las Golosinas". Frontend: **Next.js 16 (App Router) + React 19**. Backend: **Supabase** (proyecto `ERP-ElPalacioDeLasGolosinas`, ref `tpibycxcmfasnvleyelz`, región `sa-east-1`, Postgres 17). Este documento es la fuente de verdad del estado actual de la base y del frontend. Está reconstruido a partir del código en `src/` y de una inspección directa del proyecto Supabase (no asumir que coincide con documentación previa ni con `supabase/migrations/` del repo, que está muy desactualizado — ver sección "Migraciones" más abajo).
-
-## Convenciones de la base (obligatorias en TODO lo nuevo)
-
-- **PK**: `uuid`, default `gen_random_uuid()`.
-- **Nombres de columnas** en español, con sufijo de la entidad (`nombre_marca`, `nombre_producto`), no genéricos (`nombre`). Excepción heredada: `unidad_medida` y `tipo_movimiento` usan `nombre` a secas — no lo repitas en tablas nuevas.
-- Toda columna de **texto obligatoria** lleva `check (length(trim(columna)) > 0)` — no basta con `NOT NULL`.
-- **Auditoría**: la mayoría de las tablas tiene `creado` / `editado` (`timestamptz default now()`) + `creado_por uuid default auth.uid()` (algunas además tienen `editado_por`). Tablas con flujo de aprobación/edición posterior (`compra`, `compra_producto`, `inventario`, `inventario_producto`) usan `fecha_registro` en vez de `creado`/`editado`.
-- **Trigger** `BEFORE UPDATE` por tabla (patrón `set_editado_<tabla>()`) que actualiza `editado` y evita que se pisen `creado` / `creado_por`. La función debe llevar `set search_path = public`.
-- **RLS habilitado en todas las tablas** (ya no son políticas abiertas `using (true)` genéricas). El patrón actual por tabla de catálogo/operación es 4 políticas para `authenticated` (`SELECT`/`INSERT`/`UPDATE`/`DELETE`); `usuario` tiene políticas más finas (ver abajo). El control de acceso por `rol_usuario` a nivel de RLS **sigue sin implementarse** salvo lo que ya existe en `usuario` — no bloquea el resto del desarrollo pero no asumas que ya está resuelto en otras tablas.
-- **Cantidades**: `numeric` (no `integer`) con `check (>= 0)` o `(> 0)` según el caso — se migró de `integer` a `numeric` para soportar fraccionamiento (ver `producto.numero_medida`, `inventario_producto.cantidad_inventario`, `movimiento_stock.cantidad`, etc.). **Precios/costos**: `numeric` con `check (>= 0)`, default `0`.
-- **Nada de tablas de stock sueltas actualizadas a mano desde el cliente**: el stock vive en `stock` (por producto×depósito) y se mueve exclusivamente vía funciones (`fn_movimiento_stock_registrar`, `fn_aplicar_stock_compra`) que registran también en `movimiento_stock` / `movimiento_stock_detalle`. No hacer `UPDATE` directo de `stock.cantidad` desde el frontend.
-- **Patrón de escritura preferido: RPC (`supabase.rpc(...)`), no `insert`/`update` directo desde Server Actions.** Casi toda la lógica de negocio (validaciones cruzadas, mensajes de error en español, side-effects) vive en funciones `plpgsql` (`fn_<entidad>_crear/modificar/eliminar/habilitar/inhabilitar/listar`). Las Server Actions en `src/lib/**/actions.js` son capas finas que arman el payload, llaman al RPC y traducen errores — replicar ese patrón para módulos nuevos.
-
-## Inventario de tablas (estado real en Supabase, no en migraciones)
-
-| Tabla | Filas | Notas |
-| --- | --- | --- |
-| `usuario` | 6 | PK `id_usuario` FK → `auth.users`. `rol_usuario` enum (`Empleado Deposito`, `Empleado Ventas`, `Empleado Compras`, `Gerente`). RLS: cualquier `authenticated` puede `SELECT` todos; `UPDATE` solo su propia fila o si es `Gerente`. Sin `DELETE`/`INSERT` por política explícita de tabla (el alta ocurre vía `auth.users` + trigger/flujo de registro). |
-| `marca` | 0 | `nombre_marca` unique + `activo` + auditoría completa (`creado_por`). |
-| `rubro` | 0 | A-03, primer nivel de clasificación del catálogo. |
-| `categoria` | 0 | A-04, FK obligatoria a `rubro` (`id_rubro` not null). Bloquea `DELETE` si tiene artículos activos (`fn_categoria_bloquear_delete_con_articulos`). |
-| `unidad_medida` | 0 | A-01. `abreviatura` con `check` de regex (3 letras minúsculas). |
-| `producto` | 0 | Catálogo (A-05). FK a `marca`, `unidad_medida`, `rubro` (nullable), `categoria` (nullable). Tiene `precio_producto`, `costo_producto`, `precio_mayorista_producto`, `precio_minorista_producto`, `numero_medida`, `codigo_producto` unique. |
-| `deposito` | 1 | S-01, **único módulo con CRUD de frontend terminado**. Campos: `nombre_deposito` unique, `direccion_deposito`, `telefono_deposito`, `horario_apertura`/`horario_cierre` (`time`), `id_responsable` (FK a `usuario`, nullable), `activo`, `esta_lleno`. |
-| `proveedor` | 0 | `cuit_proveedor` unique con check de formato `XX-XXXXXXXX-X`, `mail_proveedor` unique, `rs_proveedor` enum de razón social. |
-| `tipo_movimiento` | 0 | S-04. `signo` (`1`/`-1`), `requiere_control_stock` bool. |
-| `compra` | 0 | Orden de compra a proveedor. `total` es columna generada (`sub_total + impuesto_total - descuento_total`). `estado` enum (`Pendiente`, `Enviada`, `Recibida`, `Cancelada`), con trigger `validar_cambio_estado_compra`. `stock_aplicado` evita doble aplicación de stock. |
-| `compra_producto` | 0 | Detalle de `compra`. `subtotal_producto` y `total_producto` son columnas generadas. |
-| `inventario` | 0 | Lote de recepción de mercadería, opcionalmente ligado a una `compra` (`id_compra` unique/nullable → ingreso manual si es null). |
-| `inventario_producto` | 0 | Detalle de `inventario`: producto, marca, cantidad, vencimiento/fabricación, `stock_disponible`. |
-| `stock` | 0 | Stock real por producto×depósito (`id_producto`, `id_deposito`, `cantidad`). Se actualiza solo vía funciones, nunca a mano. |
-| `movimiento_stock` | 0 | Auditoría de movimientos de stock (S-05). Guarda `stock_anterior`/`stock_nuevo`, FK a `tipo_movimiento`. |
-| `movimiento_stock_detalle` | 0 | Liga un movimiento con el/los `inventario_producto` (lote) que afectó, con `cantidad_aplicada`. |
-
-**Ya no existen** `lote` ni `lote_deposito` (mencionadas en versiones previas de este documento) — fueron reemplazadas por el par `inventario`/`inventario_producto` (identidad del lote) + `stock` (cantidad real por depósito) + `movimiento_stock*` (auditoría de movimientos). No reintroducir el modelo viejo.
-
-## Vistas
-
-- `vista_diferencias_recepcion` — compara lo pedido en `compra_producto` contra lo efectivamente recibido en `inventario_producto` (agrupado por compra/producto/marca), para detectar faltantes/sobrantes en la recepción de compras.
-
-Las vistas de stock mencionadas en versiones previas (`vista_stock_producto`, `vista_stock_producto_deposito`, `vista_lote_detalle`) **ya no existen**. Consultar stock hoy pasa por la función `fn_stock_consultar` y/o la tabla `stock` directamente.
-
-## Funciones (RPC) relevantes por módulo
-
-Convención de nombres en uso: `fn_<entidad>_<accion>` (crear/modificar/eliminar/habilitar/inhabilitar/listar), más algunas funciones sueltas de triggers y validaciones (`set_editado_*`, `validar_*`, `fn_*_bloquear_delete_*`).
-
-- **Depósito**: hay **dos generaciones de funciones conviviendo** — `crear_deposito` / `actualizar_deposito` / `set_activo_deposito` / `set_esta_lleno_deposito` / `eliminar_deposito` (las que llama hoy `src/lib/depositos/actions.js`) y una segunda tanda más nueva `fn_deposito_crear` / `fn_deposito_modificar` / `fn_deposito_eliminar` / `fn_deposito_habilitar` / `fn_deposito_inhabilitar` / `fn_deposito_marcar_lleno` / `fn_deposito_desmarcar_lleno` / `fn_deposito_listar` que parece venir de otra rama/refactor y **no está siendo usada por el frontend actual**. Antes de tocar el módulo de depósitos, confirmar cuál set es el vigente y no duplicar lógica — probablemente haya que migrar `actions.js` al set `fn_deposito_*` y eliminar el viejo, pero no asumirlo sin confirmar con el equipo.
-- **Marca**: `fn_marca_crear/modificar/habilitar/inhabilitar/listar` + `validar_marca_producto`.
-- **Rubro**: `fn_rubro_crear/modificar/eliminar/habilitar/inhabilitar/listar`, `fn_rubro_bloquear_delete_con_articulos`, `rubro_tiene_articulos_activos`, `rubro_motivo_bloqueo_delete`.
-- **Categoría**: `fn_categoria_bloquear_delete_con_articulos`, `categoria_motivo_bloqueo_delete` (el resto del CRUD de categoría parece manejarse por trigger/validación, no se ven `fn_categoria_crear/modificar` explícitos — confirmar antes de asumir que existen).
-- **Unidad de medida**: `fn_unidad_medida_crear/modificar/eliminar/habilitar/inhabilitar/listar`.
-- **Producto**: `fn_producto_crear/modificar/eliminar/listar`, `fn_producto_validar_codigo_unico`, `fn_producto_sync_id_rubro` (sincroniza `id_rubro` a partir de `id_categoria`), `_fn_producto_validar_referencias`.
-- **Tipo de movimiento**: `fn_tipo_movimiento_crear/modificar/habilitar/inhabilitar/listar`, `fn_tipo_movimiento_signo_inmutable` (el `signo` no se puede modificar una vez creado).
-- **Stock / movimientos**: `fn_stock_consultar`, `fn_movimiento_stock_registrar`, `fn_movimiento_stock_listar`, `fn_movimiento_stock_validar_stock_disponible`.
-- **Compras**: `fn_items_esperados_compra`, `fn_aplicar_stock_compra`, `validar_y_marcar_stock_aplicado`, `revertir_stock_aplicado`, `validar_cambio_estado_compra`.
-- **Inventario (recepción)**: `fn_inventario_producto_init_stock_disponible`.
-
-## Migraciones (⚠️ desincronizadas del estado real)
-
-`supabase/migrations/` en la raíz del repo (fuera de `erp-epg/`) solo tiene **una** migración (`20260820000001_a01_unidad_medida.sql`). Todo el resto del esquema descripto arriba (rubro, categoría, proveedor, compra*, inventario*, stock, movimiento_stock*, y buena parte de las funciones) existe en la base pero no está versionado como migración en el repo — se aplicó directo contra el proyecto Supabase. Antes de asumir que `supabase/migrations` refleja el estado de la base, verificar contra el proyecto real (`list_tables` / `execute_sql` vía MCP de Supabase). Si se retoma disciplina de migraciones, hay que generar el backlog de migraciones faltante para no perder la trazabilidad.
-
-## Frontend — estado actual (`src/`)
-
-```
-src/
-  app/
-    (auth)/
-      login/           page.jsx + actions.js — login con email/password (Supabase Auth)
-      logout/          actions.js — Server Action de logout
-    (main)/
-      layout.js         — envuelve con AppShell + getUserWithRole()
-      page.js           — dashboard, tarjetas a todos los módulos (implementados y placeholder)
-      inventario/
-        depositos/
-          page.js          — listado
-          nuevo/page.js     — alta
-          [id]/editar/page.js — edición
-        productos/page.js    — placeholder (A-05)
-        marcas/page.js        — placeholder (A-02)
-        stock/page.js         — placeholder (S-03)
-        movimientos/
-          page.js            — placeholder historial (S-05)
-          nuevo/page.js       — placeholder registrar movimiento
-          tipos/page.js       — placeholder tipos de movimiento (S-04)
-      catalogo/
-        unidades-medida/page.js — placeholder (A-01)
-        rubros/page.js           — placeholder (A-03)
-        categorias/page.js       — placeholder (A-04)
-    layout.js            — RootLayout, envuelve todo en <InactivityProvider>
-    globals.css
-  components/
-    auth/
-      LogoutButton.jsx        — botón reutilizable con useFormStatus
-      InactivityProvider.jsx  — auto-logout a los 25 min de inactividad, aviso a los 24
-    depositos/
-      DepositoForm.js
-      DepositosTable.js
-    layout/
-      AppShell.js         — header + sidebar; NAV con 3 secciones (Inicio / Inventario / Catálogo), "Movimientos" es un submenú colapsable
-      PageHeader.js
-      PlaceholderModule.js — card genérica "módulo sin pantalla todavía", usada por los placeholders de inventario/catálogo
-  lib/
-    auth/roles.js       — getUserWithRole(), PERMISOS, hasPermission()
-    depositos/actions.js — Server Actions CRUD de depósito (ver nota de funciones duplicadas arriba)
-    supabase/
-      client.js server.js middleware.js requests.http
-  proxy.js               — invoca updateSession() del middleware de Supabase
-```
-
-**Único módulo de negocio con CRUD real: Depósitos (S-01)**, en `/inventario/depositos`. El resto de las entidades (marca, rubro, categoría, unidad de medida, producto, proveedor, compras, movimientos de stock) tiene ruta y entrada en el sidebar bajo `/inventario/*` y `/catalogo/*`, pero cada página es un placeholder (`PlaceholderModule`) — la base y las funciones RPC ya existen, falta la pantalla real.
-
-**`REGLAS_POR_RUTA` en `middleware.js` está vacío a propósito (decisión de dev, 2026-08-27)**: cualquier usuario autenticado, sin importar `rol_usuario`, puede ver todas las rutas bajo `(main)` (`/inventario/*`, `/catalogo/*`) — solo se exige sesión iniciada, no rol. Antes de producción hay que reintroducir reglas por prefijo (el código para hacerlo ya está, solo falta llenar el array) y decidir qué rol corresponde a cada módulo.
-
-`AppShell` (`src/components/layout/AppShell.js`) tiene el array `NAV` con 3 secciones: "INICIO" (dashboard), "INVENTARIO" (productos, marcas, stock, movimientos —submenú colapsable con historial/registrar/tipos—, depósitos) y "CATÁLOGO" (unidades de medida, rubros, categorías). Al agregar un módulo nuevo con pantalla real, sumar su entrada ahí (y sacar el placeholder correspondiente).
-
-## Ramas remotas activas (no mergeadas a `main` al momento de este documento)
-
-- `feat/A-01-unidad-medida`
-- `feat/A-03-gestionar-rubros`
-- `feat/A-04-gestionar-categorias`
-- `feat/S-04` (tipos de movimiento)
-- `feature/crud-marcas`
-- `feature/Autenticacion`
-
-Antes de empezar un módulo nuevo, chequear si ya hay una rama remota con ese trabajo en curso para no duplicar.
-
-## Pendiente conocido
-
-- Definir y unificar qué set de funciones de depósito es el vigente (`crear_deposito`/... vs `fn_deposito_*`), eliminar el que quede obsoleto.
-- RLS por `rol_usuario` a nivel de política (hoy solo aplicado parcialmente en `usuario`) — pendiente para el resto de las tablas.
-- Falta un trigger que valide que la suma de `stock.cantidad` movida no deje números negativos fuera de los casos ya cubiertos por `fn_movimiento_stock_validar_stock_disponible` / `requiere_control_stock` — confirmar cobertura real antes de asumir que está resuelto.
-- Migraciones sin versionar para la mayor parte del esquema (ver sección "Migraciones").
-- Módulos con base de datos lista pero sin pantalla: marca, rubro, categoría, unidad de medida, producto, proveedor, compras, movimientos de stock/consulta de stock.
-- Hay un `package.json`/`node_modules` sueltos en la raíz del repo (fuera de `erp-epg/`, con la única dependencia `claude`) que no forman parte de la app Next.js — probablemente un `npm install` corrido por error en el directorio equivocado; no confundirlos con `erp-epg/package.json`, que es el real.
-- `REGLAS_POR_RUTA` de `middleware.js` está vacío (sin restricción por rol) por decisión de dev — reintroducir antes de ir a producción (ver sección de Login más abajo).
-
-## Al generar código / SQL
-
-1. Respetar las convenciones de arriba.
-2. Nueva lógica de escritura → función `plpgsql` con el prefijo `fn_<entidad>_<accion>`, invocada desde una Server Action delgada en `src/lib/<entidad>/actions.js` (seguir el patrón de `src/lib/depositos/actions.js`: parseo de payload, validación de campos obligatorios, `supabase.rpc(...)`, traducción de errores de Postgres a mensajes en español).
-3. No reintroducir tablas de stock sueltas ni escribir `stock.cantidad` directo desde el cliente — pasar por `fn_movimiento_stock_registrar` / `fn_aplicar_stock_compra`.
-4. No implementar RLS por rol de forma parcial/adivinada — si se necesita, coordinar con quien está a cargo de esa capa; mientras tanto usar el patrón de 4 políticas abiertas para `authenticated` que ya tienen la mayoría de las tablas.
-5. Si se agrega una pantalla nueva bajo un route group (`(modulo)/`), sumar su entrada al `NAV` de `AppShell.js` y, si corresponde, una regla en `REGLAS_POR_RUTA` de `middleware.js`.
-6. Verificar el estado real de la base con las herramientas de Supabase (`list_tables`, `execute_sql`) antes de asumir que este documento o `supabase/migrations/` están al día — el histórico muestra que la base avanza más rápido que ambos.
+Este documento reemplaza al doc de contexto anterior para todo lo referido al **modelo de datos**: fue generado relevando directamente el esquema real de la base (`information_schema`, `pg_catalog`), no a partir de un diseño planeado. El doc anterior (basado en `lote` / `lote_deposito` / vistas de stock) **no coincide** con lo que existe hoy — ver sección de discrepancias al final.
 
 ---
 
-# Login + Autenticación por Roles con Supabase (implementado)
+## Convenciones observadas en la base real
 
-- **Framework**: Next.js (App Router), React.
-- **Backend**: Supabase (proyecto `ERP-ElPalacioDeLasGolosinas`, región `sa-east-1`).
-
-## Clientes de Supabase (`src/lib/supabase/`)
-
-- **`client.js`** — cliente para Client Components (browser), vía `createBrowserClient`.
-- **`server.js`** — cliente para Server Components y Server Actions, vía `createServerClient` leyendo/escribiendo cookies con las utilidades de `next/headers`.
-- **`middleware.js`** — `updateSession(request)`: refresca la sesión, redirige a `/login` si no hay sesión (salvo rutas públicas), redirige a `/` si hay sesión y se pide `/login`, y aplicaría `REGLAS_POR_RUTA` (prefijo → roles permitidos) de estar poblado — **hoy está vacío a propósito** (ver nota de dev más abajo), así que ningún prefijo restringe por rol.
-
-Variables de entorno (`.env.local`):
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-```
-
-## `src/proxy.js`
-
-Invoca `updateSession()` en cada request (reemplaza al histórico `middleware.js` en la raíz de Next — el nombre del archivo es específico de esta versión de Next.js, no cambiarlo sin revisar `node_modules/next/dist/docs/`).
-
-## `src/app/(auth)/login/page.jsx`
-
-Formulario controlado (email + password) que llama a una Server Action que hace `supabase.auth.signInWithPassword`, consulta `usuario.rol_usuario` y redirige.
-
-## `src/lib/auth/roles.js`
-
-- `getUserWithRole()` — combina `supabase.auth.getUser()` con la fila de `usuario` (id, nombre, apellido, rol). Devuelve `null` si no hay sesión o no hay fila de `usuario` asociada.
-- `PERMISOS` — mapa de permisos por rol.
-- `hasPermission(rol, permiso)`.
-
-## Row Level Security
-
-Ver sección "Inventario de tablas" arriba para el estado real de RLS por tabla — ya no está deshabilitado (a diferencia de lo que decía una versión previa de este documento): todas las tablas de negocio tienen RLS habilitado con políticas para `authenticated`.
+- **PK**: `uuid`, default `gen_random_uuid()` (excepto `usuario.id_usuario`, que es FK 1:1 a `auth.users.id` sin default propio).
+- **Nombres de columnas** en español, mayormente con sufijo de la entidad (`nombre_marca`, `nombre_producto`, `nombre_deposito`), aunque hay excepciones (`unidad_medida.nombre`, `tipo_movimiento.nombre`, sin sufijo).
+- Columnas de **texto obligatorias** casi siempre llevan `check (length(trim(columna)) > 0)`.
+- **Auditoría**: la mayoría de las tablas tiene `creado` / `editado` (`timestamptz default now()`) y `creado_por` (`uuid default auth.uid()`). Las tablas de tipo "detalle" (`compra`, `compra_producto`, `inventario`, `inventario_producto`) usan además `editado_por` y `fecha_registro`.
+- **Cantidades**: `numeric` (no `integer`) con `check (>= 0)` o `check (> 0)` según el caso. **Precios/costos**: `numeric` con `check (>= 0)`, default `0`.
+- **El stock SÍ es una tabla suelta**: `stock(id_producto, id_deposito, cantidad)`, con `UNIQUE(id_producto, id_deposito)`. No se calcula desde lotes vía vistas — es un valor sincronizado directamente, con `movimiento_stock` como registro de auditoría de los cambios.
+- **RLS**: habilitado en las 16 tablas de `public`, pero **no todas tienen políticas** (ver sección RLS).
+- Casi toda la lógica de negocio (altas, bajas, habilitar/inhabilitar, listados) está implementada como **funciones RPC** en Postgres (`fn_*`), no como acceso directo a tablas desde el frontend.
 
 ---
 
-# Logout + Persistencia de Sesión + Auto-logout por Inactividad (implementado)
+## Tablas existentes
 
-## Archivos
+| Tabla | Rol | PK | Notas clave |
+|---|---|---|---|
+| `usuario` | Usuarios del sistema | `id_usuario` (uuid, FK → `auth.users.id`) | `nombre_usuario`, `apellido_usuario`, `fecha_nacimiento_usuario`, `dni_usuario` (unique, >0), `telefono_usuario`, `mail_usuario` (check regex), `rol_usuario` (enum `rol_usuario_enum`) |
+| `marca` | Marcas de producto | `id_marca` | `nombre_marca`, `activo` |
+| `rubro` | Rubro de producto | `id_rubro` | `nombre_rubro`, `activo` |
+| `categoria` | Categoría de producto | `id_categoria` | `nombre_categoria`, `activo`, FK → `rubro` |
+| `unidad_medida` | Unidades (peso/medida específica del producto) | `id_unidad_medida` | `nombre`, `abreviatura` (check: 3 letras minúsculas), `activo` |
+| `deposito` | Depósitos físicos | `id_deposito` | `nombre_deposito` (no unique a nivel constraint, ojo), `direccion_deposito`, `telefono_deposito`, `horario_apertura`/`horario_cierre` (check cierre > apertura), `activo`, `esta_lleno`, `id_responsable` (FK → `usuario`) |
+| `producto` | Catálogo de artículos | `id_producto` | `nombre_producto`, `descripcion_producto`, `codigo_producto` (**unique**), `precio_producto`, `costo_producto`, `precio_mayorista_producto`, `precio_minorista_producto`, `numero_medida` (>0), FK → `marca`, `unidad_medida`, `categoria` (nullable), `rubro` (nullable, sincronizado desde `categoria` por trigger) |
+| `proveedor` | Proveedores | `id_proveedor` | `nombre_proveedor`, `rs_proveedor` (enum `tipo_razon_social`), `cuit_proveedor` (unique, check formato XX-XXXXXXXX-X), `telefono_proveedor` (bigint), `mail_proveedor` (unique, check regex) |
+| `compra` | Cabecera de compra a proveedor | `id_compra` | FK → `proveedor`; `sub_total`, `descuento_total`, `impuesto_total`, `total` (checks de consistencia); `estado` (enum `estado_compra`); `stock_aplicado` (bool) |
+| `compra_producto` | Detalle de productos de una compra | `id_compra_producto` | FK → `compra`, `producto`, `marca`; `cantidad_producto` (>0), `total_unit_prod`, `descuento_producto`, `impuesto_producto`, `subtotal_producto`, `total_producto` |
+| `inventario` | Cabecera de recepción/lote de mercadería | `id_lote` | FK → `proveedor`, `deposito`, `compra` (**unique**, 1:1 con `compra`); `detalle_lote` |
+| `inventario_producto` | Detalle por producto de un `inventario` (lote) | `id_inventario_producto` | FK → `inventario`, `producto`, `marca`; `cantidad_inventario` (≥0), `fecha_vencimiento`/`fecha_fabricacion` (check vencimiento > fabricación), `stock_disponible` (≥0), `observaciones` |
+| `stock` | **Stock actual por producto × depósito** | `id_stock` | FK → `producto`, `deposito`; `cantidad` (numeric, default 0); `UNIQUE(id_producto, id_deposito)` |
+| `tipo_movimiento` | Tipos de movimiento de stock | `id_tipo_movimiento` | `nombre`, `signo` (check: solo `1` o `-1`), `requiere_control_stock`, `activo` |
+| `movimiento_stock` | Auditoría de movimientos sobre `stock` | `id_movimiento` | FK → `tipo_movimiento`, `producto`, `deposito`; `cantidad` (>0), `stock_anterior`, `stock_nuevo`, `fecha_movimiento`, `remito` |
+| `movimiento_stock_detalle` | Detalle de qué lote (`inventario_producto`) aportó a un movimiento | `id_detalle` | FK → `movimiento_stock`, `inventario_producto`; `cantidad_aplicada` (>0) |
 
-| Archivo | Propósito |
+## Vistas existentes
+
+| Vista | Contenido |
 |---|---|
-| `src/app/(auth)/logout/actions.js` | Server Action `logout()`: `supabase.auth.signOut()` en servidor + `redirect("/login")`. |
-| `src/components/auth/LogoutButton.jsx` | Client Component reutilizable. `<form action={logout}>` con botón que usa `useFormStatus` para mostrar "Cerrando...". Recibe `className`. |
-| `src/components/auth/InactivityProvider.jsx` | Envuelve `children` en `RootLayout` (`src/app/layout.js`). Detecta inactividad solo en el cliente y cierra sesión automáticamente. |
+| `vista_diferencias_recepcion` | Compara `cantidad_pedida` (de `compra_producto`) vs `cantidad_recibida` (de `inventario_producto`) por compra/producto/marca, con `diferencia` calculada |
 
-## Flujo de logout manual
+> No existen `vista_stock_producto`, `vista_stock_producto_deposito` ni `vista_lote_detalle` mencionadas en el doc anterior.
 
-`<LogoutButton />` en el navbar (`AppShell.js`) dispara la Server Action `logout()`, que invalida la sesión en el servidor (cookies) y redirige a `/login`.
+## Enums
 
-## Flujo de auto-logout por inactividad
+| Enum | Valores |
+|---|---|
+| `rol_usuario_enum` | `Empleado Deposito`, `Empleado Ventas`, `Empleado Compras`, `Gerente` |
+| `estado_compra` | `Pendiente`, `Enviada`, `Recibida`, `Cancelada` |
+| `tipo_razon_social` | `S.A.`, `S.R.L.`, `S.A.U.`, `S.A.S.`, `S.H.`, `Responsable Inscripto`, `Monotributista` |
 
-`InactivityProvider`:
+---
 
-- Se suscribe a `supabase.auth.onAuthStateChange`. Sin sesión, no registra listeners.
-- Con sesión activa, escucha `mousemove`, `mousedown`, `keydown`, `scroll`, `touchstart`, `click` en `window` para reiniciar el timer.
-- Chequeo cada 30 s del tiempo inactivo:
-  - A los **24 minutos** → modal de aviso con countdown.
-  - A los **25 minutos** → logout automático (`supabase.auth.signOut()` client-side + `router.push("/login")`).
-- Botón "Seguir conectado" reinicia el timer sin cerrar sesión.
-- Timeout único de 25 min para todos los roles; lógica enteramente client-side.
+## Row Level Security (RLS)
 
-## Persistencia de sesión
+RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas es dispar:
 
-Cookies httpOnly de Supabase, refrescadas en cada request vía `updateSession` (invocado desde `src/proxy.js`). Recargar la página no cierra sesión; solo logout manual o auto-logout por inactividad la invalidan.
+### Con políticas abiertas para `authenticated` (`using (true)` / `with check (true)`)
 
-## Uso de `<LogoutButton>`
+`categoria`, `marca`, `rubro`, `deposito`, `producto`, `stock`, `tipo_movimiento`, `unidad_medida` → tienen las 4 políticas (`SELECT`/`INSERT`/`UPDATE`/`DELETE`).
 
-```jsx
-import { LogoutButton } from "@/components/auth/LogoutButton";
+`movimiento_stock`, `movimiento_stock_detalle` → solo `SELECT` e `INSERT` (no `UPDATE`/`DELETE`, tiene sentido tratándose de una tabla de auditoría).
 
-<LogoutButton className="rounded px-3 py-2 text-sm font-medium hover:bg-black/5" />
-```
+### Con políticas por rol (ya implementado, a diferencia de lo que decía el doc anterior)
+
+`usuario`:
+- `SELECT`: cualquier `authenticated` puede ver todos los usuarios.
+- `UPDATE`: un usuario puede editar su propia fila, o un `Gerente` puede editar cualquiera.
+- No hay políticas de `INSERT`/`DELETE` (probablemente se gestiona vía Auth / triggers, o está pendiente).
+
+### ⚠️ Sin ninguna política (RLS habilitado = acceso denegado por completo)
+
+`compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor` → **RLS bloquea todo acceso** (ni siquiera lectura) para cualquier rol, salvo que se acceda a través de una función `SECURITY DEFINER` (ninguna de las funciones relevadas tiene `security_definer = true`, así que hoy **nadie puede leer ni escribir estas tablas directamente**, ni siquiera vía RPC estándar). Esto es probablemente un pendiente a resolver antes de que las pantallas de compras/proveedores/recepción de mercadería funcionen.
+
+---
+
+## Funciones RPC disponibles (`public.fn_*` y afines)
+
+### Marca
+`fn_marca_crear`, `fn_marca_modificar`, `fn_marca_listar(p_incluir_inactivas)`, `fn_marca_habilitar`, `fn_marca_inhabilitar`
+
+### Rubro
+`fn_rubro_crear`, `fn_rubro_modificar`, `fn_rubro_listar(p_incluir_inactivos)`, `fn_rubro_habilitar`, `fn_rubro_inhabilitar`, `fn_rubro_eliminar`, `rubro_tiene_articulos_activos`, `rubro_motivo_bloqueo_delete`
+
+### Categoría
+`categoria_motivo_bloqueo_delete` (no se ve `fn_categoria_crear/modificar/listar` — posible faltante o no relevado como función `fn_`, revisar si el CRUD de categoría está resuelto directo contra la tabla)
+
+### Unidad de medida
+`fn_unidad_medida_crear`, `fn_unidad_medida_modificar`, `fn_unidad_medida_listar(p_incluir_inactivas)`, `fn_unidad_medida_habilitar`, `fn_unidad_medida_inhabilitar`, `fn_unidad_medida_eliminar`
+
+### Depósito
+`fn_deposito_crear`, `fn_deposito_modificar`, `fn_deposito_listar(p_incluir_inactivos)`, `fn_deposito_habilitar`, `fn_deposito_inhabilitar`, `fn_deposito_eliminar`, `fn_deposito_marcar_lleno`, `fn_deposito_desmarcar_lleno`, `set_activo_deposito`, `set_esta_lleno_deposito`, `eliminar_deposito`
+
+### Producto
+`fn_producto_crear`, `fn_producto_modificar`, `fn_producto_listar(p_incluir_inactivos, p_id_marca, p_id_categoria, p_id_rubro, p_busqueda)`, `fn_producto_eliminar`, `fn_producto_validar_codigo_unico`, `_fn_producto_validar_referencias` (interna)
+
+### Tipo de movimiento
+`fn_tipo_movimiento_crear`, `fn_tipo_movimiento_modificar`, `fn_tipo_movimiento_listar(p_incluir_inactivos)`, `fn_tipo_movimiento_habilitar`, `fn_tipo_movimiento_inhabilitar`
+
+### Stock y movimientos
+- **`fn_stock_consultar(p_id_producto, p_id_deposito)`** → `TABLE(id_stock, id_producto, codigo_producto, producto, id_unidad_medida, unidad_medida, id_deposito, nombre_deposito, cantidad, editado)`. Filtra `cantidad > 0`. **Esta es la función que usamos para la vista de listado de stock.**
+- `fn_movimiento_stock_registrar(p_id_tipo_movimiento, p_id_producto, p_id_deposito, p_cantidad, p_creado_por, p_fecha_movimiento, p_remito)` → alta de movimiento (impacta `stock`)
+- `fn_movimiento_stock_listar(p_id_producto, p_id_deposito, p_id_tipo_movimiento, p_fecha_desde, p_fecha_hasta)` → histórico de movimientos
+- `fn_movimiento_stock_validar_stock_disponible(p_id_producto, p_id_deposito, p_cantidad)` → `TABLE(stock_actual, alcanza)`
+- `fn_aplicar_stock_compra(p_id_compra, p_id_deposito, p_detalle_lote, p_items)` → aplica stock desde una recepción de compra
+
+### Compras / inventario (recepción de mercadería)
+`fn_items_esperados_compra(p_id_compra)` — el resto de la lógica de compras parece resolverse por triggers (`validar_cambio_estado_compra`, `validar_y_marcar_stock_aplicado`, `revertir_stock_aplicado`) más que por funciones `fn_*` explícitas de CRUD.
+
+---
+
+## Triggers relevantes
+
+| Tabla | Trigger | Qué hace |
+|---|---|---|
+| `usuario` | `trigger_actualizar_editado_usuario` | Actualiza `editado` en cada `UPDATE` |
+| `marca` | `trg_set_editado_marca` | Ídem |
+| `deposito` | `trg_set_editado_deposito` | Ídem |
+| `producto` | `trg_producto_sync_id_rubro` | Sincroniza `id_rubro` del producto a partir de `id_categoria` (INSERT/UPDATE) |
+| `compra` | `trg_compra_set_editado_por`, `trg_compra_validar_estado` | Auditoría + valida transición de `estado` |
+| `compra_producto` | `trg_cprod_set_editado_por`, `trg_cprod_validar_marca` | Auditoría + valida que la marca coincida con la del producto |
+| `inventario` | `trg_inventario_set_editado_por`, `trg_inventario_validar_compra`, `trg_inventario_revertir_stock` | Auditoría + valida/marca `stock_aplicado` en `compra` + revierte stock si se borra el lote |
+| `inventario_producto` | `trg_inventario_producto_init_stock_disponible`, `trg_iprod_set_editado_por`, `trg_iprod_validar_marca` | Inicializa `stock_disponible` + auditoría + valida marca |
+
+> Nota: existen funciones `set_editado_categoria`, `set_editado_tipo_movimiento` pero **no aparecen triggers que las invoquen** sobre `categoria` ni `tipo_movimiento` — posible pendiente (esas tablas podrían no estar actualizando `editado` automáticamente).
+
+---
+
+## ⚠️ Discrepancias con el documento de contexto anterior
+
+El doc anterior (el que traía la sección de login/roles con Next.js) describe un modelo que **no es el que está implementado**:
+
+| Doc anterior decía | Realidad en la base |
+|---|---|
+| Tablas `lote` / `lote_deposito` | No existen. El equivalente real es `inventario` / `inventario_producto` (para lotes con vencimiento) + `stock` (para el total disponible por depósito) |
+| Vistas `vista_stock_producto`, `vista_stock_producto_deposito`, `vista_lote_detalle` | No existen. Solo existe `vista_diferencias_recepcion` |
+| "Nada de tablas de stock sueltas, se calcula vía vistas" | Falso en la práctica: `stock` es una tabla con `cantidad` sincronizada directamente, mantenida por `movimiento_stock` + triggers |
+| RLS deshabilitado en `usuario`, `marca`, `producto`, `deposito`, etc. | RLS está **habilitado** en las 16 tablas, con políticas ya definidas en la mayoría |
+| "RLS por rol no implementado todavía" | Parcialmente falso: `usuario` ya tiene una política que distingue `Gerente` del resto |
+| No se menciona nada de `compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`, `rubro`, `categoria`, `tipo_movimiento` | Estas tablas existen y tienen bastante desarrollo (funciones, triggers), pero 5 de ellas (`compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`) están **sin políticas RLS**, por lo que hoy nadie puede leerlas ni escribirlas |
+
+**Recomendación:** confirmar con el equipo si el doc anterior es de un sprint/diseño descartado, o si describe un rediseño pendiente de migrar. Mientras tanto, todo el trabajo de backend/frontend debería apoyarse en el esquema real documentado arriba, no en el doc de `lote`/`lote_deposito`.
