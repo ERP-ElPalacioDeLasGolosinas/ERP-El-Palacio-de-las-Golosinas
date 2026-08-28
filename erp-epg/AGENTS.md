@@ -118,7 +118,15 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 `fn_producto_crear`, `fn_producto_modificar`, `fn_producto_listar(p_incluir_inactivos, p_id_marca, p_id_categoria, p_id_rubro, p_busqueda)`, `fn_producto_eliminar`, `fn_producto_validar_codigo_unico`, `_fn_producto_validar_referencias` (interna)
 
 ### Tipo de movimiento
-`fn_tipo_movimiento_crear`, `fn_tipo_movimiento_modificar`, `fn_tipo_movimiento_listar(p_incluir_inactivos)`, `fn_tipo_movimiento_habilitar`, `fn_tipo_movimiento_inhabilitar`
+`fn_tipo_movimiento_crear(p_nombre, p_signo, p_creado_por, p_requiere_control_stock)`, `fn_tipo_movimiento_modificar(p_id_tipo_movimiento, p_nombre, p_signo, p_requiere_control_stock)`, `fn_tipo_movimiento_listar(p_incluir_inactivos)` → `SETOF tipo_movimiento` (sin `creado_por_nombre`, no usa `vw_usuario_resumen`), `fn_tipo_movimiento_habilitar(p_id_tipo_movimiento)`, `fn_tipo_movimiento_inhabilitar(p_id_tipo_movimiento)`.
+
+- Frontend ABMC implementado en `feat/S-04` (`app/(main)/inventario/movimientos/tipos/page.js`, `lib/tipos-movimiento/{actions,errores}.js`, `components/tipos-movimiento/{TipoMovimientoFormModal,TiposMovimientoTable}.js`), siguiendo el mismo patrón de `marcas`/`unidad_medida`: server actions que solo invocan los `fn_tipo_movimiento_*` de arriba (nada de queries directas desde el cliente), validación de formato en el frontend (nombre no vacío, signo obligatorio `1`/`-1`), y reutilización de las clases `.palacio-*` de `globals.css`.
+- Códigos de error mapeados en `lib/tipos-movimiento/errores.js`: `TMV01` nombre vacío, `TMV02` nombre duplicado (case-insensitive, con índice único `lower(btrim(nombre))` en base), `TMV03` tipo de movimiento inexistente, `TMV04` signo inválido (no es `1`/`-1`), `TMV05` signo obligatorio.
+- **Gaps conocidos y no resueltos en esta iteración** (relevados en `CONTEXTO_SUPABASE_tipo_movimiento.md`, señalados al usuario, pendientes de decisión de negocio):
+  - No existe columna `descripcion` pese a que el Sprint 1 la pide explícitamente ("ABMC de tipos de movimiento con descripción y signo"). Ninguna función `fn_tipo_movimiento_*` la recibe ni persiste — el frontend tampoco la expone porque no hay dónde guardarla.
+  - El `signo` **no es inmutable** en la implementación real: `fn_tipo_movimiento_modificar` permite cambiarlo libremente. Existe una función trigger `fn_tipo_movimiento_signo_inmutable` pensada para bloquear esto, pero (a) no está enganchada como trigger a la tabla, y (b) referencia una columna inexistente (`signo_tipo_movimiento` en vez de `signo`), por lo que fallaría en runtime si se adjuntara tal cual.
+  - `set_editado_tipo_movimiento` (función trigger) tampoco está enganchada a la tabla — hoy `editado` solo se actualiza porque las funciones `fn_tipo_movimiento_modificar/habilitar/inhabilitar` lo setean explícitamente en su `UPDATE`, no por una barrera a nivel de base.
+  - La política RLS de `DELETE` sobre `tipo_movimiento` está abierta a `authenticated` aunque el ABMC solo expone baja lógica (`activo`) — un `DELETE` directo saltándose las funciones es posible hoy.
 
 ### Stock y movimientos
 - **`fn_stock_consultar(p_id_producto, p_id_deposito)`** → `TABLE(id_stock, id_producto, codigo_producto, producto, id_unidad_medida, unidad_medida, id_deposito, nombre_deposito, cantidad, editado)`. Filtra `cantidad > 0`. **Esta es la función que usamos para la vista de listado de stock.**
@@ -163,3 +171,13 @@ El doc anterior (el que traía la sección de login/roles con Next.js) describe 
 | No se menciona nada de `compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`, `rubro`, `categoria`, `tipo_movimiento` | Estas tablas existen y tienen bastante desarrollo (funciones, triggers), pero 5 de ellas (`compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`) están **sin políticas RLS**, por lo que hoy nadie puede leerlas ni escribirlas |
 
 **Recomendación:** confirmar con el equipo si el doc anterior es de un sprint/diseño descartado, o si describe un rediseño pendiente de migrar. Mientras tanto, todo el trabajo de backend/frontend debería apoyarse en el esquema real documentado arriba, no en el doc de `lote`/`lote_deposito`.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
