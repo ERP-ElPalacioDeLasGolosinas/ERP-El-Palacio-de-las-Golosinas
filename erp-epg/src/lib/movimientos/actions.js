@@ -1,0 +1,146 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+
+const PATH = "/inventario/movimientos";
+
+/**
+ * Propaga el `code` (ERRCODE custom MOV01..MOV07) y el `message` del RPC (ya en
+ * español), con un fallback.
+ * @param {{ message?: string, code?: string } | null | undefined} error
+ * @param {string} fallback
+ */
+function errorResult(error, fallback) {
+  return {
+    ok: false,
+    code: error?.code ?? null,
+    error: error?.message || fallback,
+  };
+}
+
+/**
+ * @param {FormData | Record<string, unknown>} input
+ * @param {string} key
+ */
+function texto(input, key) {
+  const value =
+    typeof input.get === "function" ? input.get(key) : input[key];
+  if (value == null) return "";
+  return String(value).trim();
+}
+
+/**
+ * Lista movimientos de stock vía RPC `fn_movimiento_stock_listar`. Cada fila
+ * viene enriquecida (JOINs a tipo_movimiento, producto→marca/unidad, deposito,
+ * vw_usuario_resumen), con `valor` = `signo * cantidad` ya firmado y los datos
+ * de referencia de corrección (`id_movimiento_referencia`, `referencia_*`).
+ *
+ * @param {{
+ *   id_producto?: string | null,
+ *   id_deposito?: string | null,
+ *   id_tipo_movimiento?: string | null,
+ *   fecha_desde?: string | null,
+ *   fecha_hasta?: string | null,
+ * }} [filtros]
+ * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
+ */
+export async function listarMovimientos(filtros = {}) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_movimiento_stock_listar", {
+    p_id_producto: filtros.id_producto || null,
+    p_id_deposito: filtros.id_deposito || null,
+    p_id_tipo_movimiento: filtros.id_tipo_movimiento || null,
+    p_fecha_desde: filtros.fecha_desde || null,
+    p_fecha_hasta: filtros.fecha_hasta || null,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar los movimientos." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Consulta el stock disponible de un producto en un depósito, para validar en
+ * vivo un egreso antes de confirmarlo (evita el round-trip de `MOV05`).
+ *
+ * @param {string} idProducto
+ * @param {string} idDeposito
+ * @param {number} cantidad
+ * @returns {Promise<{ stockActual: number | null, alcanza: boolean, error: string | null }>}
+ */
+export async function validarStockDisponible(idProducto, idDeposito, cantidad) {
+  if (!idProducto || !idDeposito) {
+    return { stockActual: null, alcanza: false, error: null };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "fn_movimiento_stock_validar_stock_disponible",
+    {
+      p_id_producto: idProducto,
+      p_id_deposito: idDeposito,
+      p_cantidad: Number(cantidad) || 0,
+    }
+  );
+
+  if (error) {
+    return { stockActual: null, alcanza: false, error: "No se pudo validar el stock." };
+  }
+
+  const fila = Array.isArray(data) ? data[0] : data;
+  return {
+    stockActual: fila?.stock_actual ?? 0,
+    alcanza: fila?.alcanza === true,
+    error: null,
+  };
+}
+
+/**
+ * Registra un movimiento de stock vía RPC `fn_movimiento_stock_registrar`.
+ * El RPC controla stock, descuenta lotes FIFO por vencimiento, actualiza
+ * `stock` y escribe `movimiento_stock_detalle`. Si `id_movimiento_referencia`
+ * viene seteado, el movimiento queda ligado al original (corrección).
+ *
+ * @param {FormData} formData
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
+ */
+export async function registrarMovimiento(formData) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      code: null,
+      error: "Debés iniciar sesión para registrar un movimiento.",
+    };
+  }
+
+  const cantidadRaw = texto(formData, "cantidad");
+  const cantidad = Number(cantidadRaw);
+
+  const { error } = await supabase.rpc("fn_movimiento_stock_registrar", {
+    p_id_tipo_movimiento: texto(formData, "id_tipo_movimiento") || null,
+    p_id_producto: texto(formData, "id_producto") || null,
+    p_id_deposito: texto(formData, "id_deposito") || null,
+    p_cantidad: Number.isFinite(cantidad) ? cantidad : null,
+    p_creado_por: user.id,
+    p_fecha_movimiento: texto(formData, "fecha_movimiento") || null,
+    p_remito: texto(formData, "remito") || null,
+    p_id_movimiento_referencia:
+      texto(formData, "id_movimiento_referencia") || null,
+  });
+
+  if (error) {
+    return errorResult(error, "No se pudo registrar el movimiento.");
+  }
+
+  revalidatePath(PATH);
+  return { ok: true, error: null, code: null };
+}

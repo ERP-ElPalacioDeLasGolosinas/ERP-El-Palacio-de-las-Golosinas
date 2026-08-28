@@ -45,7 +45,7 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 | Vista | Contenido |
 |---|---|
 | `vista_diferencias_recepcion` | Compara `cantidad_pedida` (de `compra_producto`) vs `cantidad_recibida` (de `inventario_producto`) por compra/producto/marca, con `diferencia` calculada |
-| `vw_usuario_resumen` | Vista blindada de usuarios: `id_usuario` + `nombre_completo` (`nombre_usuario \|\| ' ' \|\| apellido_usuario`). `security_invoker = false` (default) → corre con privilegios del owner, así que sigue resolviendo el nombre aunque a futuro se cierre/restrinja el RLS de `usuario`. Expone solo id + nombre (nada de dni, mail, teléfono, rol). Pensada para resolver `creado_por` → nombre dentro de los `fn_*_listar` vía `LEFT JOIN` + `COALESCE`. `SELECT` concedido a `authenticated`, `service_role`. **Ya la usan:** `fn_unidad_medida_listar`, `fn_rubro_listar`, `fn_categoria_listar`. **Falta aplicarla en:** `fn_marca_listar`, `fn_deposito_listar` (y las tablas "detalle" con `editado_por`, con un 2º `LEFT JOIN` de alias distinto) |
+| `vw_usuario_resumen` | Vista blindada de usuarios: `id_usuario` + `nombre_completo` (`nombre_usuario \|\| ' ' \|\| apellido_usuario`). `security_invoker = false` (default) → corre con privilegios del owner, así que sigue resolviendo el nombre aunque a futuro se cierre/restrinja el RLS de `usuario`. Expone solo id + nombre (nada de dni, mail, teléfono, rol). Pensada para resolver `creado_por` → nombre dentro de los `fn_*_listar` vía `LEFT JOIN` + `COALESCE`. `SELECT` concedido a `authenticated`, `service_role`. **Ya la usan:** `fn_unidad_medida_listar`, `fn_rubro_listar`, `fn_categoria_listar`, `fn_marca_listar`, `fn_producto_listar`. **Falta aplicarla en:** `fn_deposito_listar` (y las tablas "detalle" con `editado_por`, con un 2º `LEFT JOIN` de alias distinto) |
 
 > No existen `vista_stock_producto`, `vista_stock_producto_deposito` ni `vista_lote_detalle` mencionadas en el doc anterior.
 
@@ -85,7 +85,9 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 ## Funciones RPC disponibles (`public.fn_*` y afines)
 
 ### Marca
-`fn_marca_crear`, `fn_marca_modificar`, `fn_marca_listar(p_incluir_inactivas)`, `fn_marca_habilitar`, `fn_marca_inhabilitar`
+`fn_marca_crear(p_nombre_marca, p_creado_por)`, `fn_marca_modificar(p_id_marca, p_nombre_marca)`, `fn_marca_listar(p_incluir_inactivas)`, `fn_marca_habilitar(p_id_marca)`, `fn_marca_inhabilitar(p_id_marca)`
+
+- **`fn_marca_listar(p_incluir_inactivas boolean default true)`** → `TABLE(id_marca, nombre_marca, activo, creado, editado, creado_por, creado_por_nombre)`, `creado_por_nombre` vía `LEFT JOIN vw_usuario_resumen` + `COALESCE`.
 
 ### Rubro
 `fn_rubro_crear(p_nombre_rubro, p_creado_por)`, `fn_rubro_modificar(p_id_rubro, p_nombre_rubro)`, `fn_rubro_listar(p_incluir_inactivos)`, `fn_rubro_habilitar(p_id_rubro)`, `fn_rubro_inhabilitar(p_id_rubro)`, `fn_rubro_eliminar(p_id_rubro)`, `rubro_tiene_articulos_activos(p_id_rubro)`, `rubro_motivo_bloqueo_delete(p_id_rubro)`
@@ -115,7 +117,14 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 `fn_deposito_crear`, `fn_deposito_modificar`, `fn_deposito_listar(p_incluir_inactivos)`, `fn_deposito_habilitar`, `fn_deposito_inhabilitar`, `fn_deposito_eliminar`, `fn_deposito_marcar_lleno`, `fn_deposito_desmarcar_lleno`, `set_activo_deposito`, `set_esta_lleno_deposito`, `eliminar_deposito`
 
 ### Producto
-`fn_producto_crear`, `fn_producto_modificar`, `fn_producto_listar(p_incluir_inactivos, p_id_marca, p_id_categoria, p_id_rubro, p_busqueda)`, `fn_producto_eliminar`, `fn_producto_validar_codigo_unico`, `_fn_producto_validar_referencias` (interna)
+`fn_producto_crear(p_id_marca, p_nombre_producto, p_descripcion_producto, p_codigo_producto, p_id_unidad_medida, p_numero_medida, p_creado_por, p_id_categoria?, p_precio_producto?, p_costo_producto?, p_precio_mayorista_producto?, p_precio_minorista_producto?)`, `fn_producto_modificar(p_id_producto, ...mismos que crear sin p_creado_por)`, `fn_producto_listar(p_incluir_inactivos, p_id_marca, p_id_categoria, p_id_rubro, p_busqueda)`, `fn_producto_habilitar(p_id_producto)`, `fn_producto_inhabilitar(p_id_producto)`, `fn_producto_eliminar(p_id_producto)`, `fn_producto_validar_codigo_unico(p_codigo_producto, p_id_producto?)`, `_fn_producto_validar_referencias` (interna)
+
+- **`fn_producto_listar(p_incluir_inactivos boolean default true, p_id_marca uuid default null, p_id_categoria uuid default null, p_id_rubro uuid default null, p_busqueda text default null)`** → `TABLE(id_producto, codigo_producto, nombre_producto, descripcion_producto, nombre_completo, id_marca, nombre_marca, id_unidad_medida, nombre_unidad_medida, abreviatura_unidad_medida, numero_medida, id_categoria, nombre_categoria, id_rubro, nombre_rubro, precio_producto, costo_producto, precio_mayorista_producto, precio_minorista_producto, activo, creado, editado, creado_por, creado_por_nombre)`. `nombre_completo` viene armado: `nombre_producto || ' - ' || nombre_marca || ' (' || numero_medida || ' ' || abreviatura_unidad_medida || ')'`. JOIN a `marca` y `unidad_medida`, LEFT JOIN a `categoria`/`rubro` (nullable) y a `vw_usuario_resumen` (`COALESCE(..., 'Usuario no disponible')`). (Migración que reescribió la función; antes devolvía `SETOF producto` sin joins.)
+- **`fn_producto_habilitar` / `fn_producto_inhabilitar`**: se crearon aparte (antes `producto` no tenía el par estándar). `PRD04` si el id no existe; setean `editado = now()`.
+- Códigos de error (ERRCODE custom, mensajes en español): `PRD01` nombre vacío, `PRD02` código vacío, `PRD03` código duplicado, `PRD04` producto no encontrado, `PRD05` marca inexistente/inhabilitada, `PRD06` categoría inexistente/inhabilitada, `PRD07` unidad de medida inexistente/inhabilitada, `PRD08` `numero_medida <= 0`, `PRD09` no se puede eliminar (tiene compras o inventario asociado → usar inhabilitar).
+- `fn_producto_validar_codigo_unico` → `boolean` (`true` = disponible). Para validación en vivo del form; `p_id_producto` opcional para excluirse a sí mismo al editar.
+- **Nota costo/precio**: no hay costo promedio calculado (sin costeo por lote/PEPS/ponderado). `costo_producto` es un campo simple editable. `producto` no tiene `editado_por`. El frontend de A-05 dejó de exponer `precio_producto` en el form (manda `0` fijo) y usa `costo_producto` / `precio_mayorista_producto` / `precio_minorista_producto`.
+- `producto.id_rubro` se sincroniza desde `id_categoria` vía trigger `trg_producto_sync_id_rubro` (INSERT/UPDATE de `producto`); al reasignar una categoría a otro rubro, `fn_categoria_modificar` resincroniza los productos ya cargados en la misma transacción.
 
 ### Tipo de movimiento
 `fn_tipo_movimiento_crear(p_nombre, p_signo, p_creado_por, p_requiere_control_stock)`, `fn_tipo_movimiento_modificar(p_id_tipo_movimiento, p_nombre, p_signo, p_requiere_control_stock)`, `fn_tipo_movimiento_listar(p_incluir_inactivos)` → `SETOF tipo_movimiento` (sin `creado_por_nombre`, no usa `vw_usuario_resumen`), `fn_tipo_movimiento_habilitar(p_id_tipo_movimiento)`, `fn_tipo_movimiento_inhabilitar(p_id_tipo_movimiento)`.
