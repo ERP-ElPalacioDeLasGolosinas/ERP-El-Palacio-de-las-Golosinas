@@ -49,7 +49,7 @@ export default async function NuevoMovimientoPage() {
           { label: "Registrar" },
         ]}
         title="Registrar movimiento"
-        description="Alta de un ingreso o egreso de stock (S-05). Impacta el stock y descuenta lotes por vencimiento (FIFO)."
+        description="Alta de un ingreso o egreso de stock. Impacta el stock y descuenta lotes por vencimiento (FIFO)."
       />
 
       <MovimientoForm

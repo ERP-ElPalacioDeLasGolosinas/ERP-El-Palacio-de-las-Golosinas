@@ -55,7 +55,7 @@ export default async function ProductosPage({ searchParams }) {
       <PageHeader
         crumbs={[{ label: "Inventario" }, { label: "Productos" }]}
         title="Productos"
-        description="Catálogo de artículos (A-05): alta, edición y administración."
+        description="Catálogo de artículos: alta, edición y administración."
       />
 
       {error ? (

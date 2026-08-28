@@ -20,7 +20,7 @@ export default async function UnidadesMedidaPage({ searchParams }) {
       <PageHeader
         crumbs={[{ label: "Catálogo" }, { label: "Unidades de medida" }]}
         title="Unidades de medida"
-        description="Alta, edición y administración de las unidades de medida del catálogo (A-01)."
+        description="Alta, edición y administración de las unidades de medida del catálogo."
       />
 
       {error ? (

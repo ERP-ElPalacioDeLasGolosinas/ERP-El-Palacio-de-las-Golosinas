@@ -20,7 +20,7 @@ export default async function RubrosPage({ searchParams }) {
       <PageHeader
         crumbs={[{ label: "Catálogo" }, { label: "Rubros" }]}
         title="Rubros"
-        description="Alta, edición y administración de los rubros del catálogo (A-03)."
+        description="Alta, edición y administración de los rubros del catálogo."
       />
 
       {error ? (

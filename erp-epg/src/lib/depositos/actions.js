@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 const PATH = "/inventario/depositos";
-const DEPOSITO_COLUMNS =
-  "id_deposito, nombre_deposito, direccion_deposito, telefono_deposito, horario_apertura, horario_cierre, id_responsable, activo, esta_lleno, creado, editado, creado_por";
 
 /**
  * Junta los parámetros del formulario. Las reglas de negocio (obligatorios,
@@ -43,12 +41,16 @@ function mensajeError(error, mensajePorDefecto) {
   return error?.message || mensajePorDefecto;
 }
 
-export async function listarDepositos() {
+/**
+ * Lista depósitos vía `fn_deposito_listar`. Sin queries directas a la tabla.
+ *
+ * @param {boolean} [incluirInactivos=true]
+ */
+export async function listarDepositos(incluirInactivos = true) {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("deposito")
-    .select(DEPOSITO_COLUMNS)
-    .order("nombre_deposito", { ascending: true });
+  const { data, error } = await supabase.rpc("fn_deposito_listar", {
+    p_incluir_inactivos: Boolean(incluirInactivos),
+  });
 
   if (error) {
     return { data: null, error: "No se pudieron cargar los depósitos." };
@@ -58,21 +60,25 @@ export async function listarDepositos() {
 }
 
 /**
+ * Obtiene un depósito por id usando el listado RPC (sin `.from("deposito")`).
  * @param {string} id_deposito
  */
 export async function obtenerDeposito(id_deposito) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("deposito")
-    .select(DEPOSITO_COLUMNS)
-    .eq("id_deposito", id_deposito)
-    .maybeSingle();
+  if (!id_deposito) {
+    return { data: null, error: "Falta el identificador del depósito." };
+  }
 
+  const { data, error } = await listarDepositos(true);
   if (error) {
     return { data: null, error: "No se pudo cargar el depósito." };
   }
 
-  return { data, error: null };
+  const deposito = (data ?? []).find((d) => d.id_deposito === id_deposito);
+  if (!deposito) {
+    return { data: null, error: null };
+  }
+
+  return { data: deposito, error: null };
 }
 
 /**

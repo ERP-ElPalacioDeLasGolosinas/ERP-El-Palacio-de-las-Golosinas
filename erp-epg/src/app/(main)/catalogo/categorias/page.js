@@ -29,7 +29,7 @@ export default async function CategoriasPage({ searchParams }) {
       <PageHeader
         crumbs={[{ label: "Catálogo" }, { label: "Categorías" }]}
         title="Categorías"
-        description="Alta, edición y administración de las categorías del catálogo (A-04). Cada categoría pertenece a un rubro."
+        description="Alta, edición y administración de las categorías del catálogo. Cada categoría pertenece a un rubro."
       />
 
       {error ? (

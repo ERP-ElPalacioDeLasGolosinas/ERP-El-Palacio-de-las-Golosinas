@@ -142,5 +142,6 @@ export async function registrarMovimiento(formData) {
   }
 
   revalidatePath(PATH);
+  revalidatePath("/inventario/stock");
   return { ok: true, error: null, code: null };
 }

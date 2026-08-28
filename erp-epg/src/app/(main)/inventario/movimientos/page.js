@@ -51,7 +51,7 @@ export default async function MovimientosPage({ searchParams }) {
       <PageHeader
         crumbs={[{ label: "Inventario" }, { label: "Movimientos" }]}
         title="Historial de movimientos"
-        description="Auditoría de entradas y salidas de stock por producto y depósito (S-05)."
+        description="Auditoría de entradas y salidas de stock por producto y depósito."
         actions={
           <Link
             href="/inventario/movimientos/nuevo"
