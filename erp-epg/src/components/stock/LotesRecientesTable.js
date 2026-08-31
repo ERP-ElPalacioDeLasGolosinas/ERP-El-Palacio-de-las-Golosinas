@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
@@ -24,13 +25,13 @@ function formatFecha(valor, conHora = false) {
 }
 
 /**
- * Historial de lotes recientes. El filtro de Depósito es opcional (sin depósito
- * se listan los de todos) y escribe `?deposito=` en la URL para que el server
- * re-llame `fn_inventario_producto_listar_recientes`.
+ * Historial de lotes recientes. Depósito escribe `?deposito=` (server).
+ * Marca / categoría / rubro se filtran en cliente.
  *
  * @param {{
  *   filas: Array<{
  *     id_inventario_producto: string,
+ *     id_producto: string,
  *     codigo_producto: string,
  *     nombre_completo: string,
  *     nombre_deposito: string,
@@ -38,15 +39,32 @@ function formatFecha(valor, conHora = false) {
  *     fecha_vencimiento: string | null,
  *     stock: string,
  *     fecha_registro: string,
+ *     id_marca?: string | null,
+ *     id_categoria?: string | null,
+ *     id_rubro?: string | null,
  *   }>,
  *   depositos: Array<{ id_deposito: string, nombre_deposito: string }>,
  *   filtroDeposito: string,
+ *   marcas: Array<{ id_marca: string, nombre_marca: string }>,
+ *   categorias: Array<{ id_categoria: string, nombre_categoria: string }>,
+ *   rubros: Array<{ id_rubro: string, nombre_rubro: string }>,
  * }} props
  */
-export function LotesRecientesTable({ filas, depositos, filtroDeposito }) {
+export function LotesRecientesTable({
+  filas,
+  depositos,
+  filtroDeposito,
+  marcas,
+  categorias,
+  rubros,
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  const [filtroMarca, setFiltroMarca] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [filtroRubro, setFiltroRubro] = useState("");
 
   function onDepositoChange(valor) {
     const params = new URLSearchParams(searchParams);
@@ -56,9 +74,22 @@ export function LotesRecientesTable({ filas, depositos, filtroDeposito }) {
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
+  const filtradas = useMemo(() => {
+    return filas.filter((f) => {
+      if (filtroMarca && f.id_marca !== filtroMarca) return false;
+      if (filtroCategoria && f.id_categoria !== filtroCategoria) return false;
+      if (filtroRubro && f.id_rubro !== filtroRubro) return false;
+      return true;
+    });
+  }, [filas, filtroMarca, filtroCategoria, filtroRubro]);
+
+  const hayFiltros = Boolean(
+    filtroDeposito || filtroMarca || filtroCategoria || filtroRubro
+  );
+
   return (
     <>
-      <form className="palacio-card mb-4 flex flex-wrap items-end gap-3 p-4">
+      <div className="palacio-card mb-4 flex flex-wrap items-end gap-3 p-4">
         <label className="flex flex-col gap-1.5 text-sm text-zinc-700">
           <span className="text-[11px] font-semibold tracking-wider text-palacio-muted uppercase">
             Depósito
@@ -76,14 +107,57 @@ export function LotesRecientesTable({ filas, depositos, filtroDeposito }) {
             ))}
           </select>
         </label>
-      </form>
+        <select
+          value={filtroMarca}
+          onChange={(e) => setFiltroMarca(e.target.value)}
+          className="palacio-input max-w-[12rem]"
+          aria-label="Filtrar por marca"
+        >
+          <option value="">Todas las marcas</option>
+          {marcas.map((m) => (
+            <option key={m.id_marca} value={m.id_marca}>
+              {m.nombre_marca}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filtroCategoria}
+          onChange={(e) => setFiltroCategoria(e.target.value)}
+          className="palacio-input max-w-[12rem]"
+          aria-label="Filtrar por categoría"
+        >
+          <option value="">Todas las categorías</option>
+          {categorias.map((c) => (
+            <option key={c.id_categoria} value={c.id_categoria}>
+              {c.nombre_categoria}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filtroRubro}
+          onChange={(e) => setFiltroRubro(e.target.value)}
+          className="palacio-input max-w-[12rem]"
+          aria-label="Filtrar por rubro"
+        >
+          <option value="">Todos los rubros</option>
+          {rubros.map((r) => (
+            <option key={r.id_rubro} value={r.id_rubro}>
+              {r.nombre_rubro}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {filas.length === 0 ? (
+      {filtradas.length === 0 ? (
         <div className="palacio-card px-6 py-12 text-center">
           <p className="text-sm text-palacio-muted">
-            {filtroDeposito
-              ? "No hay lotes registrados en este depósito."
-              : "No hay lotes registrados todavía."}
+            {filas.length === 0
+              ? filtroDeposito
+                ? "No hay lotes registrados en este depósito."
+                : "No hay lotes registrados todavía."
+              : hayFiltros
+                ? "Ningún lote coincide con los filtros."
+                : "No hay lotes registrados todavía."}
           </p>
         </div>
       ) : (
@@ -91,7 +165,7 @@ export function LotesRecientesTable({ filas, depositos, filtroDeposito }) {
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Historial</h2>
             <span className="text-xs text-palacio-muted">
-              {filas.length} lote{filas.length === 1 ? "" : "s"}
+              {filtradas.length} lote{filtradas.length === 1 ? "" : "s"}
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -108,7 +182,7 @@ export function LotesRecientesTable({ filas, depositos, filtroDeposito }) {
                 </tr>
               </thead>
               <tbody>
-                {filas.map((f) => (
+                {filtradas.map((f) => (
                   <tr
                     key={f.id_inventario_producto}
                     className="border-b border-palacio-border last:border-0"

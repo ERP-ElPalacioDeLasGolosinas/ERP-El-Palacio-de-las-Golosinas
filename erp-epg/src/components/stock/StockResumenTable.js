@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
@@ -8,8 +8,8 @@ const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
 /**
  * Listado principal de stock: una fila por producto (total sumado entre
  * depósitos). El buscador escribe `?q=` en la URL y el server vuelve a llamar
- * `fn_stock_resumen_por_producto(p_busqueda)`. Cada fila navega al detalle del
- * producto.
+ * `fn_stock_resumen_por_producto(p_busqueda)`. Marca / categoría / rubro se
+ * filtran en cliente (mismos selects que Productos).
  *
  * @param {{
  *   filas: Array<{
@@ -19,20 +19,33 @@ const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
  *     nombre_marca: string,
  *     stock_total: number,
  *     cantidad_depositos: number,
+ *     id_marca?: string | null,
+ *     id_categoria?: string | null,
+ *     id_rubro?: string | null,
  *   }>,
  *   busquedaInicial: string,
+ *   marcas: Array<{ id_marca: string, nombre_marca: string }>,
+ *   categorias: Array<{ id_categoria: string, nombre_categoria: string }>,
+ *   rubros: Array<{ id_rubro: string, nombre_rubro: string }>,
  * }} props
  */
-export function StockResumenTable({ filas, busquedaInicial }) {
+export function StockResumenTable({
+  filas,
+  busquedaInicial,
+  marcas,
+  categorias,
+  rubros,
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [busqueda, setBusqueda] = useState(busquedaInicial ?? "");
+  const [filtroMarca, setFiltroMarca] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [filtroRubro, setFiltroRubro] = useState("");
   const primeraRef = useRef(true);
 
-  // Debounce: propaga la búsqueda a la URL (y con eso al RPC) sin disparar en
-  // el primer render ni cuando el valor no cambió respecto de la URL.
   useEffect(() => {
     if (primeraRef.current) {
       primeraRef.current = false;
@@ -52,9 +65,22 @@ export function StockResumenTable({ filas, busquedaInicial }) {
     return () => clearTimeout(t);
   }, [busqueda, pathname, router, searchParams]);
 
+  const filtradas = useMemo(() => {
+    return filas.filter((f) => {
+      if (filtroMarca && f.id_marca !== filtroMarca) return false;
+      if (filtroCategoria && f.id_categoria !== filtroCategoria) return false;
+      if (filtroRubro && f.id_rubro !== filtroRubro) return false;
+      return true;
+    });
+  }, [filas, filtroMarca, filtroCategoria, filtroRubro]);
+
+  const hayFiltrosCatalogo = Boolean(
+    filtroMarca || filtroCategoria || filtroRubro
+  );
+
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <input
           type="search"
           value={busqueda}
@@ -62,14 +88,57 @@ export function StockResumenTable({ filas, busquedaInicial }) {
           placeholder="Buscar por código, producto o marca"
           className="palacio-input max-w-sm"
         />
+        <select
+          value={filtroMarca}
+          onChange={(e) => setFiltroMarca(e.target.value)}
+          className="palacio-input max-w-[12rem]"
+          aria-label="Filtrar por marca"
+        >
+          <option value="">Todas las marcas</option>
+          {marcas.map((m) => (
+            <option key={m.id_marca} value={m.id_marca}>
+              {m.nombre_marca}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filtroCategoria}
+          onChange={(e) => setFiltroCategoria(e.target.value)}
+          className="palacio-input max-w-[12rem]"
+          aria-label="Filtrar por categoría"
+        >
+          <option value="">Todas las categorías</option>
+          {categorias.map((c) => (
+            <option key={c.id_categoria} value={c.id_categoria}>
+              {c.nombre_categoria}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filtroRubro}
+          onChange={(e) => setFiltroRubro(e.target.value)}
+          className="palacio-input max-w-[12rem]"
+          aria-label="Filtrar por rubro"
+        >
+          <option value="">Todos los rubros</option>
+          {rubros.map((r) => (
+            <option key={r.id_rubro} value={r.id_rubro}>
+              {r.nombre_rubro}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {filas.length === 0 ? (
+      {filtradas.length === 0 ? (
         <div className="palacio-card px-6 py-12 text-center">
           <p className="text-sm text-palacio-muted">
-            {busqueda.trim()
-              ? "Ningún producto coincide con la búsqueda."
-              : "No hay stock para mostrar."}
+            {filas.length === 0
+              ? busqueda.trim()
+                ? "Ningún producto coincide con la búsqueda."
+                : "No hay stock para mostrar."
+              : hayFiltrosCatalogo
+                ? "Ningún producto coincide con los filtros."
+                : "No hay stock para mostrar."}
           </p>
         </div>
       ) : (
@@ -77,7 +146,7 @@ export function StockResumenTable({ filas, busquedaInicial }) {
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Listado</h2>
             <span className="text-xs text-palacio-muted">
-              {filas.length} producto{filas.length === 1 ? "" : "s"}
+              {filtradas.length} producto{filtradas.length === 1 ? "" : "s"}
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -91,7 +160,7 @@ export function StockResumenTable({ filas, busquedaInicial }) {
                 </tr>
               </thead>
               <tbody>
-                {filas.map((f) => (
+                {filtradas.map((f) => (
                   <tr
                     key={f.id_producto}
                     onClick={() =>
