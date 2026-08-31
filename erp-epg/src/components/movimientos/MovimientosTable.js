@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { listarProductosPorDepositoMovimientos } from "@/lib/movimientos/actions";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -35,7 +36,7 @@ function formatValor(valor) {
 /**
  * @param {{
  *   movimientos: Array<Record<string, any>>,
- *   productos: Array<{ id_producto: string, nombre_completo: string }>,
+ *   productosIniciales: Array<{ id_producto: string, nombre_completo: string }>,
  *   depositos: Array<{ id_deposito: string, nombre_deposito: string }>,
  *   tipos: Array<{ id_tipo_movimiento: string, nombre: string }>,
  *   filtros: { producto: string, deposito: string, tipo: string, desde: string, hasta: string },
@@ -43,7 +44,7 @@ function formatValor(valor) {
  */
 export function MovimientosTable({
   movimientos,
-  productos,
+  productosIniciales,
   depositos,
   tipos,
   filtros,
@@ -59,6 +60,13 @@ export function MovimientosTable({
     desde: filtros.desde,
     hasta: filtros.hasta,
   });
+  // El combo de Producto depende del Depósito: se elige primero el depósito y
+  // recién ahí se puebla, en base al historial de movimientos de ese depósito
+  // (fn_producto_listar_por_deposito_movimientos). Sin depósito, queda
+  // deshabilitado.
+  const [productos, setProductos] = useState(productosIniciales ?? []);
+  const [cargandoProductos, setCargandoProductos] = useState(false);
+  const depositoRequestRef = useRef(0);
 
   const hayFiltros = useMemo(
     () => Object.values(filtros).some((v) => v),
@@ -85,11 +93,37 @@ export function MovimientosTable({
 
   function limpiar() {
     setForm({ producto: "", deposito: "", tipo: "", desde: "", hasta: "" });
+    setProductos([]);
+    setCargandoProductos(false);
+    depositoRequestRef.current++;
     router.push(pathname);
   }
 
   function set(campo, valor) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
+  }
+
+  /**
+   * Al cambiar el Depósito: resetea el Producto elegido y vuelve a poblar el
+   * combo. Si se limpia el Depósito (vuelve a "Todos"), el combo de Producto
+   * queda vacío y deshabilitado — no se vuelve al catálogo completo.
+   */
+  function onDepositoChange(valor) {
+    setForm((prev) => ({ ...prev, deposito: valor, producto: "" }));
+
+    const requestId = ++depositoRequestRef.current;
+    if (!valor) {
+      setProductos([]);
+      setCargandoProductos(false);
+      return;
+    }
+
+    setCargandoProductos(true);
+    listarProductosPorDepositoMovimientos(valor).then((res) => {
+      if (depositoRequestRef.current !== requestId) return;
+      setCargandoProductos(false);
+      setProductos(res.data ?? []);
+    });
   }
 
   return (
@@ -98,30 +132,37 @@ export function MovimientosTable({
         onSubmit={aplicar}
         className="palacio-card mb-4 flex flex-wrap items-end gap-3 p-4"
       >
-        <Filtro label="Producto">
-          <select
-            value={form.producto}
-            onChange={(e) => set("producto", e.target.value)}
-            className="palacio-input min-w-48"
-          >
-            <option value="">Todos</option>
-            {productos.map((p) => (
-              <option key={p.id_producto} value={p.id_producto}>
-                {p.nombre_completo}
-              </option>
-            ))}
-          </select>
-        </Filtro>
         <Filtro label="Depósito">
           <select
             value={form.deposito}
-            onChange={(e) => set("deposito", e.target.value)}
+            onChange={(e) => onDepositoChange(e.target.value)}
             className="palacio-input min-w-40"
           >
             <option value="">Todos</option>
             {depositos.map((d) => (
               <option key={d.id_deposito} value={d.id_deposito}>
                 {d.nombre_deposito}
+              </option>
+            ))}
+          </select>
+        </Filtro>
+        <Filtro label="Producto">
+          <select
+            value={form.producto}
+            onChange={(e) => set("producto", e.target.value)}
+            disabled={!form.deposito || cargandoProductos}
+            className="palacio-input min-w-48"
+          >
+            <option value="">
+              {!form.deposito
+                ? "Elegí un depósito primero"
+                : cargandoProductos
+                  ? "Cargando productos…"
+                  : "Todos"}
+            </option>
+            {productos.map((p) => (
+              <option key={p.id_producto} value={p.id_producto}>
+                {p.nombre_completo}
               </option>
             ))}
           </select>

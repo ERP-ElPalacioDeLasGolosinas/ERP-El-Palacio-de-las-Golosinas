@@ -1,7 +1,6 @@
-import { consultarStock } from "@/lib/stock/actions";
-import { listarProductos } from "@/lib/productos/actions";
-import { listarDepositos } from "@/lib/depositos/actions";
-import { StockTable } from "@/components/stock/StockTable";
+import Link from "next/link";
+import { consultarStockResumen } from "@/lib/stock/actions";
+import { StockResumenTable } from "@/components/stock/StockResumenTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 export const metadata = {
@@ -9,36 +8,36 @@ export const metadata = {
 };
 
 /**
- * @param {{ searchParams: Promise<{ producto?: string, deposito?: string }> }} props
+ * @param {{ searchParams: Promise<{ q?: string }> }} props
  */
 export default async function StockPage({ searchParams }) {
   const sp = (await searchParams) ?? {};
-  const filtros = {
-    id_producto: sp.producto ?? null,
-    id_deposito: sp.deposito ?? null,
-  };
+  const q = (sp.q ?? "").trim();
 
-  const [{ data, error }, productosRes, depositosRes] = await Promise.all([
-    consultarStock(filtros),
-    listarProductos(false),
-    listarDepositos(false),
-  ]);
-
-  const productos = (productosRes.data ?? []).map((p) => ({
-    id_producto: p.id_producto,
-    nombre_completo: p.nombre_completo ?? p.nombre_producto,
-  }));
-  const depositos = (depositosRes.data ?? []).map((d) => ({
-    id_deposito: d.id_deposito,
-    nombre_deposito: d.nombre_deposito,
-  }));
+  const { data, error } = await consultarStockResumen(q || null);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8">
       <PageHeader
         crumbs={[{ label: "Inventario" }, { label: "Stock" }]}
         title="Consultar stock"
-        description="Stock disponible por producto y depósito."
+        description="Stock total por producto. Entrá a un producto para ver el desglose por depósito y sus lotes."
+        actions={
+          <>
+            <Link
+              href="/inventario/stock/lotes"
+              className="palacio-btn-secondary inline-flex px-4 py-2.5 text-sm"
+            >
+              Ver lotes
+            </Link>
+            <Link
+              href="/inventario/stock/lotes/nuevo"
+              className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
+            >
+              Registrar lote
+            </Link>
+          </>
+        }
       />
 
       {error ? (
@@ -47,15 +46,7 @@ export default async function StockPage({ searchParams }) {
           <p className="mt-1 text-amber-900/80">{error}</p>
         </div>
       ) : (
-        <StockTable
-          filas={data ?? []}
-          productos={productos}
-          depositos={depositos}
-          filtros={{
-            producto: sp.producto ?? "",
-            deposito: sp.deposito ?? "",
-          }}
-        />
+        <StockResumenTable filas={data ?? []} busquedaInicial={q} />
       )}
     </div>
   );

@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { listarMovimientos } from "@/lib/movimientos/actions";
-import { listarProductos } from "@/lib/productos/actions";
+import {
+  listarMovimientos,
+  listarProductosPorDepositoMovimientos,
+} from "@/lib/movimientos/actions";
 import { listarDepositos } from "@/lib/depositos/actions";
 import { listarTiposMovimiento } from "@/lib/tipos-movimiento/actions";
 import { MovimientosTable } from "@/components/movimientos/MovimientosTable";
@@ -25,12 +27,18 @@ export default async function MovimientosPage({ searchParams }) {
     fecha_hasta: sp.hasta ?? null,
   };
 
-  const [{ data, error }, productosRes, depositosRes, tiposRes] =
+  // El combo de Producto se puebla solo con un Depósito elegido, en base al
+  // historial de movimientos en ese depósito
+  // (fn_producto_listar_por_deposito_movimientos: incluye productos que hoy
+  // están en 0 pero que tuvieron movimientos ahí).
+  const [{ data, error }, depositosRes, tiposRes, productosRes] =
     await Promise.all([
       listarMovimientos(filtros),
-      listarProductos(false),
       listarDepositos(),
       listarTiposMovimiento(true),
+      filtros.id_deposito
+        ? listarProductosPorDepositoMovimientos(filtros.id_deposito)
+        : Promise.resolve({ data: [] }),
     ]);
 
   const productos = (productosRes.data ?? []).map((p) => ({
@@ -70,7 +78,7 @@ export default async function MovimientosPage({ searchParams }) {
       ) : (
         <MovimientosTable
           movimientos={data ?? []}
-          productos={productos}
+          productosIniciales={productos}
           depositos={depositos}
           tipos={tipos}
           filtros={{

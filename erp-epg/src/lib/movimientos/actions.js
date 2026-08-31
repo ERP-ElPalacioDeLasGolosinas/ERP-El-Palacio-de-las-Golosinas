@@ -145,3 +145,177 @@ export async function registrarMovimiento(formData) {
   revalidatePath("/inventario/stock");
   return { ok: true, error: null, code: null };
 }
+
+/**
+ * Lista los productos con stock disponible (> 0) en un depósito, vía RPC
+ * `fn_producto_listar_por_deposito`. Usada para poblar el combo de Producto
+ * del wizard una vez elegido el Depósito (origen).
+ *
+ * @param {string} idDeposito
+ * @param {boolean} [incluirInactivos=false]
+ * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
+ */
+export async function listarProductosPorDeposito(
+  idDeposito,
+  incluirInactivos = false
+) {
+  if (!idDeposito) {
+    return { data: [], error: null };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_producto_listar_por_deposito", {
+    p_id_deposito: idDeposito,
+    p_incluir_inactivos: Boolean(incluirInactivos),
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar los productos del depósito." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Lista los productos que tuvieron movimientos históricos en un depósito, vía
+ * RPC `fn_producto_listar_por_deposito_movimientos`. A diferencia de
+ * `listarProductosPorDeposito` (que mira `stock.cantidad > 0`), ésta se basa en
+ * `movimiento_stock`, así que incluye productos que hoy están en 0 pero que
+ * tuvieron movimientos en ese depósito. Usada para poblar el combo de Producto
+ * del filtro del listado de movimientos una vez elegido el Depósito.
+ *
+ * @param {string} idDeposito
+ * @param {boolean} [incluirInactivos=true]
+ * @returns {Promise<{ data: Array<{
+ *   id_producto: string,
+ *   nombre_completo: string,
+ * }> | null, error: string | null }>}
+ */
+export async function listarProductosPorDepositoMovimientos(
+  idDeposito,
+  incluirInactivos = true
+) {
+  if (!idDeposito) {
+    return { data: [], error: null };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "fn_producto_listar_por_deposito_movimientos",
+    {
+      p_id_deposito: idDeposito,
+      p_incluir_inactivos: Boolean(incluirInactivos),
+    }
+  );
+
+  if (error) {
+    return {
+      data: null,
+      error: "No se pudieron cargar los productos del depósito.",
+    };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Registra una transferencia de mercadería entre dos depósitos vía RPC
+ * `fn_movimiento_stock_transferir` (uso puntual, sin pasar por el lote).
+ * Internamente registra una salida en el origen y una entrada en el destino,
+ * referenciadas entre sí, en una única transacción.
+ *
+ * @param {{
+ *   idProducto: string,
+ *   idDepositoOrigen: string,
+ *   idDepositoDestino: string,
+ *   cantidad: number,
+ *   fechaMovimiento?: string | null,
+ *   remito?: string | null,
+ * }} input
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
+ */
+export async function registrarTransferencia({
+  idProducto,
+  idDepositoOrigen,
+  idDepositoDestino,
+  cantidad,
+  fechaMovimiento,
+  remito,
+}) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      code: null,
+      error: "Debés iniciar sesión para registrar una transferencia.",
+    };
+  }
+
+  const { error } = await supabase.rpc("fn_movimiento_stock_transferir", {
+    p_id_producto: idProducto || null,
+    p_id_deposito_origen: idDepositoOrigen || null,
+    p_id_deposito_destino: idDepositoDestino || null,
+    p_cantidad: Number(cantidad) || null,
+    p_creado_por: user.id,
+    p_fecha_movimiento: fechaMovimiento || null,
+    p_remito: remito || null,
+  });
+
+  if (error) {
+    return errorResult(error, "No se pudo registrar la transferencia.");
+  }
+
+  revalidatePath(PATH);
+  revalidatePath("/inventario/stock");
+  return { ok: true, error: null, code: null };
+}
+
+/**
+ * Registra un lote de movimientos (simples y/o transferencias) en una única
+ * transacción atómica vía RPC `fn_movimiento_stock_registrar_lote`. Si
+ * cualquier ítem falla, no queda nada registrado.
+ *
+ * @param {Array<Record<string, unknown>>} items
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null, data?: unknown }>}
+ */
+export async function registrarMovimientosLote(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return {
+      ok: false,
+      code: "MLT01",
+      error: "Debés cargar al menos un movimiento antes de registrar.",
+    };
+  }
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      code: null,
+      error: "Debés iniciar sesión para registrar movimientos.",
+    };
+  }
+
+  const { data, error } = await supabase.rpc("fn_movimiento_stock_registrar_lote", {
+    p_movimientos: items,
+    p_creado_por: user.id,
+  });
+
+  if (error) {
+    return errorResult(error, "No se pudieron registrar los movimientos.");
+  }
+
+  revalidatePath(PATH);
+  revalidatePath("/inventario/stock");
+  return { ok: true, error: null, code: null, data };
+}
