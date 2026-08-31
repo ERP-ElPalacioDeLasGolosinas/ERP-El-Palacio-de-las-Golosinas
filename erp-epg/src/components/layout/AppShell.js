@@ -33,10 +33,13 @@ const NAV = [
         match: (p) => p.startsWith("/inventario/marcas"),
       },
       {
-        href: "/inventario/stock",
         label: "Stock",
         icon: ChartIcon,
         match: (p) => p.startsWith("/inventario/stock"),
+        children: [
+          { href: "/inventario/stock", label: "General" },
+          { href: "/inventario/stock/lotes", label: "Lotes" },
+        ],
       },
       {
         label: "Movimientos",
@@ -182,7 +185,16 @@ function NavItem({ item, pathname }) {
         {open ? (
           <ul className="mt-0.5 mb-1 flex flex-col gap-0.5 border-l border-palacio-border pl-4">
             {item.children.map((child) => {
-              const childActive = pathname.startsWith(child.href);
+              // Prefijo más largo gana: evita que "General" (/stock) quede
+              // activo también en /stock/lotes, igual que en Movimientos.
+              const childActive =
+                item.children
+                  .filter(
+                    (c) =>
+                      pathname === c.href || pathname.startsWith(`${c.href}/`)
+                  )
+                  .sort((a, b) => b.href.length - a.href.length)[0]?.href ===
+                child.href;
               return (
                 <li key={child.href}>
                   <Link

@@ -23,20 +23,12 @@ export default async function StockPage({ searchParams }) {
         title="Consultar stock"
         description="Stock total por producto. Entrá a un producto para ver el desglose por depósito y sus lotes."
         actions={
-          <>
-            <Link
-              href="/inventario/stock/lotes"
-              className="palacio-btn-secondary inline-flex px-4 py-2.5 text-sm"
-            >
-              Ver lotes
-            </Link>
-            <Link
-              href="/inventario/stock/lotes/nuevo"
-              className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
-            >
-              Registrar lote
-            </Link>
-          </>
+          <Link
+            href="/inventario/stock/lotes/nuevo"
+            className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
+          >
+            Registrar lote
+          </Link>
         }
       />
 
