@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { EliminarLoteButton } from "./EliminarLoteButton";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -179,6 +180,7 @@ export function LotesRecientesTable({
                   <Th>Vencimiento</Th>
                   <Th className="text-right">Stock</Th>
                   <Th>Registrado</Th>
+                  <Th className="text-right">Acciones</Th>
                 </tr>
               </thead>
               <tbody>
@@ -209,6 +211,14 @@ export function LotesRecientesTable({
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
                       {formatFecha(f.fecha_registro, true)}
+                    </td>
+                    <td className="px-5 py-4 align-middle">
+                      <div className="flex justify-end">
+                        <EliminarLoteButton
+                          idLote={f.id_lote}
+                          nombreCompleto={f.nombre_completo}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}

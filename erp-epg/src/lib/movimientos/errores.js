@@ -15,6 +15,13 @@
  * | MTR01         | id_deposito_destino | Origen y destino de la transferencia son el mismo      |
  * | MTR02 / MTR03 | —                   | No se encontró el tipo de movimiento de transferencia  |
  * | MLT01         | —                   | El lote no tiene ítems para registrar                  |
+ * | LOT01         | —                   | Ingreso por compra sin productos                       |
+ * | LOT02         | id_producto         | Un producto del ingreso ya no existe                   |
+ * | LOT06         | —                   | Falta el tipo de movimiento "ingreso por compra"       |
+ * | LOT07         | —                   | La compra asociada no existe                           |
+ * | LOT08         | —                   | La compra ya tiene stock aplicado                      |
+ * | LOT09         | —                   | La compra no está en estado válido para recepción      |
+ * | LOT10         | —                   | El proveedor seleccionado no existe                    |
  */
 
 /** @typedef {{ field: string | null, message: string, reload?: boolean }} ErrorUI */
@@ -59,6 +66,35 @@ const MAPA = {
   MLT01: {
     field: null,
     message: "Debés cargar al menos un movimiento antes de registrar.",
+  },
+  LOT01: {
+    field: null,
+    message: "Cargá al menos un producto antes de registrar el ingreso.",
+  },
+  LOT02: {
+    field: "id_producto",
+    message: "Uno de los productos seleccionados ya no existe.",
+  },
+  LOT06: {
+    field: null,
+    message:
+      "No se encontró el tipo de movimiento requerido. Contactá al administrador.",
+  },
+  LOT07: {
+    field: null,
+    message: "La compra seleccionada no existe.",
+  },
+  LOT08: {
+    field: null,
+    message: "Esa compra ya tiene stock aplicado.",
+  },
+  LOT09: {
+    field: null,
+    message: "La compra no está en un estado válido para recibir mercadería.",
+  },
+  LOT10: {
+    field: null,
+    message: "El proveedor seleccionado no existe.",
   },
 };
 

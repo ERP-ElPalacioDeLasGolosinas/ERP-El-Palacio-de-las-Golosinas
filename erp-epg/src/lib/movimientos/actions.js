@@ -319,3 +319,128 @@ export async function registrarMovimientosLote(items) {
   revalidatePath("/inventario/stock");
   return { ok: true, error: null, code: null, data };
 }
+
+/**
+ * Busca productos por código o nombre para el flujo "ingreso por compra", vía
+ * RPC `fn_producto_listar` con `p_busqueda`. A diferencia de
+ * `listarProductosPorDeposito`, NO filtra por stock existente: sirve para
+ * recepcionar mercadería nueva que todavía no está en ningún depósito.
+ *
+ * @param {string} query
+ * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
+ */
+export async function buscarProductosParaLote(query) {
+  const limpio = String(query ?? "").trim();
+  if (limpio.length < 2) {
+    return { data: [], error: null };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_producto_listar", {
+    p_incluir_inactivos: false,
+    p_busqueda: limpio,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron buscar los productos." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Lista las compras que todavía pueden recibir mercadería (estado Pendiente /
+ * Enviada, sin stock aplicado), vía RPC `fn_compra_listar_disponibles_recepcion`.
+ *
+ * @returns {Promise<{ data: Array<{
+ *   id_compra: string,
+ *   id_proveedor: string,
+ *   nombre_proveedor: string,
+ *   estado: string,
+ *   total: number | null,
+ *   fecha_registro: string,
+ * }> | null, error: string | null }>}
+ */
+export async function listarComprasDisponibles() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "fn_compra_listar_disponibles_recepcion"
+  );
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar las compras." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Registra un ingreso por compra (recepción de mercadería) como un lote completo
+ * asociado a una compra existente, vía RPC `fn_lote_registrar_desde_compra`.
+ * Crea `compra_producto` por ítem, aplica `inventario` / `inventario_producto` y
+ * un movimiento "ingreso por compra" por producto para reflejar `stock`.
+ *
+ * @param {{
+ *   id_compra: string,
+ *   id_deposito: string,
+ *   detalle_lote?: string | null,
+ *   productos: Array<{
+ *     id_producto: string,
+ *     cantidad: number,
+ *     fecha_elaboracion?: string | null,
+ *     fecha_vencimiento?: string | null,
+ *     observaciones?: string | null,
+ *   }>,
+ * }} input
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null, data?: unknown }>}
+ */
+export async function registrarIngresoPorCompra({
+  id_compra,
+  id_deposito,
+  detalle_lote,
+  productos,
+}) {
+  if (!Array.isArray(productos) || productos.length === 0) {
+    return {
+      ok: false,
+      code: "LOT01",
+      error: "Cargá al menos un producto antes de registrar el ingreso.",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      code: null,
+      error: "Debés iniciar sesión para registrar un ingreso por compra.",
+    };
+  }
+
+  const { data, error } = await supabase.rpc("fn_lote_registrar_desde_compra", {
+    p_id_compra: id_compra || null,
+    p_id_deposito: id_deposito || null,
+    p_detalle_lote: detalle_lote?.trim() ? detalle_lote.trim() : null,
+    p_creado_por: user.id,
+    p_productos: productos.map((p) => ({
+      id_producto: p.id_producto,
+      cantidad: Number(p.cantidad) || 0,
+      fecha_elaboracion: p.fecha_elaboracion || null,
+      fecha_vencimiento: p.fecha_vencimiento || null,
+      observaciones: p.observaciones?.trim() ? p.observaciones.trim() : null,
+    })),
+  });
+
+  if (error) {
+    return errorResult(error, "No se pudo registrar el ingreso por compra.");
+  }
+
+  revalidatePath(PATH);
+  revalidatePath("/inventario/stock");
+  revalidatePath("/inventario/stock/lotes");
+  return { ok: true, error: null, code: null, data };
+}

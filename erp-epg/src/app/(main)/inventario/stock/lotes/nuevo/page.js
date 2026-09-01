@@ -1,6 +1,4 @@
 import { listarDepositos } from "@/lib/depositos/actions";
-import { listarProductos } from "@/lib/productos/actions";
-import { listarProveedoresMin } from "@/lib/stock/actions";
 import { LoteForm } from "@/components/stock/LoteForm";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -9,23 +7,11 @@ export const metadata = {
 };
 
 export default async function NuevoLotePage() {
-  const [depositosRes, proveedoresRes, productosRes] = await Promise.all([
-    listarDepositos(false),
-    listarProveedoresMin(),
-    listarProductos(false),
-  ]);
+  const depositosRes = await listarDepositos(false);
 
   const depositos = (depositosRes.data ?? []).map((d) => ({
     id_deposito: d.id_deposito,
     nombre_deposito: d.nombre_deposito,
-  }));
-  const proveedores = (proveedoresRes.data ?? []).map((p) => ({
-    id_proveedor: p.id_proveedor,
-    nombre_proveedor: p.nombre_proveedor,
-  }));
-  const productos = (productosRes.data ?? []).map((p) => ({
-    id_producto: p.id_producto,
-    nombre_completo: p.nombre_completo ?? p.nombre_producto,
   }));
 
   return (
@@ -41,11 +27,7 @@ export default async function NuevoLotePage() {
         description="Datos generales del lote una vez y varios productos a la vez. Impacta el stock (ingreso por compra) al confirmar."
       />
 
-      <LoteForm
-        depositos={depositos}
-        proveedores={proveedores}
-        productos={productos}
-      />
+      <LoteForm depositos={depositos} />
     </div>
   );
 }

@@ -1,144 +1,120 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { registrarLote } from "@/lib/stock/actions";
+import {
+  listarComprasDisponibles,
+  registrarIngresoPorCompra,
+} from "@/lib/movimientos/actions";
 import { mapErrorLote } from "@/lib/stock/errores";
+import { CarritoLoteIngreso } from "@/components/movimientos/CarritoLoteIngreso";
+import { ProductoBuscadorLote } from "@/components/movimientos/ProductoBuscadorLote";
 
-const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
-const fechaFmt = new Intl.DateTimeFormat("es-AR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
+const monedaFmt = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
 });
 
-function crearId() {
-  return typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random()}`;
-}
-
-function formatFecha(valor) {
-  if (!valor) return "—";
-  const d = new Date(`${valor}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? "—" : fechaFmt.format(d);
-}
-
-const ITEM_VACIO = {
-  idProducto: "",
-  cantidad: "",
-  fechaElaboracion: "",
-  fechaVencimiento: "",
-  observaciones: "",
-};
-
 /**
- * Alta de un lote: datos generales una vez (depósito, proveedor, detalle) y N
- * productos cargados a una lista antes de registrar todo junto vía
- * `fn_lote_registrar_completo`.
+ * Alta de un lote contra una compra YA EXISTENTE: se elige depósito + compra
+ * asociada una vez, y N productos se cargan a una tabla editable antes de
+ * registrar todo junto vía `fn_lote_registrar_desde_compra`.
+ *
+ * El carrito reutiliza `CarritoLoteIngreso` (mismo componente que "ingreso por
+ * compra" dentro de Movimientos): se busca un producto por código o nombre,
+ * se agrega como fila y se editan cantidad / fechas / observaciones ahí mismo.
  *
  * @param {{
  *   depositos: Array<{ id_deposito: string, nombre_deposito: string }>,
- *   proveedores: Array<{ id_proveedor: string, nombre_proveedor: string }>,
- *   productos: Array<{ id_producto: string, nombre_completo: string }>,
  * }} props
  */
-export function LoteForm({ depositos, proveedores, productos }) {
+export function LoteForm({ depositos }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   const [idDeposito, setIdDeposito] = useState("");
-  const [idProveedor, setIdProveedor] = useState("");
+  const [compras, setCompras] = useState([]);
+  const [idCompra, setIdCompra] = useState("");
   const [detalleLote, setDetalleLote] = useState("");
 
-  const [item, setItem] = useState(ITEM_VACIO);
   const [carrito, setCarrito] = useState([]);
   const [errores, setErrores] = useState({});
   const [errorServer, setErrorServer] = useState(null);
 
-  const sinProveedores = proveedores.length === 0;
+  useEffect(() => {
+    listarComprasDisponibles().then(({ data }) => setCompras(data ?? []));
+  }, []);
 
-  const nombreProducto = useMemo(() => {
-    const map = new Map(productos.map((p) => [p.id_producto, p.nombre_completo]));
-    return (id) => map.get(id) ?? "";
-  }, [productos]);
+  const sinCompras = compras.length === 0;
 
-  function setCampoItem(campo, valor) {
-    setItem((prev) => ({ ...prev, [campo]: valor }));
-    setErrores((prev) => ({ ...prev, [campo]: null }));
-  }
-
-  function validarItem() {
-    const next = {};
-    if (!item.idProducto) next.idProducto = "Elegí un producto.";
-    const cant = Number(item.cantidad);
-    if (
-      String(item.cantidad).trim() === "" ||
-      !Number.isFinite(cant) ||
-      cant <= 0
-    ) {
-      next.cantidad = "La cantidad debe ser mayor a cero.";
-    }
-    if (
-      item.fechaElaboracion &&
-      item.fechaVencimiento &&
-      item.fechaVencimiento <= item.fechaElaboracion
-    ) {
-      next.fechaVencimiento =
-        "El vencimiento debe ser posterior a la fecha de elaboración.";
-    }
-    setErrores(next);
-    return Object.keys(next).length === 0;
-  }
-
-  function agregarProducto() {
+  function agregarProducto(producto) {
     setErrorServer(null);
-    if (!validarItem()) return;
-
     setCarrito((prev) => [
       ...prev,
       {
-        clientId: crearId(),
-        idProducto: item.idProducto,
-        nombreProducto: nombreProducto(item.idProducto),
-        cantidad: Number(item.cantidad),
-        fechaElaboracion: item.fechaElaboracion || null,
-        fechaVencimiento: item.fechaVencimiento || null,
-        observaciones: item.observaciones.trim(),
+        id_producto: producto.id_producto,
+        codigo_producto: producto.codigo_producto ?? "",
+        nombre_completo: producto.nombre_completo ?? "",
+        cantidad: "",
+        fecha_elaboracion: "",
+        fecha_vencimiento: "",
+        observaciones: "",
       },
     ]);
-    setItem(ITEM_VACIO);
-    setErrores({});
   }
 
-  function quitarProducto(clientId) {
-    setCarrito((prev) => prev.filter((r) => r.clientId !== clientId));
+  function actualizarProducto(idx, cambios) {
+    setCarrito((prev) =>
+      prev.map((it, i) => (i === idx ? { ...it, ...cambios } : it))
+    );
+  }
+
+  function quitarProducto(idx) {
+    setCarrito((prev) => prev.filter((_, i) => i !== idx));
   }
 
   function validarGeneral() {
     const next = {};
     if (!idDeposito) next.idDeposito = "Elegí un depósito.";
-    if (!idProveedor) next.idProveedor = "Elegí un proveedor.";
+    if (!idCompra) next.idCompra = "Elegí una compra.";
     setErrores((prev) => ({ ...prev, ...next }));
     return Object.keys(next).length === 0;
   }
+
+  const filasInvalidas = carrito.filter((r) => {
+    if (!(Number(r.cantidad) > 0)) return true;
+    if (
+      r.fecha_elaboracion &&
+      r.fecha_vencimiento &&
+      r.fecha_vencimiento <= r.fecha_elaboracion
+    ) {
+      return true;
+    }
+    return false;
+  });
 
   function registrar() {
     setErrorServer(null);
     if (!validarGeneral()) return;
     if (carrito.length === 0) return;
+    if (filasInvalidas.length > 0) {
+      setErrorServer(
+        "Revisá los productos del lote: la cantidad debe ser mayor a cero y el vencimiento posterior a la elaboración."
+      );
+      return;
+    }
 
     startTransition(async () => {
-      const result = await registrarLote({
-        idDeposito,
-        idProveedor,
-        detalleLote,
+      const result = await registrarIngresoPorCompra({
+        id_compra: idCompra,
+        id_deposito: idDeposito,
+        detalle_lote: detalleLote.trim() || null,
         productos: carrito.map((r) => ({
-          id_producto: r.idProducto,
-          cantidad: r.cantidad,
-          fecha_elaboracion: r.fechaElaboracion,
-          fecha_vencimiento: r.fechaVencimiento,
-          observaciones: r.observaciones || null,
+          id_producto: r.id_producto,
+          cantidad: Number(r.cantidad) || 0,
+          fecha_elaboracion: r.fecha_elaboracion || null,
+          fecha_vencimiento: r.fecha_vencimiento || null,
+          observaciones: r.observaciones.trim() || null,
         })),
       });
 
@@ -152,7 +128,11 @@ export function LoteForm({ depositos, proveedores, productos }) {
   }
 
   const puedeRegistrar =
-    !pending && carrito.length > 0 && idDeposito && idProveedor;
+    !pending &&
+    carrito.length > 0 &&
+    idDeposito &&
+    idCompra &&
+    filasInvalidas.length === 0;
 
   return (
     <>
@@ -180,26 +160,27 @@ export function LoteForm({ depositos, proveedores, productos }) {
             </select>
           </Campo>
 
-          <Campo label="Proveedor" error={errores.idProveedor} requerido>
+          <Campo label="Compra" error={errores.idCompra} requerido>
             <select
-              value={idProveedor}
+              value={idCompra}
               onChange={(e) => {
-                setIdProveedor(e.target.value);
-                setErrores((prev) => ({ ...prev, idProveedor: null }));
+                setIdCompra(e.target.value);
+                setErrores((prev) => ({ ...prev, idCompra: null }));
               }}
-              disabled={sinProveedores}
+              disabled={sinCompras}
               className="palacio-input"
             >
-              <option value="">Seleccioná un proveedor…</option>
-              {proveedores.map((p) => (
-                <option key={p.id_proveedor} value={p.id_proveedor}>
-                  {p.nombre_proveedor}
+              <option value="">Seleccioná una compra…</option>
+              {compras.map((c) => (
+                <option key={c.id_compra} value={c.id_compra}>
+                  {c.nombre_proveedor} —{" "}
+                  {c.total ? monedaFmt.format(Number(c.total)) : "sin total"}
                 </option>
               ))}
             </select>
-            {sinProveedores ? (
+            {sinCompras ? (
               <p className="text-xs text-red-600">
-                No hay proveedores cargados. Cargá uno antes de registrar un lote.
+                No hay compras pendientes de recepción.
               </p>
             ) : null}
           </Campo>
@@ -222,78 +203,18 @@ export function LoteForm({ depositos, proveedores, productos }) {
         <h2 className="mb-4 text-sm font-semibold text-zinc-900">
           Agregar producto
         </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Campo label="Producto" error={errores.idProducto} requerido full>
-            <select
-              value={item.idProducto}
-              onChange={(e) => setCampoItem("idProducto", e.target.value)}
-              className="palacio-input"
-            >
-              <option value="">Seleccioná un producto…</option>
-              {productos.map((p) => (
-                <option key={p.id_producto} value={p.id_producto}>
-                  {p.nombre_completo}
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          <Campo label="Cantidad" error={errores.cantidad} requerido>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              value={item.cantidad}
-              onChange={(e) => setCampoItem("cantidad", e.target.value)}
-              className="palacio-input"
-              placeholder="0"
-            />
-          </Campo>
-
-          <div className="hidden md:block" />
-
-          <Campo label="Fecha de elaboración">
-            <input
-              type="date"
-              value={item.fechaElaboracion}
-              onChange={(e) => setCampoItem("fechaElaboracion", e.target.value)}
-              className="palacio-input"
-            />
-          </Campo>
-
-          <Campo label="Fecha de vencimiento" error={errores.fechaVencimiento}>
-            <input
-              type="date"
-              value={item.fechaVencimiento}
-              onChange={(e) => setCampoItem("fechaVencimiento", e.target.value)}
-              className="palacio-input"
-            />
-          </Campo>
-
-          <Campo label="Observaciones (opcional)" full>
-            <input
-              type="text"
-              value={item.observaciones}
-              onChange={(e) => setCampoItem("observaciones", e.target.value)}
-              className="palacio-input"
-              placeholder="Detalle puntual de este producto en el lote"
-              maxLength={200}
-            />
-          </Campo>
-        </div>
-
-        <div className="mt-5 border-t border-palacio-border pt-4">
-          <button
-            type="button"
-            onClick={agregarProducto}
-            className="palacio-btn-secondary px-4 py-2.5 text-sm"
-          >
-            Agregar producto
-          </button>
-        </div>
+        <ProductoBuscadorLote
+          onSeleccionar={agregarProducto}
+          disabled={!idDeposito || !idCompra}
+        />
+        <p className="mt-1 text-xs text-palacio-muted">
+          {!idDeposito || !idCompra
+            ? "Elegí depósito y compra para poder buscar y agregar productos."
+            : "La cantidad, las fechas y las observaciones se editan en la tabla de abajo."}
+        </p>
       </div>
 
-      {/* Lista de productos del lote */}
+      {/* Productos del lote */}
       <div className="palacio-card mt-6 overflow-hidden">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">
@@ -304,60 +225,14 @@ export function LoteForm({ depositos, proveedores, productos }) {
           </span>
         </div>
 
-        {carrito.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-palacio-muted">
-            Todavía no agregaste ningún producto al lote.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm whitespace-nowrap">
-              <thead>
-                <tr className="border-b border-palacio-border bg-zinc-50/80">
-                  <Th>Producto</Th>
-                  <Th className="text-right">Cantidad</Th>
-                  <Th>Elaboración</Th>
-                  <Th>Vencimiento</Th>
-                  <Th>Observaciones</Th>
-                  <Th />
-                </tr>
-              </thead>
-              <tbody>
-                {carrito.map((r) => (
-                  <tr
-                    key={r.clientId}
-                    className="border-b border-palacio-border last:border-0"
-                  >
-                    <td className="px-5 py-3 align-middle font-medium text-zinc-900">
-                      {r.nombreProducto}
-                    </td>
-                    <td className="px-5 py-3 text-right align-middle tabular-nums text-zinc-900">
-                      {numFmt.format(r.cantidad)}
-                    </td>
-                    <td className="px-5 py-3 align-middle text-palacio-muted">
-                      {formatFecha(r.fechaElaboracion)}
-                    </td>
-                    <td className="px-5 py-3 align-middle text-palacio-muted">
-                      {formatFecha(r.fechaVencimiento)}
-                    </td>
-                    <td className="px-5 py-3 align-middle text-palacio-muted">
-                      {r.observaciones || "—"}
-                    </td>
-                    <td className="px-5 py-3 text-right align-middle">
-                      <button
-                        type="button"
-                        onClick={() => quitarProducto(r.clientId)}
-                        disabled={pending}
-                        className="text-xs font-medium text-palacio-red hover:underline disabled:opacity-50"
-                      >
-                        Quitar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="p-5">
+          <CarritoLoteIngreso
+            items={carrito}
+            onActualizar={actualizarProducto}
+            onQuitar={quitarProducto}
+            vencimientoRequerido={false}
+          />
+        </div>
 
         {errorServer ? (
           <p className="mx-5 mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -397,15 +272,5 @@ function Campo({ label, error, requerido = false, full = false, children }) {
       {children}
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
-  );
-}
-
-function Th({ children, className = "" }) {
-  return (
-    <th
-      className={`px-5 py-3 text-[11px] font-semibold tracking-wider text-palacio-muted uppercase ${className}`}
-    >
-      {children}
-    </th>
   );
 }

@@ -318,3 +318,69 @@ export async function registrarLote({
   revalidatePath("/inventario/stock/lotes");
   return { ok: true, error: null, code: null, data };
 }
+
+/**
+ * Chequeo previo de UX antes de eliminar un lote. Devuelve el motivo de
+ * bloqueo (texto en español, p. ej. si ya tiene stock consumido) o `null` si
+ * el lote se puede eliminar. La validación real la hace igual `fn_lote_eliminar`
+ * server-side (LOT03/LOT04).
+ *
+ * @param {string} idLote
+ * @returns {Promise<{ motivo: string | null, error: string | null }>}
+ */
+export async function motivoBloqueoEliminarLote(idLote) {
+  if (!idLote) {
+    return { motivo: null, error: "Falta el identificador del lote." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_lote_motivo_bloqueo_delete", {
+    p_id_lote: idLote,
+  });
+
+  if (error) {
+    return {
+      motivo: null,
+      error: "No se pudo verificar si el lote se puede eliminar.",
+    };
+  }
+
+  const motivo = typeof data === "string" && data.trim() !== "" ? data : null;
+  return { motivo, error: null };
+}
+
+/**
+ * Elimina un lote completo (y su compra de soporte, si existía) revirtiendo
+ * el stock que había aportado, vía RPC `fn_lote_eliminar`. Bloquea con `LOT04`
+ * si algún producto del lote ya tiene stock consumido.
+ *
+ * @param {string} idLote
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
+ */
+export async function eliminarLote(idLote) {
+  if (!idLote) {
+    return { ok: false, code: null, error: "Falta el identificador del lote." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase.rpc("fn_lote_eliminar", {
+    p_id_lote: idLote,
+    p_creado_por: user?.id ?? null,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      code: error.code ?? null,
+      error: error.message || "No se pudo eliminar el lote.",
+    };
+  }
+
+  revalidatePath("/inventario/stock");
+  revalidatePath("/inventario/stock/lotes");
+  return { ok: true, code: null, error: null };
+}

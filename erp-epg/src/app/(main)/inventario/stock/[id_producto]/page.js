@@ -6,6 +6,7 @@ import {
   obtenerStockPorDeposito,
   obtenerUltimosLotes,
 } from "@/lib/stock/actions";
+import { EliminarLoteButton } from "@/components/stock/EliminarLoteButton";
 
 export const metadata = {
   title: "Detalle de stock | Palacio · ERP",
@@ -240,8 +241,9 @@ export default async function StockDetallePage({ params }) {
                       <tr className="border-b border-palacio-border bg-zinc-50/80">
                         <Th>Código</Th>
                         <Th>Producto</Th>
-                        <Th>Fecha de elaboración</Th>
+                        <Th>Fecha de vencimiento</Th>
                         <Th className="text-right">Stock</Th>
+                        <Th className="text-right">Acciones</Th>
                       </tr>
                     </thead>
                     <tbody>
@@ -259,10 +261,18 @@ export default async function StockDetallePage({ params }) {
                             {l.nombre_completo}
                           </td>
                           <td className="px-5 py-4 align-middle text-palacio-muted">
-                            {formatFecha(l.fecha_fabricacion)}
+                            {formatFecha(l.fecha_vencimiento)}
                           </td>
                           <td className="px-5 py-4 text-right align-middle tabular-nums text-zinc-900">
                             {l.stock}
+                          </td>
+                          <td className="px-5 py-4 align-middle">
+                            <div className="flex justify-end">
+                              <EliminarLoteButton
+                                idLote={l.id_lote}
+                                nombreCompleto={l.nombre_completo}
+                              />
+                            </div>
                           </td>
                         </tr>
                       ))}

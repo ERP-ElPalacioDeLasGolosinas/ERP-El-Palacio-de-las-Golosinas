@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   registrarMovimientosLote,
   listarProductosPorDeposito,
@@ -46,8 +47,14 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  // "ingreso por compra" se carga solo desde "Registrar lote"
+  // (/inventario/stock/lotes/nuevo), no desde este wizard.
   const tiposSimples = useMemo(
-    () => tipos.filter((t) => !t.requiere_deposito_destino),
+    () =>
+      tipos.filter(
+        (t) =>
+          !t.requiere_deposito_destino && t.nombre !== "ingreso por compra"
+      ),
     [tipos]
   );
   const hayTransferencia = useMemo(
@@ -279,6 +286,16 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
                     : "Este concepto resta stock."}
               </p>
             ) : null}
+            <p className="text-xs text-palacio-muted">
+              ¿Necesitás cargar mercadería de una compra?{" "}
+              <Link
+                href="/inventario/stock/lotes/nuevo"
+                className="text-palacio-red hover:underline"
+              >
+                Registrar lote
+              </Link>
+              .
+            </p>
           </Campo>
 
           <Campo
