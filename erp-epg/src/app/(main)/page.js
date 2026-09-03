@@ -5,43 +5,24 @@ import { PageHeader } from "@/components/layout/PageHeader";
 const MODULOS = [
   {
     href: "/inventario/productos",
-    titulo: "Productos",
-    descripcion: "Catálogo de productos: alta, edición y precios.",
-  },
-  {
-    href: "/inventario/marcas",
-    titulo: "Marcas",
-    descripcion: "Gestión de marcas del catálogo.",
-  },
-  {
-    href: "/inventario/stock",
-    titulo: "Stock",
-    descripcion: "Consultar stock por producto y depósito.",
-  },
-  {
-    href: "/inventario/movimientos",
-    titulo: "Movimientos",
-    descripcion: "Historial y registro de movimientos de stock.",
-  },
-  {
-    href: "/inventario/depositos",
-    titulo: "Depósitos",
-    descripcion: "Alta, edición y administración operativa de depósitos.",
+    titulo: "Inventario",
+    descripcion:
+      "Productos, marcas, stock, movimientos y depósitos.",
   },
   {
     href: "/catalogo/unidades-medida",
-    titulo: "Unidades de medida",
-    descripcion: "Gestión de unidades de medida del catálogo.",
+    titulo: "Catálogo",
+    descripcion: "Unidades de medida, rubros y categorías.",
   },
   {
-    href: "/catalogo/rubros",
-    titulo: "Rubros",
-    descripcion: "Gestión de rubros del catálogo.",
+    href: "/compras/proveedores",
+    titulo: "Compras",
+    descripcion: "Proveedores y comprobantes de proveedor.",
   },
   {
-    href: "/catalogo/categorias",
-    titulo: "Categorías",
-    descripcion: "Gestión de categorías del catálogo.",
+    href: "/tesoreria/cuentas",
+    titulo: "Tesorería",
+    descripcion: "Cuentas, órdenes de pago y medios de pago.",
   },
 ];
 
@@ -59,7 +40,7 @@ export default async function Home() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {MODULOS.map((modulo) => (
           <Link
             key={modulo.href}

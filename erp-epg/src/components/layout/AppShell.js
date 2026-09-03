@@ -82,6 +82,56 @@ const NAV = [
       },
     ],
   },
+  {
+    section: "COMPRAS",
+    items: [
+      {
+        href: "/compras/proveedores",
+        label: "Proveedores",
+        icon: CartIcon,
+        match: (p) => p.startsWith("/compras/proveedores"),
+      },
+      {
+        label: "Comprobantes",
+        icon: ReceiptIcon,
+        match: (p) => p.startsWith("/compras/comprobantes"),
+        children: [
+          { href: "/compras/comprobantes", label: "Historial" },
+          {
+            href: "/compras/comprobantes/nuevo",
+            label: "Registrar comprobante",
+          },
+          {
+            href: "/compras/comprobantes/tipos",
+            label: "Tipos de comprobante",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    section: "TESORERÍA",
+    items: [
+      {
+        href: "/tesoreria/cuentas",
+        label: "Cuentas",
+        icon: WalletIcon,
+        match: (p) => p.startsWith("/tesoreria/cuentas"),
+      },
+      {
+        href: "/tesoreria/ordenes-de-pago",
+        label: "Órdenes de pago",
+        icon: PaymentIcon,
+        match: (p) => p.startsWith("/tesoreria/ordenes-de-pago"),
+      },
+      {
+        href: "/tesoreria/medios-de-pago",
+        label: "Medios de pago",
+        icon: CardIcon,
+        match: (p) => p.startsWith("/tesoreria/medios-de-pago"),
+      },
+    ],
+  },
 ];
 
 /**
@@ -185,8 +235,6 @@ function NavItem({ item, pathname }) {
         {open ? (
           <ul className="mt-0.5 mb-1 flex flex-col gap-0.5 border-l border-palacio-border pl-4">
             {item.children.map((child) => {
-              // Prefijo más largo gana: evita que "General" (/stock) quede
-              // activo también en /stock/lotes, igual que en Movimientos.
               const childActive =
                 item.children
                   .filter(
@@ -350,6 +398,66 @@ function ListIcon({ className }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+      />
+    </svg>
+  );
+}
+
+function CartIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 4h2l1.5 10h11L20 7H7m0 0L6 4m11 14.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-8 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
+      />
+    </svg>
+  );
+}
+
+function ReceiptIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7 3h10v18l-2-1.5L13 21l-2-1.5L9 21l-2-1.5V3Zm3 5h4M10 12h4M10 16h3"
+      />
+    </svg>
+  );
+}
+
+function WalletIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 7.5A1.5 1.5 0 0 1 4.5 6h15A1.5 1.5 0 0 1 21 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 16.5v-9Zm18 3.5h-4a2 2 0 0 0 0 4h4"
+      />
+    </svg>
+  );
+}
+
+function PaymentIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 7h16v10H4V7Zm0 3h16M8 14h3"
+      />
+    </svg>
+  );
+}
+
+function CardIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 8.5A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v7a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5v-7ZM3 11h18"
       />
     </svg>
   );
