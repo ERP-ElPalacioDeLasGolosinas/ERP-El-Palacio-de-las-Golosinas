@@ -30,7 +30,7 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 | `unidad_medida` | Unidades (peso/medida específica del producto) | `id_unidad_medida` | `nombre`, `abreviatura` (check: 3 letras minúsculas), `activo` |
 | `deposito` | Depósitos físicos | `id_deposito` | `nombre_deposito` (no unique a nivel constraint, ojo), `direccion_deposito`, `telefono_deposito`, `horario_apertura`/`horario_cierre` (check cierre > apertura), `activo`, `esta_lleno`, `id_responsable` (FK → `usuario`) |
 | `producto` | Catálogo de artículos | `id_producto` | `nombre_producto`, `descripcion_producto`, `codigo_producto` (**unique**), `precio_producto`, `costo_producto`, `precio_mayorista_producto`, `precio_minorista_producto`, `numero_medida` (>0), FK → `marca`, `unidad_medida`, `categoria` (nullable), `rubro` (nullable, sincronizado desde `categoria` por trigger) |
-| `proveedor` | Proveedores | `id_proveedor` | `nombre_proveedor`, `rs_proveedor` (enum `tipo_razon_social`), `cuit_proveedor` (unique, check formato XX-XXXXXXXX-X), `telefono_proveedor` (bigint), `mail_proveedor` (unique, check regex) |
+| `proveedor` | Proveedores | `id_proveedor` | `nombre_proveedor`, `rs_proveedor` (enum `tipo_razon_social`), `cuit_proveedor` (unique, check formato XX-XXXXXXXX-X), `telefono_proveedor` (bigint, rango 100000–999999999999999), `mail_proveedor` (unique, check regex), `activo`, `creado`/`editado` (`timestamptz`), `registrado_por` (uuid → `usuario`) |
 | `compra` | Cabecera de compra a proveedor | `id_compra` | FK → `proveedor`; `sub_total`, `descuento_total`, `impuesto_total`, `total` (checks de consistencia); `estado` (enum `estado_compra`); `stock_aplicado` (bool) |
 | `compra_producto` | Detalle de productos de una compra | `id_compra_producto` | FK → `compra`, `producto`, `marca`; `cantidad_producto` (>0), `total_unit_prod`, `descuento_producto`, `impuesto_producto`, `subtotal_producto`, `total_producto` |
 | `inventario` | Cabecera de recepción/lote de mercadería | `id_lote` | FK → `proveedor`, `deposito`, `compra` (**unique**, 1:1 con `compra`); `detalle_lote` |
@@ -45,7 +45,7 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 | Vista | Contenido |
 |---|---|
 | `vista_diferencias_recepcion` | Compara `cantidad_pedida` (de `compra_producto`) vs `cantidad_recibida` (de `inventario_producto`) por compra/producto/marca, con `diferencia` calculada |
-| `vw_usuario_resumen` | Vista blindada de usuarios: `id_usuario` + `nombre_completo` (`nombre_usuario \|\| ' ' \|\| apellido_usuario`). `security_invoker = false` (default) → corre con privilegios del owner, así que sigue resolviendo el nombre aunque a futuro se cierre/restrinja el RLS de `usuario`. Expone solo id + nombre (nada de dni, mail, teléfono, rol). Pensada para resolver `creado_por` → nombre dentro de los `fn_*_listar` vía `LEFT JOIN` + `COALESCE`. `SELECT` concedido a `authenticated`, `service_role`. **Ya la usan:** `fn_unidad_medida_listar`, `fn_rubro_listar`, `fn_categoria_listar`, `fn_marca_listar`, `fn_producto_listar`. **Falta aplicarla en:** `fn_deposito_listar` (y las tablas "detalle" con `editado_por`, con un 2º `LEFT JOIN` de alias distinto) |
+| `vw_usuario_resumen` | Vista blindada de usuarios: `id_usuario` + `nombre_completo` (`nombre_usuario \|\| ' ' \|\| apellido_usuario`). `security_invoker = false` (default) → corre con privilegios del owner, así que sigue resolviendo el nombre aunque a futuro se cierre/restrinja el RLS de `usuario`. Expone solo id + nombre (nada de dni, mail, teléfono, rol). Pensada para resolver `creado_por` / `registrado_por` → nombre dentro de los `fn_*_listar` vía `LEFT JOIN` + `COALESCE`. `SELECT` concedido a `authenticated`, `service_role`. **Ya la usan:** `fn_unidad_medida_listar`, `fn_rubro_listar`, `fn_categoria_listar`, `fn_marca_listar`, `fn_producto_listar`, `fn_proveedor_listar`. **Falta aplicarla en:** `fn_deposito_listar` (y las tablas "detalle" con `editado_por`, con un 2º `LEFT JOIN` de alias distinto) |
 
 > No existen `vista_stock_producto`, `vista_stock_producto_deposito` ni `vista_lote_detalle` mencionadas en el doc anterior.
 
@@ -78,7 +78,7 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 
 ### ⚠️ Sin ninguna política (RLS habilitado = acceso denegado por completo)
 
-`compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor` → **RLS bloquea todo acceso** (ni siquiera lectura) para cualquier rol, salvo que se acceda a través de una función `SECURITY DEFINER` (ninguna de las funciones relevadas tiene `security_definer = true`, así que hoy **nadie puede leer ni escribir estas tablas directamente**, ni siquiera vía RPC estándar). Esto es probablemente un pendiente a resolver antes de que las pantallas de compras/proveedores/recepción de mercadería funcionen.
+`compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor` → **RLS bloquea todo acceso directo** (ni siquiera lectura) para cualquier rol. El acceso operativo a `proveedor` va por las funciones `fn_proveedor_*` (ver sección Proveedor). Ojo: esas 6 funciones son **`SECURITY INVOKER`** (respetan RLS), a diferencia de `fn_proveedor_listar_min` / `fn_aplicar_stock_compra` / etc. que son `SECURITY DEFINER`. Si `proveedor` sigue sin políticas, las RPC INVOKER pueden fallar hasta que se agreguen políticas o se pasen a DEFINER — confirmar con el equipo.
 
 ---
 
@@ -126,6 +126,21 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 - **Nota costo/precio**: no hay costo promedio calculado (sin costeo por lote/PEPS/ponderado). `costo_producto` es un campo simple editable. `producto` no tiene `editado_por`. El frontend de A-05 dejó de exponer `precio_producto` en el form (manda `0` fijo) y usa `costo_producto` / `precio_mayorista_producto` / `precio_minorista_producto`.
 - `producto.id_rubro` se sincroniza desde `id_categoria` vía trigger `trg_producto_sync_id_rubro` (INSERT/UPDATE de `producto`); al reasignar una categoría a otro rubro, `fn_categoria_modificar` resincroniza los productos ya cargados en la misma transacción.
 
+### Proveedor
+`fn_proveedor_crear(p_nombre_proveedor, p_rs_proveedor, p_cuit_proveedor, p_telefono_proveedor, p_mail_proveedor, p_registrado_por)`, `fn_proveedor_modificar(p_id_proveedor, …mismos que crear sin p_registrado_por)`, `fn_proveedor_listar(p_incluir_inactivos)`, `fn_proveedor_habilitar(p_id_proveedor)`, `fn_proveedor_inhabilitar(p_id_proveedor)`, `fn_proveedor_eliminar(p_id_proveedor)`, `fn_proveedor_listar_min()` (ya existía; combo liviano).
+
+- **Regla de oro frontend:** solo juntar parámetros e invocar RPC — nada de queries directas a `proveedor`. Mostrar `error.message` tal cual (mensajes ya en español).
+- **`fn_proveedor_crear`**: todos los parámetros obligatorios. `p_rs_proveedor` = enum `tipo_razon_social` (`S.A.`, `S.R.L.`, `S.A.U.`, `S.A.S.`, `S.H.`, `Responsable Inscripto`, `Monotributista`). `p_cuit_proveedor` formato `XX-XXXXXXXX-X`. `p_telefono_proveedor` bigint entre `100000` y `999999999999999`. `p_mail_proveedor` email válido. `p_registrado_por` = `user.id` del logueado (`supabase.auth.getUser()`). Completa `creado`/`editado` con `DEFAULT now()`.
+- **`fn_proveedor_modificar`**: igual que crear + `p_id_proveedor`, **sin** `p_registrado_por`. Setea `editado = now()`. Duplicados CUIT/mail excluyen el propio registro.
+- **`fn_proveedor_habilitar` / `fn_proveedor_inhabilitar`**: setean `activo` y `editado = now()`.
+- **`fn_proveedor_eliminar`**: `void`. Bloquea si tiene compras y/o lotes de inventario asociados (`PRV08`, sugiere inhabilitar).
+- **`fn_proveedor_listar(p_incluir_inactivos boolean default true)`** → `TABLE(id_proveedor, nombre_proveedor, rs_proveedor, cuit_proveedor, telefono_proveedor, mail_proveedor, activo, creado, editado, registrado_por, registrado_por_nombre)`. `registrado_por_nombre` vía `LEFT JOIN vw_usuario_resumen` + `COALESCE(..., 'Usuario no disponible')`. Usar esta para la grilla de gestión.
+- **`fn_proveedor_listar_min()`** → `TABLE(id_proveedor, nombre_proveedor)`. Sin parámetros. Pensada para combos (alta de lote / compra). `SECURITY DEFINER`. No reemplaza a `fn_proveedor_listar`.
+- Códigos de error (ERRCODE custom): `PRV01` nombre vacío, `PRV02` CUIT vacío/inválido, `PRV03` mail vacío/inválido, `PRV04` CUIT duplicado, `PRV05` proveedor inexistente, `PRV06` razón social no informada, `PRV07` teléfono vacío/fuera de rango, `PRV08` no se puede eliminar (tiene compras/lotes), `PRV09` mail duplicado.
+- **Trigger:** `trg_set_editado_proveedor` (`BEFORE UPDATE`) fuerza `editado = now()` y protege `creado`/`registrado_por` de pisarse. Mismo patrón que `deposito`.
+- **Security:** las 6 funciones nuevas son `SECURITY INVOKER` (respetan RLS). Ver nota RLS de `proveedor` más arriba.
+- **Frontend ABMC (C-01)** implementado en `app/(main)/compras/proveedores/page.js`, `lib/proveedores/{actions,errores}.js`, `components/proveedores/{ProveedorFormModal,ProveedoresTable}.js`. Mismo patrón que marcas/unidades: server actions solo invocan `fn_proveedor_*`, validación de formato en el front (nombre, razón social, CUIT `XX-XXXXXXXX-X`, teléfono 6–15 dígitos, mail), errores por campo bajo el input + banner para el resto, listado con búsqueda / incluir inactivos / habilitar-inhabilitar / eliminar. Mapeo en `lib/proveedores/errores.js` (`mapErrorProveedor`).
+
 ### Tipo de movimiento
 `fn_tipo_movimiento_crear(p_nombre, p_signo, p_creado_por, p_requiere_control_stock)`, `fn_tipo_movimiento_modificar(p_id_tipo_movimiento, p_nombre, p_signo, p_requiere_control_stock)`, `fn_tipo_movimiento_listar(p_incluir_inactivos)` → `SETOF tipo_movimiento` (sin `creado_por_nombre`, no usa `vw_usuario_resumen`), `fn_tipo_movimiento_habilitar(p_id_tipo_movimiento)`, `fn_tipo_movimiento_inhabilitar(p_id_tipo_movimiento)`.
 
@@ -145,7 +160,7 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 - `fn_aplicar_stock_compra(p_id_compra, p_id_deposito, p_detalle_lote, p_items)` → aplica `inventario`/`inventario_producto` desde una recepción de compra. **Ojo: no toca `stock`** — usar `fn_lote_registrar_completo` para el flujo completo.
 - `fn_lote_registrar_completo(p_id_deposito, p_id_proveedor, p_detalle_lote, p_creado_por, p_productos jsonb)` → `TABLE(lote_id, compra_id, movimientos jsonb)`. Registra un lote con N productos en una operación atómica: crea compra de soporte (`Recibida`) + `compra_producto` por ítem (resuelve `id_marca` solo), llama `fn_aplicar_stock_compra` y además registra un movimiento "ingreso por compra" por producto para reflejar `stock`. `p_productos`: `[{ id_producto, cantidad, costo_unitario?, fecha_elaboracion, fecha_vencimiento, observaciones? }]`. Errores `LOT01` (sin productos), `LOT02` (`id_producto` inexistente).
 - `fn_inventario_producto_listar_recientes(p_id_deposito?, p_limite default 50)` → últimos lotes ingresados (cualquier producto), orden `fecha_registro desc`. `SECURITY DEFINER` (`inventario`/`inventario_producto` sin políticas RLS), `EXECUTE` solo `authenticated`/`service_role`.
-- `fn_proveedor_listar_min()` → `TABLE(id_proveedor, nombre_proveedor)`. `SECURITY DEFINER` (`proveedor` tiene RLS sin políticas); expone solo id + nombre. `EXECUTE` solo `authenticated`/`service_role`. Es el único modo de listar proveedores desde el frontend hoy.
+- `fn_proveedor_listar_min()` → `TABLE(id_proveedor, nombre_proveedor)`. `SECURITY DEFINER` (`proveedor` tiene RLS sin políticas de acceso directo); expone solo id + nombre. `EXECUTE` solo `authenticated`/`service_role`. Para combos livianos (alta de lote). La grilla de gestión usa `fn_proveedor_listar` (ver sección Proveedor).
 
 **Movimientos son inmutables**: no hay `fn_movimiento_stock_modificar`/`_eliminar`. Un error de carga se corrige con un movimiento inverso (tipos seed `Ajuste - Corrección (suma)`/`(resta)`, signo `+1`/`-1`) referenciado vía `movimiento_stock.id_movimiento_referencia`. `fn_movimiento_stock_listar` devuelve también `id_movimiento_referencia`, `referencia_tipo_movimiento_nombre`, `referencia_fecha_movimiento`.
 
@@ -157,6 +172,10 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 ### Compras / inventario (recepción de mercadería)
 `fn_items_esperados_compra(p_id_compra)` — el resto de la lógica de compras parece resolverse por triggers (`validar_cambio_estado_compra`, `validar_y_marcar_stock_aplicado`, `revertir_stock_aplicado`) más que por funciones `fn_*` explícitas de CRUD.
 
+**Frontend Sprint 2 (estructura + C-01):**
+- Navegación: secciones `COMPRAS` y `TESORERÍA` en el sidebar (`AppShell`), dashboard con 4 recuadros (Inventario / Catálogo / Compras / Tesorería). Placeholders para comprobantes, cuentas, órdenes y medios de pago.
+- **Proveedores (C-01)** — implementado (ver sección Proveedor arriba).
+
 ---
 
 ## Triggers relevantes
@@ -165,6 +184,7 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 |---|---|---|
 | `usuario` | `trigger_actualizar_editado_usuario` | Actualiza `editado` en cada `UPDATE` |
 | `marca` | `trg_set_editado_marca` | Ídem |
+| `proveedor` | `trg_set_editado_proveedor` | Actualiza `editado` en cada `UPDATE` y protege `creado`/`registrado_por` |
 | `deposito` | `trg_set_editado_deposito` | Ídem |
 | `producto` | `trg_producto_sync_id_rubro` | Sincroniza `id_rubro` del producto a partir de `id_categoria` (INSERT/UPDATE) |
 | `compra` | `trg_compra_set_editado_por`, `trg_compra_validar_estado` | Auditoría + valida transición de `estado` |
@@ -187,7 +207,7 @@ El doc anterior (el que traía la sección de login/roles con Next.js) describe 
 | "Nada de tablas de stock sueltas, se calcula vía vistas" | Falso en la práctica: `stock` es una tabla con `cantidad` sincronizada directamente, mantenida por `movimiento_stock` + triggers |
 | RLS deshabilitado en `usuario`, `marca`, `producto`, `deposito`, etc. | RLS está **habilitado** en las 16 tablas, con políticas ya definidas en la mayoría |
 | "RLS por rol no implementado todavía" | Parcialmente falso: `usuario` ya tiene una política que distingue `Gerente` del resto |
-| No se menciona nada de `compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`, `rubro`, `categoria`, `tipo_movimiento` | Estas tablas existen y tienen bastante desarrollo (funciones, triggers), pero 5 de ellas (`compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`) están **sin políticas RLS**, por lo que hoy nadie puede leerlas ni escribirlas |
+| No se menciona nada de `compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`, `rubro`, `categoria`, `tipo_movimiento` | Estas tablas existen y tienen bastante desarrollo (funciones, triggers). `compra`/`compra_producto`/`inventario`/`inventario_producto` siguen sin políticas RLS. `proveedor` ya tiene CRUD vía `fn_proveedor_*` (+ trigger `trg_set_editado_proveedor`) y pantalla ABMC en el front; el acceso directo a la tabla sigue bloqueado por RLS sin políticas |
 
 **Recomendación:** confirmar con el equipo si el doc anterior es de un sprint/diseño descartado, o si describe un rediseño pendiente de migrar. Mientras tanto, todo el trabajo de backend/frontend debería apoyarse en el esquema real documentado arriba, no en el doc de `lote`/`lote_deposito`.
 
