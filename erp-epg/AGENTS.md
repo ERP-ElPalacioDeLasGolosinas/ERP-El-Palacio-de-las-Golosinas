@@ -14,7 +14,7 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 - **Auditoría**: la mayoría de las tablas tiene `creado` / `editado` (`timestamptz default now()`) y `creado_por` (`uuid default auth.uid()`). Las tablas de tipo "detalle" (`compra`, `compra_producto`, `inventario`, `inventario_producto`) usan además `editado_por` y `fecha_registro`.
 - **Cantidades**: `numeric` (no `integer`) con `check (>= 0)` o `check (> 0)` según el caso. **Precios/costos**: `numeric` con `check (>= 0)`, default `0`.
 - **El stock SÍ es una tabla suelta**: `stock(id_producto, id_deposito, cantidad)`, con `UNIQUE(id_producto, id_deposito)`. No se calcula desde lotes vía vistas — es un valor sincronizado directamente, con `movimiento_stock` como registro de auditoría de los cambios.
-- **RLS**: habilitado en las 16 tablas de `public`, pero **no todas tienen políticas** (ver sección RLS).
+- **RLS**: habilitado en las tablas de `public`, pero **no todas tienen políticas** (ver sección RLS).
 - Casi toda la lógica de negocio (altas, bajas, habilitar/inhabilitar, listados) está implementada como **funciones RPC** en Postgres (`fn_*`), no como acceso directo a tablas desde el frontend.
 
 ---
@@ -31,6 +31,7 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 | `deposito` | Depósitos físicos | `id_deposito` | `nombre_deposito` (no unique a nivel constraint, ojo), `direccion_deposito`, `telefono_deposito`, `horario_apertura`/`horario_cierre` (check cierre > apertura), `activo`, `esta_lleno`, `id_responsable` (FK → `usuario`) |
 | `producto` | Catálogo de artículos | `id_producto` | `nombre_producto`, `descripcion_producto`, `codigo_producto` (**unique**), `precio_producto`, `costo_producto`, `precio_mayorista_producto`, `precio_minorista_producto`, `numero_medida` (>0), FK → `marca`, `unidad_medida`, `categoria` (nullable), `rubro` (nullable, sincronizado desde `categoria` por trigger) |
 | `proveedor` | Proveedores | `id_proveedor` | `nombre_proveedor`, `rs_proveedor` (enum `tipo_razon_social`), `cuit_proveedor` (unique, check formato XX-XXXXXXXX-X), `telefono_proveedor` (bigint, rango 100000–999999999999999), `mail_proveedor` (unique, check regex), `activo`, `creado`/`editado` (`timestamptz`), `registrado_por` (uuid → `usuario`) |
+| `medio_pago` | Catálogo compartido de medios de pago (Ventas/Caja y Tesorería) | `id_medio_pago` | `nombre_medio_pago` (unique), `requiere_referencia` (bool, default `false` — si es `true`, la operación debe pedir nro. de referencia), `activo`, `creado`/`editado` (`timestamptz`), `creado_por` (uuid → `usuario`) |
 | `compra` | Cabecera de compra a proveedor | `id_compra` | FK → `proveedor`; `sub_total`, `descuento_total`, `impuesto_total`, `total` (checks de consistencia); `estado` (enum `estado_compra`); `stock_aplicado` (bool) |
 | `compra_producto` | Detalle de productos de una compra | `id_compra_producto` | FK → `compra`, `producto`, `marca`; `cantidad_producto` (>0), `total_unit_prod`, `descuento_producto`, `impuesto_producto`, `subtotal_producto`, `total_producto` |
 | `inventario` | Cabecera de recepción/lote de mercadería | `id_lote` | FK → `proveedor`, `deposito`, `compra` (**unique**, 1:1 con `compra`); `detalle_lote` |
@@ -45,7 +46,7 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 | Vista | Contenido |
 |---|---|
 | `vista_diferencias_recepcion` | Compara `cantidad_pedida` (de `compra_producto`) vs `cantidad_recibida` (de `inventario_producto`) por compra/producto/marca, con `diferencia` calculada |
-| `vw_usuario_resumen` | Vista blindada de usuarios: `id_usuario` + `nombre_completo` (`nombre_usuario \|\| ' ' \|\| apellido_usuario`). `security_invoker = false` (default) → corre con privilegios del owner, así que sigue resolviendo el nombre aunque a futuro se cierre/restrinja el RLS de `usuario`. Expone solo id + nombre (nada de dni, mail, teléfono, rol). Pensada para resolver `creado_por` / `registrado_por` → nombre dentro de los `fn_*_listar` vía `LEFT JOIN` + `COALESCE`. `SELECT` concedido a `authenticated`, `service_role`. **Ya la usan:** `fn_unidad_medida_listar`, `fn_rubro_listar`, `fn_categoria_listar`, `fn_marca_listar`, `fn_producto_listar`, `fn_proveedor_listar`. **Falta aplicarla en:** `fn_deposito_listar` (y las tablas "detalle" con `editado_por`, con un 2º `LEFT JOIN` de alias distinto) |
+| `vw_usuario_resumen` | Vista blindada de usuarios: `id_usuario` + `nombre_completo` (`nombre_usuario \|\| ' ' \|\| apellido_usuario`). `security_invoker = false` (default) → corre con privilegios del owner, así que sigue resolviendo el nombre aunque a futuro se cierre/restrinja el RLS de `usuario`. Expone solo id + nombre (nada de dni, mail, teléfono, rol). Pensada para resolver `creado_por` / `registrado_por` → nombre dentro de los `fn_*_listar` vía `LEFT JOIN` + `COALESCE`. `SELECT` concedido a `authenticated`, `service_role`. **Ya la usan:** `fn_unidad_medida_listar`, `fn_rubro_listar`, `fn_categoria_listar`, `fn_marca_listar`, `fn_producto_listar`, `fn_proveedor_listar`, `fn_medio_pago_listar`. **Falta aplicarla en:** `fn_deposito_listar` (y las tablas "detalle" con `editado_por`, con un 2º `LEFT JOIN` de alias distinto) |
 
 > No existen `vista_stock_producto`, `vista_stock_producto_deposito` ni `vista_lote_detalle` mencionadas en el doc anterior.
 
@@ -61,11 +62,11 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 
 ## Row Level Security (RLS)
 
-RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas es dispar:
+RLS está **habilitado** en las tablas de `public`. El estado de políticas es dispar:
 
 ### Con políticas abiertas para `authenticated` (`using (true)` / `with check (true)`)
 
-`categoria`, `marca`, `rubro`, `deposito`, `producto`, `stock`, `tipo_movimiento`, `unidad_medida` → tienen las 4 políticas (`SELECT`/`INSERT`/`UPDATE`/`DELETE`).
+`categoria`, `marca`, `rubro`, `deposito`, `producto`, `stock`, `tipo_movimiento`, `unidad_medida`, `medio_pago` → tienen las 4 políticas (`SELECT`/`INSERT`/`UPDATE`/`DELETE`).
 
 `movimiento_stock`, `movimiento_stock_detalle` → solo `SELECT` e `INSERT` (no `UPDATE`/`DELETE`, tiene sentido tratándose de una tabla de auditoría).
 
@@ -141,6 +142,21 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 - **Security:** las 6 funciones nuevas son `SECURITY INVOKER` (respetan RLS). Ver nota RLS de `proveedor` más arriba.
 - **Frontend ABMC (C-01)** implementado en `app/(main)/compras/proveedores/page.js`, `lib/proveedores/{actions,errores}.js`, `components/proveedores/{ProveedorFormModal,ProveedoresTable}.js`. Mismo patrón que marcas/unidades: server actions solo invocan `fn_proveedor_*`, validación de formato en el front (nombre, razón social, CUIT `XX-XXXXXXXX-X`, teléfono 6–15 dígitos, mail), errores por campo bajo el input + banner para el resto, listado con búsqueda / incluir inactivos / habilitar-inhabilitar / eliminar. Mapeo en `lib/proveedores/errores.js` (`mapErrorProveedor`).
 
+### Medio de pago
+`fn_medio_pago_crear(p_nombre_medio_pago, p_requiere_referencia, p_creado_por)`, `fn_medio_pago_modificar(p_id_medio_pago, p_nombre_medio_pago, p_requiere_referencia)`, `fn_medio_pago_listar(p_incluir_inactivos)`, `fn_medio_pago_habilitar(p_id_medio_pago)`, `fn_medio_pago_inhabilitar(p_id_medio_pago)`.
+
+- **Catálogo compartido** entre Ventas/Caja y Tesorería: combos de ambos módulos deben consumir la misma RPC (`fn_medio_pago_listar`) — no duplicar listados por módulo.
+- **Regla de oro frontend:** solo juntar parámetros e invocar RPC — nada de queries directas a `medio_pago`. Mostrar `error.message` tal cual (mensajes ya en español).
+- **No hay `fn_medio_pago_eliminar`** — mismo criterio que `marca`: solo baja lógica (`habilitar`/`inhabilitar`). Cuando existan `orden_pago`/`pago` que referencien `medio_pago`, un delete físico sería peligroso.
+- **`fn_medio_pago_crear`**: `p_nombre_medio_pago` obligatorio; `p_requiere_referencia` opcional (default `false`); `p_creado_por` = `user.id` del logueado (`supabase.auth.getUser()`).
+- **`fn_medio_pago_modificar`**: `p_id_medio_pago` + `p_nombre_medio_pago` obligatorios; `p_requiere_referencia` opcional (si no se manda, mantiene el valor actual).
+- **`fn_medio_pago_habilitar` / `fn_medio_pago_inhabilitar`**: setean `activo`. Validación `MDP03` si no existe.
+- **`fn_medio_pago_listar(p_incluir_inactivos boolean default true)`** → `TABLE(id_medio_pago, nombre_medio_pago, requiere_referencia, activo, creado, editado, creado_por, creado_por_nombre)`. `creado_por_nombre` vía `LEFT JOIN vw_usuario_resumen` + `COALESCE(..., 'Usuario no disponible')`. Los inactivos no deben ofrecerse al registrar nuevas operaciones.
+- Códigos de error (ERRCODE custom): `MDP01` nombre vacío, `MDP02` nombre duplicado, `MDP03` medio de pago inexistente.
+- **Trigger:** `trg_set_editado_medio_pago` (`BEFORE UPDATE`) fuerza `editado = now()` y protege `creado`/`creado_por`.
+- **Uso de `requiere_referencia` en formularios de operación** (venta, pago a proveedor, etc.): si el medio elegido tiene `requiere_referencia = true`, mostrar el campo de número de referencia; si no, ocultarlo.
+- **Frontend ABMC (V-03)** implementado en `app/(main)/tesoreria/medios-de-pago/page.js`, `lib/medios-pago/{actions,errores}.js`, `components/medios-pago/{MedioPagoFormModal,MediosPagoTable}.js`. Mismo patrón que marcas: server actions solo invocan `fn_medio_pago_*`, modal con nombre + checkbox `requiere_referencia`, errores por campo + banner, listado con búsqueda / incluir inactivos / Editar / Habilitar-Inhabilitar (**sin Eliminar**). Mapeo en `lib/medios-pago/errores.js` (`mapErrorMedioPago`).
+
 ### Tipo de movimiento
 `fn_tipo_movimiento_crear(p_nombre, p_signo, p_creado_por, p_requiere_control_stock)`, `fn_tipo_movimiento_modificar(p_id_tipo_movimiento, p_nombre, p_signo, p_requiere_control_stock)`, `fn_tipo_movimiento_listar(p_incluir_inactivos)` → `SETOF tipo_movimiento` (sin `creado_por_nombre`, no usa `vw_usuario_resumen`), `fn_tipo_movimiento_habilitar(p_id_tipo_movimiento)`, `fn_tipo_movimiento_inhabilitar(p_id_tipo_movimiento)`.
 
@@ -172,9 +188,10 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 ### Compras / inventario (recepción de mercadería)
 `fn_items_esperados_compra(p_id_compra)` — el resto de la lógica de compras parece resolverse por triggers (`validar_cambio_estado_compra`, `validar_y_marcar_stock_aplicado`, `revertir_stock_aplicado`) más que por funciones `fn_*` explícitas de CRUD.
 
-**Frontend Sprint 2 (estructura + C-01):**
-- Navegación: secciones `COMPRAS` y `TESORERÍA` en el sidebar (`AppShell`), dashboard con 4 recuadros (Inventario / Catálogo / Compras / Tesorería). Placeholders para comprobantes, cuentas, órdenes y medios de pago.
+**Frontend Sprint 2 (estructura + C-01 + V-03):**
+- Navegación: secciones `COMPRAS` y `TESORERÍA` en el sidebar (`AppShell`), dashboard con 4 recuadros (Inventario / Catálogo / Compras / Tesorería). Placeholders para comprobantes (historial/registrar), cuentas, órdenes y tipos de comprobante (en Tesorería).
 - **Proveedores (C-01)** — implementado (ver sección Proveedor arriba).
+- **Medios de pago (V-03)** — implementado en `/tesoreria/medios-de-pago` (ver sección Medio de pago arriba).
 
 ---
 
@@ -185,6 +202,7 @@ RLS está **habilitado en las 16 tablas** de `public`. El estado de políticas e
 | `usuario` | `trigger_actualizar_editado_usuario` | Actualiza `editado` en cada `UPDATE` |
 | `marca` | `trg_set_editado_marca` | Ídem |
 | `proveedor` | `trg_set_editado_proveedor` | Actualiza `editado` en cada `UPDATE` y protege `creado`/`registrado_por` |
+| `medio_pago` | `trg_set_editado_medio_pago` | Actualiza `editado` en cada `UPDATE` y protege `creado`/`creado_por` |
 | `deposito` | `trg_set_editado_deposito` | Ídem |
 | `producto` | `trg_producto_sync_id_rubro` | Sincroniza `id_rubro` del producto a partir de `id_categoria` (INSERT/UPDATE) |
 | `compra` | `trg_compra_set_editado_por`, `trg_compra_validar_estado` | Auditoría + valida transición de `estado` |
@@ -205,9 +223,9 @@ El doc anterior (el que traía la sección de login/roles con Next.js) describe 
 | Tablas `lote` / `lote_deposito` | No existen. El equivalente real es `inventario` / `inventario_producto` (para lotes con vencimiento) + `stock` (para el total disponible por depósito) |
 | Vistas `vista_stock_producto`, `vista_stock_producto_deposito`, `vista_lote_detalle` | No existen. Solo existe `vista_diferencias_recepcion` |
 | "Nada de tablas de stock sueltas, se calcula vía vistas" | Falso en la práctica: `stock` es una tabla con `cantidad` sincronizada directamente, mantenida por `movimiento_stock` + triggers |
-| RLS deshabilitado en `usuario`, `marca`, `producto`, `deposito`, etc. | RLS está **habilitado** en las 16 tablas, con políticas ya definidas en la mayoría |
+| RLS deshabilitado en `usuario`, `marca`, `producto`, `deposito`, etc. | RLS está **habilitado** en las tablas de `public`, con políticas ya definidas en la mayoría |
 | "RLS por rol no implementado todavía" | Parcialmente falso: `usuario` ya tiene una política que distingue `Gerente` del resto |
-| No se menciona nada de `compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`, `rubro`, `categoria`, `tipo_movimiento` | Estas tablas existen y tienen bastante desarrollo (funciones, triggers). `compra`/`compra_producto`/`inventario`/`inventario_producto` siguen sin políticas RLS. `proveedor` ya tiene CRUD vía `fn_proveedor_*` (+ trigger `trg_set_editado_proveedor`) y pantalla ABMC en el front; el acceso directo a la tabla sigue bloqueado por RLS sin políticas |
+| No se menciona nada de `compra`, `compra_producto`, `inventario`, `inventario_producto`, `proveedor`, `medio_pago`, `rubro`, `categoria`, `tipo_movimiento` | Estas tablas existen y tienen bastante desarrollo (funciones, triggers). `compra`/`compra_producto`/`inventario`/`inventario_producto` siguen sin políticas RLS. `proveedor` ya tiene CRUD vía `fn_proveedor_*` (+ trigger) y pantalla ABMC; `medio_pago` tiene las 4 políticas RLS + `fn_medio_pago_*` (+ trigger) y pantalla ABMC en Tesorería |
 
 **Recomendación:** confirmar con el equipo si el doc anterior es de un sprint/diseño descartado, o si describe un rediseño pendiente de migrar. Mientras tanto, todo el trabajo de backend/frontend debería apoyarse en el esquema real documentado arriba, no en el doc de `lote`/`lote_deposito`.
 

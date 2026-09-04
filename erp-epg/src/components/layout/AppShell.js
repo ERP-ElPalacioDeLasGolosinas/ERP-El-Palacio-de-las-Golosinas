@@ -101,10 +101,6 @@ const NAV = [
             href: "/compras/comprobantes/nuevo",
             label: "Registrar comprobante",
           },
-          {
-            href: "/compras/comprobantes/tipos",
-            label: "Tipos de comprobante",
-          },
         ],
       },
     ],
@@ -129,6 +125,12 @@ const NAV = [
         label: "Medios de pago",
         icon: CardIcon,
         match: (p) => p.startsWith("/tesoreria/medios-de-pago"),
+      },
+      {
+        href: "/tesoreria/tipos-de-comprobante",
+        label: "Tipos de comprobante",
+        icon: ReceiptIcon,
+        match: (p) => p.startsWith("/tesoreria/tipos-de-comprobante"),
       },
     ],
   },
