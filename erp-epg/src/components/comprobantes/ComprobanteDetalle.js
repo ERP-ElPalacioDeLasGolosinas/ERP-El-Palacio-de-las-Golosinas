@@ -1,0 +1,260 @@
+"use client";
+
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { anularComprobante } from "@/lib/comprobantes/actions";
+import { mapErrorComprobante } from "@/lib/comprobantes/errores";
+
+const fechaFmt = new Intl.DateTimeFormat("es-AR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+const monedaFmt = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+});
+const cantidadFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 });
+
+function formatFecha(valor) {
+  if (!valor) return "—";
+  const d = new Date(`${valor}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? "—" : fechaFmt.format(d);
+}
+
+/**
+ * C-11 · Detalle de un comprobante de proveedor: cabecera enriquecida,
+ * líneas, totales y control de coincidencia detalle vs. importe total.
+ *
+ * @param {{
+ *   comprobante: Record<string, any>,
+ *   lineas: Array<Record<string, any>>,
+ *   errorLineas?: string | null,
+ * }} props
+ */
+export function ComprobanteDetalle({ comprobante, lineas, errorLineas }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  const totalDetalle = Number(comprobante.total_detalle) || 0;
+  const importeTotal = Number(comprobante.importe_total) || 0;
+  const diferencia =
+    comprobante.diferencia != null
+      ? Number(comprobante.diferencia)
+      : Math.round((importeTotal - totalDetalle) * 100) / 100;
+  const hayDiferencia = Math.round(diferencia * 100) / 100 !== 0;
+
+  function anular() {
+    const ok = window.confirm(
+      `¿Anular el comprobante ${comprobante.nombre_tipo_comprobante} ${comprobante.numero_formateado} de ${comprobante.nombre_proveedor}? Esta acción es una baja lógica.`
+    );
+    if (!ok) return;
+
+    startTransition(async () => {
+      const result = await anularComprobante(comprobante.id_comprobante);
+      if (!result.ok) {
+        const ui = mapErrorComprobante(result);
+        window.alert(ui.message);
+        router.refresh();
+        return;
+      }
+      router.push("/compras/comprobantes");
+      router.refresh();
+    });
+  }
+
+  return (
+    <>
+      {/* Cabecera */}
+      <div className="palacio-card p-5 md:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-zinc-900">
+            Datos del comprobante
+          </h2>
+          <span
+            className={
+              comprobante.anulado
+                ? "palacio-badge-inactivo"
+                : "palacio-badge-activo"
+            }
+          >
+            {comprobante.anulado ? "Anulado" : "Vigente"}
+          </span>
+        </div>
+
+        <dl className="grid gap-4 text-sm md:grid-cols-2">
+          <Dato label="Proveedor" valor={comprobante.nombre_proveedor} />
+          <Dato
+            label="Tipo"
+            valor={`${comprobante.nombre_tipo_comprobante}${
+              comprobante.letra ? ` (${comprobante.letra})` : ""
+            }`}
+          />
+          <Dato label="Número" valor={comprobante.numero_formateado} mono />
+          <Dato
+            label="Efecto sobre el saldo"
+            valor={
+              comprobante.signo === -1
+                ? "Resta del saldo del proveedor (nota de crédito)"
+                : "Suma al saldo del proveedor"
+            }
+          />
+          <Dato
+            label="Fecha del comprobante"
+            valor={formatFecha(comprobante.fecha_comprobante)}
+          />
+          <Dato
+            label="Vencimiento"
+            valor={formatFecha(comprobante.fecha_vencimiento)}
+          />
+          <Dato
+            label="Importe total"
+            valor={monedaFmt.format(importeTotal)}
+          />
+          <Dato
+            label="Saldo pendiente"
+            valor={monedaFmt.format(Number(comprobante.saldo_pendiente) || 0)}
+          />
+          <Dato
+            label="Registrado por"
+            valor={comprobante.creado_por_nombre ?? "—"}
+          />
+          {comprobante.observaciones ? (
+            <Dato
+              label="Observaciones"
+              valor={comprobante.observaciones}
+              full
+            />
+          ) : null}
+        </dl>
+      </div>
+
+      {/* Detalle */}
+      <div className="palacio-card mt-6 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
+          <h2 className="text-sm font-semibold text-zinc-900">
+            Detalle del comprobante
+          </h2>
+          <span className="text-xs text-palacio-muted">
+            {lineas.length} línea{lineas.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        {errorLineas ? (
+          <p className="mx-5 my-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {errorLineas}
+          </p>
+        ) : lineas.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-palacio-muted">
+            El comprobante no tiene líneas de detalle.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-palacio-border bg-zinc-50/80">
+                  <Th className="w-12 text-right">#</Th>
+                  <Th>Artículo / concepto</Th>
+                  <Th className="w-28 text-right">Cantidad</Th>
+                  <Th className="w-32 text-right">Precio unit.</Th>
+                  <Th className="w-32 text-right">Importe</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineas.map((l) => (
+                  <tr
+                    key={l.id_detalle}
+                    className="border-b border-palacio-border last:border-0"
+                  >
+                    <td className="px-3 py-2 text-right align-middle text-palacio-muted">
+                      {l.nro_linea}
+                    </td>
+                    <td className="px-3 py-2 align-middle text-zinc-900">
+                      {l.nombre_producto ?? l.concepto ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right align-middle">
+                      {cantidadFmt.format(Number(l.cantidad) || 0)}
+                    </td>
+                    <td className="px-3 py-2 text-right align-middle">
+                      {monedaFmt.format(Number(l.precio_unitario) || 0)}
+                    </td>
+                    <td className="px-3 py-2 text-right align-middle font-medium text-zinc-800">
+                      {monedaFmt.format(Number(l.importe_linea) || 0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-end gap-x-8 gap-y-1 border-t border-palacio-border px-5 py-3 text-right text-sm">
+          <p className="text-palacio-muted">
+            Suma del detalle:{" "}
+            <span className="font-semibold text-zinc-900">
+              {monedaFmt.format(totalDetalle)}
+            </span>
+          </p>
+          <p className="text-palacio-muted">
+            Importe total:{" "}
+            <span className="font-semibold text-zinc-900">
+              {monedaFmt.format(importeTotal)}
+            </span>
+          </p>
+        </div>
+
+        {hayDiferencia ? (
+          <p className="mx-5 mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            La suma de las líneas no coincide con el importe total. Diferencia:{" "}
+            <span className="font-semibold">{monedaFmt.format(diferencia)}</span>.
+          </p>
+        ) : (
+          <p className="mx-5 mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            La suma de las líneas coincide con el importe total.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => router.push("/compras/comprobantes")}
+          className="palacio-btn-secondary px-4 py-2.5 text-sm"
+        >
+          Volver al listado
+        </button>
+        <button
+          type="button"
+          onClick={anular}
+          disabled={pending || comprobante.anulado}
+          className="palacio-btn-primary px-4 py-2.5 text-sm"
+        >
+          {pending ? "Anulando…" : "Anular comprobante"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function Dato({ label, valor, mono = false, full = false }) {
+  return (
+    <div className={`flex flex-col gap-0.5 ${full ? "md:col-span-2" : ""}`}>
+      <dt className="text-xs font-medium tracking-wide text-palacio-muted uppercase">
+        {label}
+      </dt>
+      <dd className={`text-zinc-900 ${mono ? "font-mono text-xs" : ""}`}>
+        {valor || "—"}
+      </dd>
+    </div>
+  );
+}
+
+function Th({ children, className = "" }) {
+  return (
+    <th
+      className={`px-3 py-2 text-[11px] font-semibold tracking-wider text-palacio-muted uppercase ${className}`}
+    >
+      {children}
+    </th>
+  );
+}
