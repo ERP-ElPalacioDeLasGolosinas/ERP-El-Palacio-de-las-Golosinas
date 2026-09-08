@@ -22,7 +22,7 @@ const MODULOS = [
   {
     href: "/tesoreria/cuentas",
     titulo: "Tesorería",
-    descripcion: "Cuentas, órdenes de pago y medios de pago.",
+    descripcion: "Cuentas, pagos, medios de pago y tipos de comprobante.",
   },
 ];
 

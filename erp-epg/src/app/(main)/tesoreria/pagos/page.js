@@ -4,7 +4,7 @@ import { PagosTable } from "@/components/pagos/PagosTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 export const metadata = {
-  title: "Pagos | Palacio · ERP",
+  title: "Historial de pagos | Palacio · ERP",
 };
 
 /**
@@ -27,7 +27,7 @@ export default async function PagosPage({ searchParams }) {
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
       <PageHeader
         crumbs={[{ label: "Tesorería" }, { label: "Pagos" }]}
-        title="Pagos a proveedor"
+        title="Historial de pagos"
         description="Pagos registrados desde órdenes de pago: generan movimientos de tesorería y bajan el saldo de los comprobantes."
       />
 

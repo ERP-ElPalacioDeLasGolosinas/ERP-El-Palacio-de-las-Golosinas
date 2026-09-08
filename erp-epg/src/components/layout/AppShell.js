@@ -119,16 +119,18 @@ const NAV = [
         match: (p) => p.startsWith("/tesoreria/cuentas"),
       },
       {
-        href: "/tesoreria/ordenes-de-pago",
-        label: "Órdenes de pago",
-        icon: PaymentIcon,
-        match: (p) => p.startsWith("/tesoreria/ordenes-de-pago"),
-      },
-      {
-        href: "/tesoreria/pagos",
         label: "Pagos",
         icon: CashIcon,
-        match: (p) => p.startsWith("/tesoreria/pagos"),
+        match: (p) =>
+          p.startsWith("/tesoreria/pagos") ||
+          p.startsWith("/tesoreria/ordenes-de-pago"),
+        children: [
+          {
+            href: "/tesoreria/ordenes-de-pago",
+            label: "Órdenes de pago",
+          },
+          { href: "/tesoreria/pagos", label: "Historial" },
+        ],
       },
       {
         href: "/tesoreria/medios-de-pago",
@@ -162,8 +164,8 @@ export function AppShell({ user, children }) {
       .join("") || "U";
 
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between bg-palacio-red px-4 text-white shadow-sm md:px-6">
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <header className="z-40 flex h-14 shrink-0 items-center justify-between bg-palacio-red px-4 text-white shadow-sm md:px-6">
         <Link href="/" className="flex items-center gap-3">
           <div
             className="flex size-9 items-center justify-center rounded-full bg-white/15 text-sm font-bold"
@@ -194,9 +196,9 @@ export function AppShell({ user, children }) {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <aside className="hidden w-56 shrink-0 border-r border-palacio-border bg-white md:flex md:flex-col">
-          <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-5">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <aside className="hidden w-56 shrink-0 border-r border-palacio-border bg-white md:flex md:flex-col md:overflow-hidden">
+          <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain px-3 py-5">
             {NAV.map((group) => (
               <div key={group.section}>
                 <p className="mb-2 px-2 text-[10px] font-semibold tracking-[0.14em] text-palacio-muted">
@@ -212,7 +214,7 @@ export function AppShell({ user, children }) {
           </nav>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-auto bg-palacio-bg">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-palacio-bg">
           {children}
         </main>
       </div>
@@ -446,18 +448,6 @@ function WalletIcon({ className }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M3 7.5A1.5 1.5 0 0 1 4.5 6h15A1.5 1.5 0 0 1 21 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 16.5v-9Zm18 3.5h-4a2 2 0 0 0 0 4h4"
-      />
-    </svg>
-  );
-}
-
-function PaymentIcon({ className }) {
-  return (
-    <svg {...iconProps(className)}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M4 7h16v10H4V7Zm0 3h16M8 14h3"
       />
     </svg>
   );

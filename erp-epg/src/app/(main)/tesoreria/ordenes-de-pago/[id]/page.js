@@ -21,6 +21,7 @@ export default async function OrdenPagoDetallePage({ params }) {
           <PageHeader
             crumbs={[
               { label: "Tesorería" },
+              { label: "Pagos", href: "/tesoreria/pagos" },
               { label: "Órdenes de pago", href: "/tesoreria/ordenes-de-pago" },
               { label: "Detalle" },
             ]}
@@ -41,6 +42,7 @@ export default async function OrdenPagoDetallePage({ params }) {
       <PageHeader
         crumbs={[
           { label: "Tesorería" },
+          { label: "Pagos", href: "/tesoreria/pagos" },
           { label: "Órdenes de pago", href: "/tesoreria/ordenes-de-pago" },
           { label: data.orden?.nombre_proveedor ?? "Detalle" },
         ]}

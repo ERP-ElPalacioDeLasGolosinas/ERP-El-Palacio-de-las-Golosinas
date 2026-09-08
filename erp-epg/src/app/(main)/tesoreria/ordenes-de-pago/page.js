@@ -27,7 +27,11 @@ export default async function OrdenesDePagoPage({ searchParams }) {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
       <PageHeader
-        crumbs={[{ label: "Tesorería" }, { label: "Órdenes de pago" }]}
+        crumbs={[
+          { label: "Tesorería" },
+          { label: "Pagos", href: "/tesoreria/pagos" },
+          { label: "Órdenes de pago" },
+        ]}
         title="Órdenes de pago a proveedor"
         description="Órdenes que instruyen cancelar comprobantes de un proveedor con uno o más medios de pago."
       />

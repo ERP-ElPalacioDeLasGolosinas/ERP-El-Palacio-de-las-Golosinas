@@ -34,6 +34,7 @@ export default async function NuevaOrdenPagoPage() {
       <PageHeader
         crumbs={[
           { label: "Tesorería" },
+          { label: "Pagos", href: "/tesoreria/pagos" },
           { label: "Órdenes de pago", href: "/tesoreria/ordenes-de-pago" },
           { label: "Nueva" },
         ]}
