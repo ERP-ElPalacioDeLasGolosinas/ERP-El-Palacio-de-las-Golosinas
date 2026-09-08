@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
-  habilitarMedioPago,
-  inhabilitarMedioPago,
-} from "@/lib/medios-pago/actions";
-import { MedioPagoFormModal } from "./MedioPagoFormModal";
+  habilitarCuentaTesoreria,
+  inhabilitarCuentaTesoreria,
+} from "@/lib/cuentas-tesoreria/actions";
+import { TIPOS_CUENTA } from "@/lib/cuentas-tesoreria/constantes";
+import { CuentaTesoreriaFormModal } from "./CuentaTesoreriaFormModal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -16,39 +18,43 @@ const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   minute: "2-digit",
 });
 
+const montoFmt = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  minimumFractionDigits: 2,
+});
+
 function formatFecha(valor) {
   if (!valor) return "—";
   const d = new Date(valor);
   return Number.isNaN(d.getTime()) ? "—" : fechaFmt.format(d);
 }
 
+function formatMonto(valor) {
+  const n = Number(valor);
+  return Number.isFinite(n) ? montoFmt.format(n) : "—";
+}
+
 /**
  * @param {{
- *   mediosPago: Array<{
- *     id_medio_pago: string,
- *     nombre_medio_pago: string,
- *     tipo?: string,
- *     requiere_referencia: boolean,
+ *   cuentas: Array<{
+ *     id_cuenta: string,
+ *     nombre_cuenta: string,
+ *     tipo: string,
+ *     descripcion: string | null,
+ *     saldo_inicial: number | string,
+ *     saldo_actual: number | string,
  *     activo: boolean,
  *     creado: string,
  *     editado: string,
  *     creado_por: string | null,
  *     creado_por_nombre?: string | null,
- *     cuentas?: Array<{ id_cuenta: string, nombre_cuenta: string, tipo: string }>,
  *   }>,
- *   incluirInactivos: boolean,
- *   cuentasDisponibles?: Array<{
- *     id_cuenta: string,
- *     nombre_cuenta: string,
- *     tipo: string,
- *   }>,
+ *   incluirInactivas: boolean,
+ *   tipo: string | null,
  * }} props
  */
-export function MediosPagoTable({
-  mediosPago,
-  incluirInactivos,
-  cuentasDisponibles = [],
-}) {
+export function CuentasTesoreriaTable({ cuentas, incluirInactivas, tipo }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -57,18 +63,18 @@ export function MediosPagoTable({
   const [modalAbierto, setModalAbierto] = useState(false);
   const [enEdicion, setEnEdicion] = useState(null);
 
-  const filtrados = useMemo(() => {
+  const filtradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return mediosPago;
-    return mediosPago.filter((m) =>
-      m.nombre_medio_pago.toLowerCase().includes(q)
+    if (!q) return cuentas;
+    return cuentas.filter((c) =>
+      c.nombre_cuenta.toLowerCase().includes(q)
     );
-  }, [mediosPago, busqueda]);
+  }, [cuentas, busqueda]);
 
-  function toggleInactivos(checked) {
+  function setParam(key, value) {
     const params = new URLSearchParams(searchParams);
-    if (checked) params.set("inactivos", "1");
-    else params.delete("inactivos");
+    if (value) params.set(key, value);
+    else params.delete(key);
     const qs = params.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
@@ -78,21 +84,21 @@ export function MediosPagoTable({
     setModalAbierto(true);
   }
 
-  function abrirEdicion(medio) {
-    setEnEdicion(medio);
+  function abrirEdicion(cuenta) {
+    setEnEdicion(cuenta);
     setModalAbierto(true);
   }
 
   function manejarErrorAccion(result) {
     window.alert(result.error);
-    if (result.code === "MDP03") router.refresh();
+    if (result.code === "CTA03") router.refresh();
   }
 
-  function toggleActivo(medio) {
+  function toggleActivo(cuenta) {
     startTransition(async () => {
-      const result = medio.activo
-        ? await inhabilitarMedioPago(medio.id_medio_pago)
-        : await habilitarMedioPago(medio.id_medio_pago);
+      const result = cuenta.activo
+        ? await inhabilitarCuentaTesoreria(cuenta.id_cuenta)
+        : await habilitarCuentaTesoreria(cuenta.id_cuenta);
       if (!result.ok) {
         manejarErrorAccion(result);
         return;
@@ -112,14 +118,29 @@ export function MediosPagoTable({
             placeholder="Buscar por nombre"
             className="palacio-input max-w-xs"
           />
+          <select
+            value={tipo ?? ""}
+            onChange={(e) => setParam("tipo", e.target.value)}
+            className="palacio-input max-w-[10rem]"
+            aria-label="Filtrar por tipo"
+          >
+            <option value="">Todos los tipos</option>
+            {TIPOS_CUENTA.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
           <label className="flex items-center gap-2 text-sm text-zinc-700">
             <input
               type="checkbox"
-              checked={incluirInactivos}
-              onChange={(e) => toggleInactivos(e.target.checked)}
+              checked={incluirInactivas}
+              onChange={(e) =>
+                setParam("inactivas", e.target.checked ? "1" : "")
+              }
               className="size-4 accent-palacio-red"
             />
-            Incluir inactivos
+            Incluir inactivas
           </label>
         </div>
         <button
@@ -127,16 +148,16 @@ export function MediosPagoTable({
           onClick={abrirAlta}
           className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
         >
-          Nuevo medio de pago
+          Nueva cuenta
         </button>
       </div>
 
-      {filtrados.length === 0 ? (
+      {filtradas.length === 0 ? (
         <div className="palacio-card px-6 py-12 text-center">
           <p className="text-sm text-palacio-muted">
-            {mediosPago.length === 0
-              ? "No hay medios de pago cargados."
-              : "Ningún medio de pago coincide con la búsqueda."}
+            {cuentas.length === 0
+              ? "No hay cuentas de tesorería cargadas."
+              : "Ninguna cuenta coincide con la búsqueda."}
           </p>
         </div>
       ) : (
@@ -144,8 +165,7 @@ export function MediosPagoTable({
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Listado</h2>
             <span className="text-xs text-palacio-muted">
-              {filtrados.length} medio
-              {filtrados.length === 1 ? "" : "s"}
+              {filtradas.length} cuenta{filtradas.length === 1 ? "" : "s"}
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -154,64 +174,59 @@ export function MediosPagoTable({
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
                   <Th>Nombre</Th>
                   <Th>Tipo</Th>
-                  <Th>Cuentas</Th>
-                  <Th className="text-center">Requiere referencia</Th>
+                  <Th className="text-right">Saldo actual</Th>
                   <Th className="text-center">Estado</Th>
                   <Th>Creado</Th>
-                  <Th>Editado</Th>
                   <Th>Creado por</Th>
                   <Th className="text-right">Acciones</Th>
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((m) => (
+                {filtradas.map((c) => (
                   <tr
-                    key={m.id_medio_pago}
+                    key={c.id_cuenta}
                     className={[
                       "border-b border-palacio-border last:border-0",
-                      m.activo ? "" : "opacity-60",
+                      c.activo ? "" : "opacity-60",
                     ].join(" ")}
                   >
                     <td className="px-5 py-4 align-middle font-medium text-zinc-900">
-                      {m.nombre_medio_pago}
+                      {c.nombre_cuenta}
+                      {c.descripcion ? (
+                        <span className="mt-0.5 block text-xs font-normal text-palacio-muted">
+                          {c.descripcion}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {m.tipo ?? "—"}
+                      {c.tipo}
                     </td>
-                    <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {m.cuentas && m.cuentas.length > 0
-                        ? m.cuentas.map((c) => c.nombre_cuenta).join(", ")
-                        : "—"}
-                    </td>
-                    <td className="px-5 py-4 text-center align-middle text-palacio-muted">
-                      {m.requiere_referencia ? "Sí" : "No"}
+                    <td className="px-5 py-4 text-right align-middle tabular-nums text-zinc-900">
+                      {formatMonto(c.saldo_actual)}
                     </td>
                     <td className="px-5 py-4 text-center align-middle">
                       <span
                         className={
-                          m.activo
+                          c.activo
                             ? "palacio-badge-activo"
                             : "palacio-badge-inactivo"
                         }
                       >
-                        {m.activo ? "Activo" : "Inactivo"}
+                        {c.activo ? "Activa" : "Inactiva"}
                       </span>
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {formatFecha(m.creado)}
+                      {formatFecha(c.creado)}
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {formatFecha(m.editado)}
-                    </td>
-                    <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {m.creado_por_nombre ??
-                        (m.creado_por ? `${m.creado_por.slice(0, 8)}…` : "—")}
+                      {c.creado_por_nombre ??
+                        (c.creado_por ? `${c.creado_por.slice(0, 8)}…` : "—")}
                     </td>
                     <td className="px-5 py-4 align-middle">
                       <div className="flex flex-wrap justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => abrirEdicion(m)}
+                          onClick={() => abrirEdicion(c)}
                           className="palacio-action-btn palacio-action-primary"
                         >
                           Editar
@@ -219,11 +234,17 @@ export function MediosPagoTable({
                         <button
                           type="button"
                           disabled={pending}
-                          onClick={() => toggleActivo(m)}
+                          onClick={() => toggleActivo(c)}
                           className="palacio-action-btn"
                         >
-                          {m.activo ? "Inhabilitar" : "Habilitar"}
+                          {c.activo ? "Inhabilitar" : "Habilitar"}
                         </button>
+                        <Link
+                          href={`/tesoreria/cuentas/${c.id_cuenta}`}
+                          className="palacio-action-btn"
+                        >
+                          Ver movimientos
+                        </Link>
                       </div>
                     </td>
                   </tr>
@@ -235,11 +256,10 @@ export function MediosPagoTable({
       )}
 
       {modalAbierto ? (
-        <MedioPagoFormModal
-          key={enEdicion?.id_medio_pago ?? "nuevo"}
+        <CuentaTesoreriaFormModal
+          key={enEdicion?.id_cuenta ?? "nueva"}
           onClose={() => setModalAbierto(false)}
-          medioPago={enEdicion}
-          cuentasDisponibles={cuentasDisponibles}
+          cuenta={enEdicion}
         />
       ) : null}
     </>

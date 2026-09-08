@@ -1,4 +1,5 @@
 import { listarMediosPago } from "@/lib/medios-pago/actions";
+import { listarCuentasTesoreria } from "@/lib/cuentas-tesoreria/actions";
 import { MediosPagoTable } from "@/components/medios-pago/MediosPagoTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -13,7 +14,10 @@ export default async function MediosDePagoPage({ searchParams }) {
   const sp = await searchParams;
   const incluirInactivos = sp?.inactivos === "1";
 
-  const { data, error } = await listarMediosPago(incluirInactivos);
+  const [{ data, error }, { data: cuentas }] = await Promise.all([
+    listarMediosPago(incluirInactivos),
+    listarCuentasTesoreria(false),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8">
@@ -32,6 +36,7 @@ export default async function MediosDePagoPage({ searchParams }) {
         <MediosPagoTable
           mediosPago={data ?? []}
           incluirInactivos={incluirInactivos}
+          cuentasDisponibles={cuentas ?? []}
         />
       )}
     </div>

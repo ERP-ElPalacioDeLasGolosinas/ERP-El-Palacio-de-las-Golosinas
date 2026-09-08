@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import {
   obtenerComprobante,
   listarDetalleComprobante,
+  listarOrdenesPagoComprobante,
 } from "@/lib/comprobantes/actions";
 import { ComprobanteDetalle } from "@/components/comprobantes/ComprobanteDetalle";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -16,9 +17,10 @@ export const metadata = {
 export default async function ComprobanteDetallePage({ params }) {
   const { id } = await params;
 
-  const [cabeceraRes, lineasRes] = await Promise.all([
+  const [cabeceraRes, lineasRes, ordenesRes] = await Promise.all([
     obtenerComprobante(id),
     listarDetalleComprobante(id),
+    listarOrdenesPagoComprobante(id),
   ]);
 
   if (!cabeceraRes.data) {
@@ -59,6 +61,7 @@ export default async function ComprobanteDetallePage({ params }) {
         comprobante={cabeceraRes.data}
         lineas={lineasRes.data ?? []}
         errorLineas={lineasRes.error}
+        ordenesPago={ordenesRes.data ?? []}
       />
     </div>
   );

@@ -1,49 +1,47 @@
-import { listarOrdenesPago } from "@/lib/ordenes-pago/actions";
+import { listarPagos } from "@/lib/pagos/actions";
 import { listarProveedores } from "@/lib/proveedores/actions";
-import { OrdenesPagoTable } from "@/components/ordenes-pago/OrdenesPagoTable";
+import { PagosTable } from "@/components/pagos/PagosTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 export const metadata = {
-  title: "Órdenes de pago | Palacio · ERP",
+  title: "Pagos | Palacio · ERP",
 };
 
 /**
- * @param {{ searchParams: Promise<{ proveedor?: string, estado?: string, desde?: string, hasta?: string }> }} props
+ * @param {{ searchParams: Promise<{ proveedor?: string, desde?: string, hasta?: string }> }} props
  */
-export default async function OrdenesDePagoPage({ searchParams }) {
+export default async function PagosPage({ searchParams }) {
   const sp = await searchParams;
   const filtros = {
     idProveedor: sp?.proveedor || null,
-    estado: sp?.estado || null,
     desde: sp?.desde || null,
     hasta: sp?.hasta || null,
   };
 
   const [{ data, error }, { data: proveedores }] = await Promise.all([
-    listarOrdenesPago(filtros),
+    listarPagos(filtros),
     listarProveedores(true),
   ]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
       <PageHeader
-        crumbs={[{ label: "Tesorería" }, { label: "Órdenes de pago" }]}
-        title="Órdenes de pago a proveedor"
-        description="Órdenes que instruyen cancelar comprobantes de un proveedor con uno o más medios de pago."
+        crumbs={[{ label: "Tesorería" }, { label: "Pagos" }]}
+        title="Pagos a proveedor"
+        description="Pagos registrados desde órdenes de pago: generan movimientos de tesorería y bajan el saldo de los comprobantes."
       />
 
       {error ? (
         <div className="palacio-card border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
-          <p className="font-medium">No se pudieron cargar las órdenes de pago</p>
+          <p className="font-medium">No se pudieron cargar los pagos</p>
           <p className="mt-1 text-amber-900/80">{error}</p>
         </div>
       ) : (
-        <OrdenesPagoTable
-          ordenes={data ?? []}
+        <PagosTable
+          pagos={data ?? []}
           proveedores={proveedores ?? []}
           filtros={{
             proveedor: filtros.idProveedor ?? "",
-            estado: filtros.estado ?? "",
             desde: filtros.desde ?? "",
             hasta: filtros.hasta ?? "",
           }}

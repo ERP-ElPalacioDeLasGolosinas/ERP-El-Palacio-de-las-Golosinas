@@ -98,6 +98,10 @@ const NAV = [
         children: [
           { href: "/compras/comprobantes", label: "Historial" },
           {
+            href: "/compras/comprobantes/pendientes",
+            label: "Pendientes por proveedor",
+          },
+          {
             href: "/compras/comprobantes/nuevo",
             label: "Registrar comprobante",
           },
@@ -119,6 +123,12 @@ const NAV = [
         label: "Órdenes de pago",
         icon: PaymentIcon,
         match: (p) => p.startsWith("/tesoreria/ordenes-de-pago"),
+      },
+      {
+        href: "/tesoreria/pagos",
+        label: "Pagos",
+        icon: CashIcon,
+        match: (p) => p.startsWith("/tesoreria/pagos"),
       },
       {
         href: "/tesoreria/medios-de-pago",
@@ -448,6 +458,18 @@ function PaymentIcon({ className }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M4 7h16v10H4V7Zm0 3h16M8 14h3"
+      />
+    </svg>
+  );
+}
+
+function CashIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 6h18v12H3V6Zm0 4c1.66 0 3-1.34 3-3m15 3c-1.66 0-3-1.34-3-3M3 14c1.66 0 3 1.34 3 3m15-3c-1.66 0-3 1.34-3 3m-3-4a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
       />
     </svg>
   );

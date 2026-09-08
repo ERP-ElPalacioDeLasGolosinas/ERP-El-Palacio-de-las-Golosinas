@@ -2,9 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { anularComprobante } from "@/lib/comprobantes/actions";
 import { mapErrorComprobante } from "@/lib/comprobantes/errores";
+import {
+  badgeEstadoComprobante,
+  ESTADOS_COMPROBANTE,
+} from "@/lib/comprobantes/estado";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -23,21 +27,25 @@ function formatFecha(valor) {
 }
 
 /**
- * @param {{ comprobantes: Array<Record<string, any>> }} props
+ * @param {{
+ *   comprobantes: Array<Record<string, any>>,
+ *   resumen: { cantidad: number, importe_total: number, importe_pagado: number, saldo_pendiente: number } | null,
+ *   proveedores: Array<{ id_proveedor: string, nombre_proveedor: string }>,
+ *   filtros: { proveedor: string, estado: string, desde: string, hasta: string },
+ * }} props
  */
-export function ComprobantesTable({ comprobantes }) {
+export function ComprobantesTable({ comprobantes, resumen, proveedores, filtros }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [busqueda, setBusqueda] = useState("");
-  const [soloPendientes, setSoloPendientes] = useState(false);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    return comprobantes.filter((c) => {
-      if (soloPendientes && !(Number(c.saldo_pendiente) > 0 && !c.anulado))
-        return false;
-      if (!q) return true;
-      return (
+    if (!q) return comprobantes;
+    return comprobantes.filter(
+      (c) =>
         String(c.nombre_proveedor ?? "")
           .toLowerCase()
           .includes(q) ||
@@ -47,9 +55,23 @@ export function ComprobantesTable({ comprobantes }) {
         String(c.nombre_tipo_comprobante ?? "")
           .toLowerCase()
           .includes(q)
-      );
-    });
-  }, [comprobantes, busqueda, soloPendientes]);
+    );
+  }, [comprobantes, busqueda]);
+
+  function setParam(key, value) {
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  function limpiarFiltros() {
+    router.push(pathname);
+  }
+
+  const hayFiltros =
+    filtros.proveedor || filtros.estado || filtros.desde || filtros.hasta;
 
   function anular(c) {
     const ok = window.confirm(
@@ -71,24 +93,65 @@ export function ComprobantesTable({ comprobantes }) {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por proveedor, número o tipo"
-            className="palacio-input max-w-xs"
-          />
-          <label className="flex items-center gap-2 text-sm text-zinc-700">
-            <input
-              type="checkbox"
-              checked={soloPendientes}
-              onChange={(e) => setSoloPendientes(e.target.checked)}
-              className="size-4 accent-palacio-red"
-            />
-            Solo con saldo pendiente
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+            Proveedor
+            <select
+              value={filtros.proveedor}
+              onChange={(e) => setParam("proveedor", e.target.value)}
+              className="palacio-input max-w-xs"
+            >
+              <option value="">Todos</option>
+              {proveedores.map((p) => (
+                <option key={p.id_proveedor} value={p.id_proveedor}>
+                  {p.nombre_proveedor}
+                </option>
+              ))}
+            </select>
           </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+            Estado
+            <select
+              value={filtros.estado}
+              onChange={(e) => setParam("estado", e.target.value)}
+              className="palacio-input"
+            >
+              <option value="">Todos</option>
+              {ESTADOS_COMPROBANTE.map((estado) => (
+                <option key={estado} value={estado}>
+                  {estado}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+            Desde
+            <input
+              type="date"
+              value={filtros.desde}
+              onChange={(e) => setParam("desde", e.target.value)}
+              className="palacio-input"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+            Hasta
+            <input
+              type="date"
+              value={filtros.hasta}
+              onChange={(e) => setParam("hasta", e.target.value)}
+              className="palacio-input"
+            />
+          </label>
+          {hayFiltros ? (
+            <button
+              type="button"
+              onClick={limpiarFiltros}
+              className="palacio-action-btn"
+            >
+              Limpiar filtros
+            </button>
+          ) : null}
         </div>
         <Link
           href="/compras/comprobantes/nuevo"
@@ -98,12 +161,40 @@ export function ComprobantesTable({ comprobantes }) {
         </Link>
       </div>
 
+      {resumen ? (
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <ResumenItem label="Comprobantes" valor={String(resumen.cantidad)} />
+          <ResumenItem
+            label="Importe total"
+            valor={monedaFmt.format(resumen.importe_total)}
+          />
+          <ResumenItem
+            label="Pagado"
+            valor={monedaFmt.format(resumen.importe_pagado)}
+          />
+          <ResumenItem
+            label="Saldo pendiente"
+            valor={monedaFmt.format(resumen.saldo_pendiente)}
+          />
+        </div>
+      ) : null}
+
+      <div className="mb-4">
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar en la página por proveedor, número o tipo"
+          className="palacio-input max-w-sm"
+        />
+      </div>
+
       {filtrados.length === 0 ? (
         <div className="palacio-card px-6 py-12 text-center">
           <p className="text-sm text-palacio-muted">
             {comprobantes.length === 0
-              ? "No hay comprobantes registrados."
-              : "Ningún comprobante coincide con el filtro."}
+              ? "No hay comprobantes para el filtro aplicado."
+              : "Ningún comprobante coincide con la búsqueda."}
           </p>
         </div>
       ) : (
@@ -164,14 +255,8 @@ export function ComprobantesTable({ comprobantes }) {
                       {monedaFmt.format(Number(c.saldo_pendiente) || 0)}
                     </td>
                     <td className="px-5 py-4 text-center align-middle">
-                      <span
-                        className={
-                          c.anulado
-                            ? "palacio-badge-inactivo"
-                            : "palacio-badge-activo"
-                        }
-                      >
-                        {c.anulado ? "Anulado" : "Vigente"}
+                      <span className={badgeEstadoComprobante(c.estado)}>
+                        {c.estado ?? (c.anulado ? "Anulado" : "Pendiente")}
                       </span>
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
@@ -203,6 +288,19 @@ export function ComprobantesTable({ comprobantes }) {
         </div>
       )}
     </>
+  );
+}
+
+function ResumenItem({ label, valor }) {
+  return (
+    <div className="rounded-lg border border-palacio-border bg-zinc-50/60 px-4 py-3">
+      <p className="text-[11px] font-semibold tracking-wider text-palacio-muted uppercase">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-semibold text-zinc-900 tabular-nums">
+        {valor}
+      </p>
+    </div>
   );
 }
 

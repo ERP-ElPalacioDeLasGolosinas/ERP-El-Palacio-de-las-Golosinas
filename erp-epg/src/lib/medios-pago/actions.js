@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { TIPOS_MEDIO_PAGO } from "@/lib/medios-pago/constantes";
 
 const PATH = "/tesoreria/medios-de-pago";
 
@@ -44,19 +45,52 @@ function booleano(input, key) {
 }
 
 /**
- * Lista medios de pago vía `fn_medio_pago_listar` (incluye `creado_por_nombre`).
- * Sin queries directas a la tabla `medio_pago`.
+ * @param {FormData | Record<string, unknown>} input
+ * @returns {string[]} ids de cuentas de tesorería seleccionadas
+ */
+function cuentas(input) {
+  const values =
+    typeof input.getAll === "function"
+      ? input.getAll("cuentas")
+      : Array.isArray(input.cuentas)
+        ? input.cuentas
+        : input.cuentas != null
+          ? [input.cuentas]
+          : [];
+  return values.map((v) => String(v).trim()).filter(Boolean);
+}
+
+/**
+ * @param {FormData | Record<string, unknown>} input
+ * @returns {string | null} valor válido del enum `tipo_medio_pago` o `null`
+ */
+function tipoMedioPago(input) {
+  const value = texto(input, "tipo");
+  return TIPOS_MEDIO_PAGO.includes(value) ? value : null;
+}
+
+/**
+ * Lista medios de pago vía `fn_medio_pago_listar` (incluye `creado_por_nombre`,
+ * `tipo` y las `cuentas` de tesorería enlazadas). Sin queries directas a la
+ * tabla `medio_pago`.
  *
  * @param {boolean} [incluirInactivos=true]
  * @returns {Promise<{ data: Array<{
  *   id_medio_pago: string,
  *   nombre_medio_pago: string,
+ *   tipo: string,
  *   requiere_referencia: boolean,
  *   activo: boolean,
  *   creado: string,
  *   editado: string,
  *   creado_por: string | null,
  *   creado_por_nombre: string | null,
+ *   cuentas: Array<{
+ *     id_cuenta: string,
+ *     nombre_cuenta: string,
+ *     tipo: string,
+ *     activo: boolean,
+ *   }>,
  * }> | null, error: string | null }>}
  */
 export async function listarMediosPago(incluirInactivos = true) {
@@ -67,6 +101,38 @@ export async function listarMediosPago(incluirInactivos = true) {
 
   if (error) {
     return { data: null, error: "No se pudieron cargar los medios de pago." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Cuentas de tesorería activas enlazadas a un medio de pago
+ * (`fn_medio_pago_cuentas_compatibles`). Insumo de los formularios de orden de
+ * pago (T-07) y de pago (T-08).
+ *
+ * @param {string} idMedioPago
+ * @returns {Promise<{ data: Array<{
+ *   id_cuenta: string,
+ *   nombre_cuenta: string,
+ *   tipo: string,
+ *   saldo_actual: number,
+ *   activo: boolean,
+ * }> | null, error: string | null }>}
+ */
+export async function listarCuentasCompatibles(idMedioPago) {
+  if (!idMedioPago) {
+    return { data: null, error: "Falta el identificador del medio de pago." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "fn_medio_pago_cuentas_compatibles",
+    { p_id_medio_pago: idMedioPago }
+  );
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar las cuentas del medio de pago." };
   }
 
   return { data: data ?? [], error: null };
@@ -93,8 +159,10 @@ export async function crearMedioPago(formData) {
 
   const { error } = await supabase.rpc("fn_medio_pago_crear", {
     p_nombre_medio_pago: texto(formData, "nombre_medio_pago"),
+    p_tipo: tipoMedioPago(formData),
     p_requiere_referencia: booleano(formData, "requiere_referencia"),
     p_creado_por: user.id,
+    p_cuentas: cuentas(formData),
   });
 
   if (error) {
@@ -123,7 +191,9 @@ export async function actualizarMedioPago(id_medio_pago, formData) {
   const { error } = await supabase.rpc("fn_medio_pago_modificar", {
     p_id_medio_pago: id_medio_pago,
     p_nombre_medio_pago: texto(formData, "nombre_medio_pago"),
+    p_tipo: tipoMedioPago(formData),
     p_requiere_referencia: booleano(formData, "requiere_referencia"),
+    p_cuentas: cuentas(formData),
   });
 
   if (error) {

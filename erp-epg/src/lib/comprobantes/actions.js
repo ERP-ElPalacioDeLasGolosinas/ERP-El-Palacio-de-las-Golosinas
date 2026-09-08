@@ -34,7 +34,7 @@ function textoOpcional(valor) {
 /**
  * Lista comprobantes de proveedor vía `fn_comprobante_listar`.
  *
- * @param {{ idProveedor?: string | null, soloPendientes?: boolean, desde?: string | null, hasta?: string | null }} [filtros]
+ * @param {{ idProveedor?: string | null, soloPendientes?: boolean, desde?: string | null, hasta?: string | null, estado?: string | null }} [filtros]
  * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
  */
 export async function listarComprobantes(filtros = {}) {
@@ -44,6 +44,7 @@ export async function listarComprobantes(filtros = {}) {
     p_solo_pendientes: Boolean(filtros.soloPendientes),
     p_desde: filtros.desde || null,
     p_hasta: filtros.hasta || null,
+    p_estado: filtros.estado || null,
   });
 
   if (error) {
@@ -51,6 +52,103 @@ export async function listarComprobantes(filtros = {}) {
   }
 
   return { data: data ?? [], error: null };
+}
+
+/**
+ * Totales agregados de comprobantes vía `fn_comprobante_resumen`, para el
+ * mismo conjunto que `listarComprobantes` filtra por proveedor, rango de
+ * fechas y estado (T-C2).
+ *
+ * @param {{ idProveedor?: string | null, desde?: string | null, hasta?: string | null, estado?: string | null }} [filtros]
+ * @returns {Promise<{ data: { cantidad: number, importe_total: number, importe_pagado: number, saldo_pendiente: number } | null, error: string | null }>}
+ */
+export async function obtenerResumenComprobantes(filtros = {}) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_comprobante_resumen", {
+    p_id_proveedor: filtros.idProveedor || null,
+    p_desde: filtros.desde || null,
+    p_hasta: filtros.hasta || null,
+    p_estado: filtros.estado || null,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudo cargar el resumen de comprobantes." };
+  }
+
+  const fila = Array.isArray(data) ? data[0] : data;
+  if (!fila) {
+    return {
+      data: { cantidad: 0, importe_total: 0, importe_pagado: 0, saldo_pendiente: 0 },
+      error: null,
+    };
+  }
+
+  return {
+    data: {
+      cantidad: Number(fila.cantidad) || 0,
+      importe_total: Number(fila.importe_total) || 0,
+      importe_pagado: Number(fila.importe_pagado) || 0,
+      saldo_pendiente: Number(fila.saldo_pendiente) || 0,
+    },
+    error: null,
+  };
+}
+
+/**
+ * Comprobantes de un proveedor con saldo pendiente > 0 (no anulados,
+ * estado ≠ `Pagado`) vía `fn_comprobante_pendientes_listar` (S2-2c / C-12).
+ *
+ * @param {string} idProveedor
+ * @param {"fecha" | "vencimiento"} [orden="fecha"]
+ * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
+ */
+export async function listarComprobantesPendientes(idProveedor, orden = "fecha") {
+  if (!idProveedor) {
+    return { data: [], error: null };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_comprobante_pendientes_listar", {
+    p_id_proveedor: idProveedor,
+    p_orden: orden === "vencimiento" ? "vencimiento" : "fecha",
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar los comprobantes pendientes." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Cantidad y suma de saldos pendientes de un proveedor vía
+ * `fn_comprobante_pendientes_resumen` (S2-2c / C-12).
+ *
+ * @param {string} idProveedor
+ * @returns {Promise<{ data: { cantidad: number, saldo_pendiente: number } | null, error: string | null }>}
+ */
+export async function obtenerResumenPendientes(idProveedor) {
+  if (!idProveedor) {
+    return { data: { cantidad: 0, saldo_pendiente: 0 }, error: null };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_comprobante_pendientes_resumen", {
+    p_id_proveedor: idProveedor,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudo cargar el resumen de pendientes." };
+  }
+
+  const fila = Array.isArray(data) ? data[0] : data;
+  return {
+    data: {
+      cantidad: Number(fila?.cantidad) || 0,
+      saldo_pendiente: Number(fila?.saldo_pendiente) || 0,
+    },
+    error: null,
+  };
 }
 
 /**
@@ -139,6 +237,31 @@ export async function validarDetalle(entrada) {
     },
     error: null,
   };
+}
+
+/**
+ * Órdenes de pago que imputan un comprobante, con su importe imputado y el
+ * estado de la orden, vía `fn_comprobante_ordenes_pago_listar` (T-07).
+ *
+ * @param {string} id_comprobante
+ * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
+ */
+export async function listarOrdenesPagoComprobante(id_comprobante) {
+  if (!id_comprobante) {
+    return { data: null, error: "Falta el identificador del comprobante." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "fn_comprobante_ordenes_pago_listar",
+    { p_id_comprobante: id_comprobante }
+  );
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar las órdenes de pago del comprobante." };
+  }
+
+  return { data: data ?? [], error: null };
 }
 
 /**

@@ -6,9 +6,11 @@
  * | MDP01  | nombre | Nombre vacío                                     |
  * | MDP02  | nombre | Nombre duplicado                                 |
  * | MDP03  | —      | El medio de pago ya no existe (recargar tabla)   |
+ * | MDP04  | tipo   | Tipo no indicado                                 |
+ * | MDP05  | cuentas| Una cuenta enlazada no existe o está inactiva    |
  */
 
-/** @typedef {{ field: "nombre" | null, message: string, reload?: boolean }} ErrorUI */
+/** @typedef {{ field: "nombre" | "tipo" | "cuentas" | null, message: string, reload?: boolean }} ErrorUI */
 
 const MAPA = {
   MDP01: { field: "nombre", message: "El nombre es obligatorio." },
@@ -20,6 +22,13 @@ const MAPA = {
     field: null,
     message:
       "El medio de pago ya no existe (puede haber sido eliminado por otro usuario).",
+    reload: true,
+  },
+  MDP04: { field: "tipo", message: "Elegí el tipo del medio de pago." },
+  MDP05: {
+    field: "cuentas",
+    message:
+      "Alguna de las cuentas seleccionadas ya no existe o está inactiva. Actualizá la lista.",
     reload: true,
   },
 };

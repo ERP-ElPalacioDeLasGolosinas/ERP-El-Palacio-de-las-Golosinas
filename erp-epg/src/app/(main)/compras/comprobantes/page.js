@@ -1,4 +1,8 @@
-import { listarComprobantes } from "@/lib/comprobantes/actions";
+import {
+  listarComprobantes,
+  obtenerResumenComprobantes,
+} from "@/lib/comprobantes/actions";
+import { listarProveedores } from "@/lib/proveedores/actions";
 import { ComprobantesTable } from "@/components/comprobantes/ComprobantesTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -6,8 +10,24 @@ export const metadata = {
   title: "Comprobantes | Palacio · ERP",
 };
 
-export default async function ComprobantesPage() {
-  const { data, error } = await listarComprobantes();
+/**
+ * @param {{ searchParams: Promise<{ proveedor?: string, estado?: string, desde?: string, hasta?: string }> }} props
+ */
+export default async function ComprobantesPage({ searchParams }) {
+  const sp = await searchParams;
+  const filtros = {
+    idProveedor: sp?.proveedor || null,
+    estado: sp?.estado || null,
+    desde: sp?.desde || null,
+    hasta: sp?.hasta || null,
+  };
+
+  const [{ data, error }, { data: resumen }, { data: proveedores }] =
+    await Promise.all([
+      listarComprobantes(filtros),
+      obtenerResumenComprobantes(filtros),
+      listarProveedores(true),
+    ]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
@@ -23,7 +43,17 @@ export default async function ComprobantesPage() {
           <p className="mt-1 text-amber-900/80">{error}</p>
         </div>
       ) : (
-        <ComprobantesTable comprobantes={data ?? []} />
+        <ComprobantesTable
+          comprobantes={data ?? []}
+          resumen={resumen}
+          proveedores={proveedores ?? []}
+          filtros={{
+            proveedor: filtros.idProveedor ?? "",
+            estado: filtros.estado ?? "",
+            desde: filtros.desde ?? "",
+            hasta: filtros.hasta ?? "",
+          }}
+        />
       )}
     </div>
   );

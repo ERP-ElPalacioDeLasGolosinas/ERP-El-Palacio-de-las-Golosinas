@@ -1,9 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { anularComprobante } from "@/lib/comprobantes/actions";
 import { mapErrorComprobante } from "@/lib/comprobantes/errores";
+import { badgeEstadoComprobante } from "@/lib/comprobantes/estado";
+import { badgeEstadoOrdenPago } from "@/lib/ordenes-pago/constantes";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -30,9 +33,15 @@ function formatFecha(valor) {
  *   comprobante: Record<string, any>,
  *   lineas: Array<Record<string, any>>,
  *   errorLineas?: string | null,
+ *   ordenesPago?: Array<Record<string, any>>,
  * }} props
  */
-export function ComprobanteDetalle({ comprobante, lineas, errorLineas }) {
+export function ComprobanteDetalle({
+  comprobante,
+  lineas,
+  errorLineas,
+  ordenesPago = [],
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -71,14 +80,9 @@ export function ComprobanteDetalle({ comprobante, lineas, errorLineas }) {
           <h2 className="text-sm font-semibold text-zinc-900">
             Datos del comprobante
           </h2>
-          <span
-            className={
-              comprobante.anulado
-                ? "palacio-badge-inactivo"
-                : "palacio-badge-activo"
-            }
-          >
-            {comprobante.anulado ? "Anulado" : "Vigente"}
+          <span className={badgeEstadoComprobante(comprobante.estado)}>
+            {comprobante.estado ??
+              (comprobante.anulado ? "Anulado" : "Pendiente")}
           </span>
         </div>
 
@@ -214,6 +218,56 @@ export function ComprobanteDetalle({ comprobante, lineas, errorLineas }) {
           </p>
         )}
       </div>
+
+      {ordenesPago.length > 0 ? (
+        <div className="palacio-card mt-6 overflow-hidden">
+          <div className="border-b border-palacio-border px-5 py-3">
+            <h2 className="text-sm font-semibold text-zinc-900">
+              Órdenes de pago
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-palacio-border bg-zinc-50/80">
+                  <Th>Referencia</Th>
+                  <Th className="text-center">Estado</Th>
+                  <Th className="text-right">Importe imputado</Th>
+                  <Th className="text-right">Acciones</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {ordenesPago.map((o) => (
+                  <tr
+                    key={o.id_orden_pago}
+                    className="border-b border-palacio-border last:border-0"
+                  >
+                    <td className="px-3 py-2 align-middle text-palacio-muted">
+                      {o.referencia || "—"}
+                    </td>
+                    <td className="px-3 py-2 text-center align-middle">
+                      <span className={badgeEstadoOrdenPago(o.estado)}>
+                        {o.estado}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right align-middle font-medium text-zinc-800">
+                      {monedaFmt.format(Number(o.importe_imputado) || 0)}
+                    </td>
+                    <td className="px-3 py-2 text-right align-middle">
+                      <Link
+                        href={`/tesoreria/ordenes-de-pago/${o.id_orden_pago}`}
+                        className="palacio-action-btn"
+                      >
+                        Ver orden
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-6 flex flex-wrap gap-2">
         <button
