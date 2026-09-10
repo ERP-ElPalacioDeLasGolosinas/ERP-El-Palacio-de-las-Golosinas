@@ -153,8 +153,8 @@ export async function obtenerResumenPendientes(idProveedor) {
 
 /**
  * Cabecera enriquecida de un comprobante vía `fn_comprobante_obtener`
- * (proveedor, tipo, signo, número formateado, saldo, `creado_por_nombre`,
- * `total_detalle` y `diferencia` frente al importe total).
+ * (proveedor, tipo, número formateado, desglose subtotal/descuento/impuesto,
+ * importe total, saldo, `creado_por_nombre` y `total_detalle`).
  *
  * @param {string} id_comprobante
  * @returns {Promise<{ data: Record<string, unknown> | null, error: string | null }>}
@@ -201,42 +201,23 @@ export async function listarDetalleComprobante(id_comprobante) {
 }
 
 /**
- * Compara la suma del detalle con el importe total vía
- * `fn_comprobante_detalle_validar`. La usa el formulario de alta antes de
- * confirmar, para advertir la diferencia (C-11).
+ * Facturas de compra disponibles para recepción (aplican a compra, no
+ * anuladas y todavía sin lote) vía `fn_comprobante_listar_para_recepcion`.
+ * Alimenta el selector de "Ingreso por compra" en Registrar movimiento.
  *
- * @param {{ detalle: Array<{ cantidad: number | string, precio_unitario: number | string }>, importe_total: number | string }} entrada
- * @returns {Promise<{ data: { total_detalle: number, diferencia: number, coincide: boolean } | null, error: string | null }>}
+ * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
  */
-export async function validarDetalle(entrada) {
-  const detalle = Array.isArray(entrada?.detalle) ? entrada.detalle : [];
-
+export async function listarComprobantesParaRecepcion() {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_comprobante_detalle_validar", {
-    p_detalle: detalle.map((linea) => ({
-      cantidad: numero(linea.cantidad),
-      precio_unitario: numero(linea.precio_unitario),
-    })),
-    p_importe_total: numero(entrada?.importe_total),
-  });
+  const { data, error } = await supabase.rpc(
+    "fn_comprobante_listar_para_recepcion"
+  );
 
   if (error) {
-    return { data: null, error: "No se pudo validar el detalle." };
+    return { data: null, error: "No se pudieron cargar las facturas para recepción." };
   }
 
-  const fila = Array.isArray(data) ? data[0] : data;
-  if (!fila) {
-    return { data: null, error: "No se pudo validar el detalle." };
-  }
-
-  return {
-    data: {
-      total_detalle: Number(fila.total_detalle) || 0,
-      diferencia: Number(fila.diferencia) || 0,
-      coincide: Boolean(fila.coincide),
-    },
-    error: null,
-  };
+  return { data: data ?? [], error: null };
 }
 
 /**
@@ -265,7 +246,9 @@ export async function listarOrdenesPagoComprobante(id_comprobante) {
 }
 
 /**
- * Alta transaccional de un comprobante con su detalle (D-011).
+ * Alta transaccional de un comprobante con su detalle. El importe total y el
+ * desglose (subtotal / descuento_total / impuesto_total) se calculan en la
+ * base a partir de las líneas.
  *
  * @param {{
  *   id_proveedor: string,
@@ -274,15 +257,14 @@ export async function listarOrdenesPagoComprobante(id_comprobante) {
  *   numero: number | string,
  *   fecha_comprobante: string,
  *   fecha_vencimiento?: string | null,
- *   importe_total: number | string,
- *   id_compra?: string | null,
  *   observaciones?: string | null,
- *   confirmar_diferencia?: boolean,
  *   detalle: Array<{
  *     id_producto?: string | null,
  *     concepto?: string | null,
  *     cantidad: number | string,
  *     precio_unitario: number | string,
+ *     descuento?: number | string,
+ *     impuesto?: number | string,
  *   }>,
  * }} entrada
  * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
@@ -311,16 +293,15 @@ export async function registrarComprobante(entrada) {
     p_numero: numero(entrada.numero),
     p_fecha_comprobante: entrada.fecha_comprobante || null,
     p_fecha_vencimiento: entrada.fecha_vencimiento || null,
-    p_importe_total: numero(entrada.importe_total),
-    p_id_compra: entrada.id_compra || null,
     p_observaciones: textoOpcional(entrada.observaciones),
     p_detalle: detalle.map((linea) => ({
       id_producto: linea.id_producto || null,
       concepto: textoOpcional(linea.concepto),
       cantidad: numero(linea.cantidad),
       precio_unitario: numero(linea.precio_unitario),
+      descuento: numero(linea.descuento) ?? 0,
+      impuesto: numero(linea.impuesto) ?? 0,
     })),
-    p_confirmar_diferencia: Boolean(entrada.confirmar_diferencia),
     p_creado_por: user.id,
   });
 

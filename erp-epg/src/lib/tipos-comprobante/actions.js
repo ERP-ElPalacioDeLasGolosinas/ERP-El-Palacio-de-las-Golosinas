@@ -46,18 +46,6 @@ function booleano(input, key) {
 /**
  * @param {FormData | Record<string, unknown>} input
  * @param {string} key
- * @returns {number | null}
- */
-function signo(input, key) {
-  const raw = texto(input, key);
-  if (raw === "1") return 1;
-  if (raw === "-1") return -1;
-  return null;
-}
-
-/**
- * @param {FormData | Record<string, unknown>} input
- * @param {string} key
  * @returns {string | null}
  */
 function letra(input, key) {
@@ -76,7 +64,6 @@ function letra(input, key) {
  *   nombre_tipo_comprobante: string,
  *   letra: string | null,
  *   es_fiscal: boolean,
- *   signo: number,
  *   aplica_compra: boolean,
  *   aplica_venta: boolean,
  *   aplica_pago: boolean,
@@ -123,18 +110,8 @@ export async function crearTipoComprobante(formData) {
     };
   }
 
-  const p_signo = signo(formData, "signo");
-  if (p_signo == null) {
-    return {
-      ok: false,
-      code: "CPB04",
-      error: "El signo debe ser 1 o -1.",
-    };
-  }
-
   const { error } = await supabase.rpc("fn_tipo_comprobante_crear", {
     p_nombre_tipo_comprobante: texto(formData, "nombre_tipo_comprobante"),
-    p_signo,
     p_creado_por: user.id,
     p_letra: letra(formData, "letra"),
     p_es_fiscal: booleano(formData, "es_fiscal"),
@@ -168,20 +145,10 @@ export async function actualizarTipoComprobante(
     };
   }
 
-  const p_signo = signo(formData, "signo");
-  if (p_signo == null) {
-    return {
-      ok: false,
-      code: "CPB04",
-      error: "El signo debe ser 1 o -1.",
-    };
-  }
-
   const supabase = await createClient();
   const { error } = await supabase.rpc("fn_tipo_comprobante_modificar", {
     p_id_tipo_comprobante: id_tipo_comprobante,
     p_nombre_tipo_comprobante: texto(formData, "nombre_tipo_comprobante"),
-    p_signo,
     p_letra: letra(formData, "letra"),
     p_es_fiscal: booleano(formData, "es_fiscal"),
     p_aplica_compra: true,

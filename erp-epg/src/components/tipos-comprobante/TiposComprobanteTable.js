@@ -22,12 +22,6 @@ function formatFecha(valor) {
   return Number.isNaN(d.getTime()) ? "—" : fechaFmt.format(d);
 }
 
-function labelSigno(signo) {
-  if (Number(signo) === 1) return "+1";
-  if (Number(signo) === -1) return "−1";
-  return "—";
-}
-
 /**
  * @param {{
  *   tipos: Array<{
@@ -35,7 +29,6 @@ function labelSigno(signo) {
  *     nombre_tipo_comprobante: string,
  *     letra: string | null,
  *     es_fiscal: boolean,
- *     signo: number,
  *     aplica_compra: boolean,
  *     aplica_venta: boolean,
  *     aplica_pago: boolean,
@@ -155,7 +148,6 @@ export function TiposComprobanteTable({ tipos, incluirInactivos }) {
                   <Th>Nombre</Th>
                   <Th className="text-center">Letra</Th>
                   <Th className="text-center">Fiscal</Th>
-                  <Th className="text-center">Signo</Th>
                   <Th className="text-center">Estado</Th>
                   <Th>Creado</Th>
                   <Th>Editado</Th>
@@ -180,9 +172,6 @@ export function TiposComprobanteTable({ tipos, incluirInactivos }) {
                     </td>
                     <td className="px-5 py-4 text-center align-middle text-palacio-muted">
                       {t.es_fiscal ? "Sí" : "No"}
-                    </td>
-                    <td className="px-5 py-4 text-center align-middle font-medium text-zinc-800">
-                      {labelSigno(t.signo)}
                     </td>
                     <td className="px-5 py-4 text-center align-middle">
                       <span

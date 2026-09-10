@@ -26,8 +26,8 @@ function formatFecha(valor) {
 }
 
 /**
- * C-11 · Detalle de un comprobante de proveedor: cabecera enriquecida,
- * líneas, totales y control de coincidencia detalle vs. importe total.
+ * C-11 · Detalle de un comprobante de proveedor: cabecera con desglose
+ * (subtotal / descuentos / impuestos / importe total) y líneas.
  *
  * @param {{
  *   comprobante: Record<string, any>,
@@ -45,13 +45,10 @@ export function ComprobanteDetalle({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const totalDetalle = Number(comprobante.total_detalle) || 0;
+  const subtotal = Number(comprobante.subtotal) || 0;
+  const descuentoTotal = Number(comprobante.descuento_total) || 0;
+  const impuestoTotal = Number(comprobante.impuesto_total) || 0;
   const importeTotal = Number(comprobante.importe_total) || 0;
-  const diferencia =
-    comprobante.diferencia != null
-      ? Number(comprobante.diferencia)
-      : Math.round((importeTotal - totalDetalle) * 100) / 100;
-  const hayDiferencia = Math.round(diferencia * 100) / 100 !== 0;
 
   function anular() {
     const ok = window.confirm(
@@ -96,14 +93,6 @@ export function ComprobanteDetalle({
           />
           <Dato label="Número" valor={comprobante.numero_formateado} mono />
           <Dato
-            label="Efecto sobre el saldo"
-            valor={
-              comprobante.signo === -1
-                ? "Resta del saldo del proveedor (nota de crédito)"
-                : "Suma al saldo del proveedor"
-            }
-          />
-          <Dato
             label="Fecha del comprobante"
             valor={formatFecha(comprobante.fecha_comprobante)}
           />
@@ -111,6 +100,12 @@ export function ComprobanteDetalle({
             label="Vencimiento"
             valor={formatFecha(comprobante.fecha_vencimiento)}
           />
+          <Dato label="Subtotal" valor={monedaFmt.format(subtotal)} />
+          <Dato
+            label="Descuentos"
+            valor={`−${monedaFmt.format(descuentoTotal)}`}
+          />
+          <Dato label="Impuestos" valor={monedaFmt.format(impuestoTotal)} />
           <Dato
             label="Importe total"
             valor={monedaFmt.format(importeTotal)}
@@ -159,8 +154,10 @@ export function ComprobanteDetalle({
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
                   <Th className="w-12 text-right">#</Th>
                   <Th>Artículo / concepto</Th>
-                  <Th className="w-28 text-right">Cantidad</Th>
-                  <Th className="w-32 text-right">Precio unit.</Th>
+                  <Th className="w-24 text-right">Cantidad</Th>
+                  <Th className="w-28 text-right">Precio unit.</Th>
+                  <Th className="w-28 text-right">Descuento</Th>
+                  <Th className="w-28 text-right">Impuesto</Th>
                   <Th className="w-32 text-right">Importe</Th>
                 </tr>
               </thead>
@@ -182,6 +179,12 @@ export function ComprobanteDetalle({
                     <td className="px-3 py-2 text-right align-middle">
                       {monedaFmt.format(Number(l.precio_unitario) || 0)}
                     </td>
+                    <td className="px-3 py-2 text-right align-middle">
+                      {monedaFmt.format(Number(l.descuento) || 0)}
+                    </td>
+                    <td className="px-3 py-2 text-right align-middle">
+                      {monedaFmt.format(Number(l.impuesto) || 0)}
+                    </td>
                     <td className="px-3 py-2 text-right align-middle font-medium text-zinc-800">
                       {monedaFmt.format(Number(l.importe_linea) || 0)}
                     </td>
@@ -194,29 +197,30 @@ export function ComprobanteDetalle({
 
         <div className="flex flex-wrap items-center justify-end gap-x-8 gap-y-1 border-t border-palacio-border px-5 py-3 text-right text-sm">
           <p className="text-palacio-muted">
-            Suma del detalle:{" "}
+            Subtotal{" "}
             <span className="font-semibold text-zinc-900">
-              {monedaFmt.format(totalDetalle)}
+              {monedaFmt.format(subtotal)}
             </span>
           </p>
           <p className="text-palacio-muted">
-            Importe total:{" "}
+            Descuentos{" "}
+            <span className="font-semibold text-zinc-900">
+              −{monedaFmt.format(descuentoTotal)}
+            </span>
+          </p>
+          <p className="text-palacio-muted">
+            Impuestos{" "}
+            <span className="font-semibold text-zinc-900">
+              {monedaFmt.format(impuestoTotal)}
+            </span>
+          </p>
+          <p className="text-palacio-muted">
+            Importe total{" "}
             <span className="font-semibold text-zinc-900">
               {monedaFmt.format(importeTotal)}
             </span>
           </p>
         </div>
-
-        {hayDiferencia ? (
-          <p className="mx-5 mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            La suma de las líneas no coincide con el importe total. Diferencia:{" "}
-            <span className="font-semibold">{monedaFmt.format(diferencia)}</span>.
-          </p>
-        ) : (
-          <p className="mx-5 mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-            La suma de las líneas coincide con el importe total.
-          </p>
-        )}
       </div>
 
       {ordenesPago.length > 0 ? (

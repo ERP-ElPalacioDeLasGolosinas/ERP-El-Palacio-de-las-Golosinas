@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { registrarComprobante, validarDetalle } from "@/lib/comprobantes/actions";
+import { registrarComprobante } from "@/lib/comprobantes/actions";
 import { mapErrorComprobante } from "@/lib/comprobantes/errores";
 
 const monedaFmt = new Intl.NumberFormat("es-AR", {
@@ -20,16 +20,28 @@ function nuevaLinea() {
     concepto: "",
     cantidad: "",
     precio_unitario: "",
+    descuento: "",
+    impuesto: "",
   };
+}
+
+/** Importe neto de una línea: cantidad × precio − descuento + impuesto. */
+function importeLinea(l) {
+  const c = Number(l.cantidad) || 0;
+  const p = Number(l.precio_unitario) || 0;
+  const d = Number(l.descuento) || 0;
+  const i = Number(l.impuesto) || 0;
+  return c * p - d + i;
 }
 
 /**
  * C-05 · Alta de comprobante de proveedor: cabecera + grilla de líneas en una
- * sola pantalla, enviadas juntas a `fn_comprobante_registrar` (D-011).
+ * sola pantalla, enviadas juntas a `fn_comprobante_registrar`. El importe total
+ * y el desglose (subtotal / descuento / impuesto) se calculan desde el detalle.
  *
  * @param {{
  *   proveedores: Array<{ id_proveedor: string, nombre_proveedor: string }>,
- *   tipos: Array<{ id_tipo_comprobante: string, nombre_tipo_comprobante: string, letra: string | null, signo: number }>,
+ *   tipos: Array<{ id_tipo_comprobante: string, nombre_tipo_comprobante: string, letra: string | null }>,
  *   productos: Array<{ id_producto: string, nombre_completo: string, codigo_producto?: string | null }>,
  * }} props
  */
@@ -44,26 +56,16 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
     numero: "",
     fecha_comprobante: "",
     fecha_vencimiento: "",
-    importe_total: "",
     observaciones: "",
   });
   const [lineas, setLineas] = useState([nuevaLinea()]);
   const [errores, setErrores] = useState({});
   const [errorServer, setErrorServer] = useState(null);
-  const [confirmarDiferencia, setConfirmarDiferencia] = useState(false);
-  const [permiteConfirmar, setPermiteConfirmar] = useState(false);
-
-  const tipoSel = tipos.find(
-    (t) => t.id_tipo_comprobante === cab.id_tipo_comprobante
-  );
 
   function setCampo(campo, valor) {
     setCab((prev) => ({ ...prev, [campo]: valor }));
     setErrores((prev) => ({ ...prev, [campo]: null }));
     setErrorServer(null);
-    // Cualquier cambio invalida una confirmación de diferencia previa.
-    setPermiteConfirmar(false);
-    setConfirmarDiferencia(false);
   }
 
   function setLinea(idx, cambios) {
@@ -72,8 +74,6 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
     );
     setErrores((prev) => ({ ...prev, detalle: null }));
     setErrorServer(null);
-    setPermiteConfirmar(false);
-    setConfirmarDiferencia(false);
   }
 
   function agregarLinea() {
@@ -86,23 +86,23 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
     );
   }
 
-  const totalDetalle = useMemo(
-    () =>
-      lineas.reduce((acc, l) => {
-        const c = Number(l.cantidad);
-        const p = Number(l.precio_unitario);
-        if (!Number.isFinite(c) || !Number.isFinite(p)) return acc;
-        return acc + c * p;
-      }, 0),
-    [lineas]
-  );
-
-  const importeTotalNum = Number(cab.importe_total);
-  const diferencia =
-    Number.isFinite(importeTotalNum) && cab.importe_total !== ""
-      ? Math.round((importeTotalNum - totalDetalle) * 100) / 100
-      : null;
-  const hayDiferencia = diferencia != null && diferencia !== 0;
+  const totales = useMemo(() => {
+    let subtotal = 0;
+    let descuento = 0;
+    let impuesto = 0;
+    for (const l of lineas) {
+      subtotal += (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0);
+      descuento += Number(l.descuento) || 0;
+      impuesto += Number(l.impuesto) || 0;
+    }
+    const round = (n) => Math.round(n * 100) / 100;
+    return {
+      subtotal: round(subtotal),
+      descuento: round(descuento),
+      impuesto: round(impuesto),
+      importe_total: round(subtotal - descuento + impuesto),
+    };
+  }, [lineas]);
 
   function validar() {
     const next = {};
@@ -119,17 +119,23 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
       cab.fecha_vencimiento < cab.fecha_comprobante
     )
       next.fechas = "El vencimiento no puede ser anterior al comprobante.";
-    if (!(Number(cab.importe_total) > 0))
-      next.importe = "El importe total debe ser mayor a cero.";
 
     const lineasValidas = lineas.filter((l) => {
       const tieneItem =
         l.modo === "producto" ? Boolean(l.id_producto) : Boolean(l.concepto.trim());
-      return tieneItem && Number(l.cantidad) > 0 && Number(l.precio_unitario) >= 0;
+      return (
+        tieneItem &&
+        Number(l.cantidad) > 0 &&
+        Number(l.precio_unitario) >= 0 &&
+        (Number(l.descuento) || 0) >= 0 &&
+        (Number(l.impuesto) || 0) >= 0
+      );
     });
     if (lineasValidas.length !== lineas.length || lineas.length === 0)
       next.detalle =
-        "Cada línea necesita artículo o concepto, cantidad mayor a cero y precio no negativo.";
+        "Cada línea necesita artículo o concepto, cantidad mayor a cero y montos no negativos.";
+    else if (!(totales.importe_total > 0))
+      next.detalle = "El importe total del comprobante debe ser mayor a cero.";
 
     setErrores(next);
     return Object.keys(next).length === 0;
@@ -140,33 +146,6 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
     if (!validar()) return;
 
     startTransition(async () => {
-      // C-11: la advertencia de diferencia se resuelve antes de confirmar,
-      // contra fn_comprobante_detalle_validar. CMP10 queda como respaldo.
-      const val = await validarDetalle({
-        detalle: lineas.map((l) => ({
-          cantidad: l.cantidad,
-          precio_unitario: l.precio_unitario,
-        })),
-        importe_total: cab.importe_total,
-      });
-
-      if (val.error) {
-        setErrorServer(val.error);
-        return;
-      }
-
-      if (!val.data.coincide && !confirmarDiferencia) {
-        setPermiteConfirmar(true);
-        setErrorServer(
-          `La suma del detalle (${monedaFmt.format(
-            val.data.total_detalle
-          )}) no coincide con el importe total (${monedaFmt.format(
-            Number(cab.importe_total) || 0
-          )}). Revisá los valores o confirmá la diferencia para continuar.`
-        );
-        return;
-      }
-
       const result = await registrarComprobante({
         id_proveedor: cab.id_proveedor,
         id_tipo_comprobante: cab.id_tipo_comprobante,
@@ -174,22 +153,19 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
         numero: cab.numero,
         fecha_comprobante: cab.fecha_comprobante,
         fecha_vencimiento: cab.fecha_vencimiento || null,
-        importe_total: cab.importe_total,
         observaciones: cab.observaciones || null,
-        confirmar_diferencia: confirmarDiferencia,
         detalle: lineas.map((l) => ({
           id_producto: l.modo === "producto" ? l.id_producto : null,
           concepto: l.modo === "concepto" ? l.concepto : null,
           cantidad: l.cantidad,
           precio_unitario: l.precio_unitario,
+          descuento: l.descuento || 0,
+          impuesto: l.impuesto || 0,
         })),
       });
 
       if (!result.ok) {
         const ui = mapErrorComprobante(result);
-        if (ui.confirmable) {
-          setPermiteConfirmar(true);
-        }
         if (ui.field) {
           setErrores((prev) => ({ ...prev, [ui.field]: ui.message }));
         } else {
@@ -248,13 +224,6 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
                 </option>
               ))}
             </select>
-            {tipoSel ? (
-              <p className="text-xs text-palacio-muted">
-                {tipoSel.signo === -1
-                  ? "Resta del saldo del proveedor (nota de crédito)."
-                  : "Suma al saldo del proveedor."}
-              </p>
-            ) : null}
           </Campo>
 
           <Campo label="Punto de venta" error={errores.numero} requerido>
@@ -303,18 +272,6 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
             />
           </Campo>
 
-          <Campo label="Importe total" error={errores.importe} requerido>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={cab.importe_total}
-              onChange={(e) => setCampo("importe_total", e.target.value)}
-              className="palacio-input"
-              placeholder="0.00"
-            />
-          </Campo>
-
           <Campo label="Observaciones (opcional)" full>
             <textarea
               value={cab.observaciones}
@@ -345,111 +302,135 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
               <tr className="border-b border-palacio-border bg-zinc-50/80">
                 <Th className="w-28">Tipo</Th>
                 <Th>Artículo / concepto</Th>
-                <Th className="w-28 text-right">Cantidad</Th>
-                <Th className="w-32 text-right">Precio unit.</Th>
+                <Th className="w-24 text-right">Cantidad</Th>
+                <Th className="w-28 text-right">Precio unit.</Th>
+                <Th className="w-28 text-right">Descuento</Th>
+                <Th className="w-28 text-right">Impuesto</Th>
                 <Th className="w-32 text-right">Importe</Th>
                 <Th className="w-16" />
               </tr>
             </thead>
             <tbody>
-              {lineas.map((l, idx) => {
-                const importe =
-                  (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0);
-                return (
-                  <tr
-                    key={l.key}
-                    className="border-b border-palacio-border last:border-0"
-                  >
-                    <td className="px-3 py-2 align-top">
+              {lineas.map((l, idx) => (
+                <tr
+                  key={l.key}
+                  className="border-b border-palacio-border last:border-0"
+                >
+                  <td className="px-3 py-2 align-top">
+                    <select
+                      value={l.modo}
+                      onChange={(e) =>
+                        setLinea(idx, {
+                          modo: e.target.value,
+                          id_producto: "",
+                          concepto: "",
+                        })
+                      }
+                      className="palacio-input"
+                    >
+                      <option value="producto">Artículo</option>
+                      <option value="concepto">Concepto</option>
+                    </select>
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    {l.modo === "producto" ? (
                       <select
-                        value={l.modo}
+                        value={l.id_producto}
                         onChange={(e) =>
-                          setLinea(idx, {
-                            modo: e.target.value,
-                            id_producto: "",
-                            concepto: "",
-                          })
+                          setLinea(idx, { id_producto: e.target.value })
                         }
                         className="palacio-input"
                       >
-                        <option value="producto">Artículo</option>
-                        <option value="concepto">Concepto</option>
+                        <option value="">Seleccioná un artículo…</option>
+                        {productos.map((p) => (
+                          <option key={p.id_producto} value={p.id_producto}>
+                            {p.nombre_completo}
+                          </option>
+                        ))}
                       </select>
-                    </td>
-                    <td className="px-3 py-2 align-top">
-                      {l.modo === "producto" ? (
-                        <select
-                          value={l.id_producto}
-                          onChange={(e) =>
-                            setLinea(idx, { id_producto: e.target.value })
-                          }
-                          className="palacio-input"
-                        >
-                          <option value="">Seleccioná un artículo…</option>
-                          {productos.map((p) => (
-                            <option key={p.id_producto} value={p.id_producto}>
-                              {p.nombre_completo}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          value={l.concepto}
-                          onChange={(e) =>
-                            setLinea(idx, { concepto: e.target.value })
-                          }
-                          className="palacio-input"
-                          placeholder="Flete, servicio, ajuste…"
-                          maxLength={200}
-                        />
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right align-top">
+                    ) : (
                       <input
-                        type="number"
-                        min="0"
-                        step="0.001"
-                        value={l.cantidad}
+                        type="text"
+                        value={l.concepto}
                         onChange={(e) =>
-                          setLinea(idx, { cantidad: e.target.value })
+                          setLinea(idx, { concepto: e.target.value })
                         }
-                        className="palacio-input text-right"
+                        className="palacio-input"
+                        placeholder="Flete, servicio, ajuste…"
+                        maxLength={200}
                       />
-                    </td>
-                    <td className="px-3 py-2 text-right align-top">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={l.precio_unitario}
-                        onChange={(e) =>
-                          setLinea(idx, { precio_unitario: e.target.value })
-                        }
-                        className="palacio-input text-right"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right align-middle font-medium text-zinc-800">
-                      {monedaFmt.format(Number.isFinite(importe) ? importe : 0)}
-                    </td>
-                    <td className="px-3 py-2 text-right align-middle">
-                      <button
-                        type="button"
-                        onClick={() => quitarLinea(idx)}
-                        disabled={lineas.length === 1}
-                        className="palacio-action-btn palacio-action-danger"
-                      >
-                        Quitar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right align-top">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      value={l.cantidad}
+                      onChange={(e) =>
+                        setLinea(idx, { cantidad: e.target.value })
+                      }
+                      className="palacio-input text-right"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-right align-top">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={l.precio_unitario}
+                      onChange={(e) =>
+                        setLinea(idx, { precio_unitario: e.target.value })
+                      }
+                      className="palacio-input text-right"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-right align-top">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={l.descuento}
+                      onChange={(e) =>
+                        setLinea(idx, { descuento: e.target.value })
+                      }
+                      className="palacio-input text-right"
+                      placeholder="0.00"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-right align-top">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={l.impuesto}
+                      onChange={(e) =>
+                        setLinea(idx, { impuesto: e.target.value })
+                      }
+                      className="palacio-input text-right"
+                      placeholder="0.00"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-right align-middle font-medium text-zinc-800">
+                    {monedaFmt.format(importeLinea(l))}
+                  </td>
+                  <td className="px-3 py-2 text-right align-middle">
+                    <button
+                      type="button"
+                      onClick={() => quitarLinea(idx)}
+                      disabled={lineas.length === 1}
+                      className="palacio-action-btn palacio-action-danger"
+                    >
+                      Quitar
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-palacio-border px-5 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-t border-palacio-border px-5 py-3">
           <button
             type="button"
             onClick={agregarLinea}
@@ -457,42 +438,36 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
           >
             Agregar línea
           </button>
-          <div className="text-right text-sm">
-            <p className="text-palacio-muted">
-              Suma del detalle:{" "}
-              <span className="font-semibold text-zinc-900">
-                {monedaFmt.format(totalDetalle)}
-              </span>
-            </p>
-            {hayDiferencia ? (
-              <p className="text-amber-700">
-                Diferencia con el importe total:{" "}
-                {monedaFmt.format(diferencia)}
-              </p>
-            ) : null}
-          </div>
+          <dl className="min-w-52 space-y-1 text-right text-sm">
+            <div className="flex justify-between gap-6">
+              <dt className="text-palacio-muted">Subtotal</dt>
+              <dd className="tabular-nums">{monedaFmt.format(totales.subtotal)}</dd>
+            </div>
+            <div className="flex justify-between gap-6">
+              <dt className="text-palacio-muted">Descuentos</dt>
+              <dd className="tabular-nums">
+                −{monedaFmt.format(totales.descuento)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-6">
+              <dt className="text-palacio-muted">Impuestos</dt>
+              <dd className="tabular-nums">
+                {monedaFmt.format(totales.impuesto)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-6 border-t border-palacio-border pt-1 font-semibold text-zinc-900">
+              <dt>Importe total</dt>
+              <dd className="tabular-nums">
+                {monedaFmt.format(totales.importe_total)}
+              </dd>
+            </div>
+          </dl>
         </div>
 
         {errores.detalle ? (
           <p className="mx-5 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {errores.detalle}
           </p>
-        ) : null}
-
-        {permiteConfirmar && hayDiferencia ? (
-          <label className="mx-5 mb-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            <input
-              type="checkbox"
-              checked={confirmarDiferencia}
-              onChange={(e) => {
-                setConfirmarDiferencia(e.target.checked);
-                if (e.target.checked) setErrorServer(null);
-              }}
-              className="size-4 accent-palacio-red"
-            />
-            Registrar de todos modos, aceptando la diferencia entre el detalle y
-            el importe total.
-          </label>
         ) : null}
 
         {errorServer ? (
@@ -505,7 +480,7 @@ export function ComprobanteForm({ proveedores, tipos, productos }) {
           <button
             type="button"
             onClick={registrar}
-            disabled={pending || (permiteConfirmar && hayDiferencia && !confirmarDiferencia)}
+            disabled={pending}
             className="palacio-btn-primary px-4 py-2.5 text-sm"
           >
             {pending ? "Registrando…" : "Registrar comprobante"}

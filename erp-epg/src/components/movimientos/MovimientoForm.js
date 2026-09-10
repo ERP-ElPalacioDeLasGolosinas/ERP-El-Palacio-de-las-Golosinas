@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   registrarMovimientosLote,
   listarProductosPorDeposito,
@@ -10,8 +9,10 @@ import {
 } from "@/lib/movimientos/actions";
 import { mapErrorMovimiento } from "@/lib/movimientos/errores";
 import { MovimientosLoteTable } from "./MovimientosLoteTable";
+import { LoteForm } from "@/components/stock/LoteForm";
 
 const TRANSFERENCIA_SENTINEL = "__transferencia__";
+const INGRESO_COMPRA_SENTINEL = "__ingreso_compra__";
 
 const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
@@ -47,8 +48,9 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  // "ingreso por compra" se carga solo desde "Registrar lote"
-  // (/inventario/stock/lotes/nuevo), no desde este wizard.
+  // "ingreso por compra" no va en la lista de conceptos simples: tiene su
+  // propia opción sintética (INGRESO_COMPRA_SENTINEL) que despliega el
+  // formulario de recepción contra factura (LoteForm).
   const tiposSimples = useMemo(
     () =>
       tipos.filter(
@@ -79,6 +81,7 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
   const [carrito, setCarrito] = useState([]);
 
   const esTransferencia = idConcepto === TRANSFERENCIA_SENTINEL;
+  const esIngresoCompra = idConcepto === INGRESO_COMPRA_SENTINEL;
   const tipoElegido = useMemo(
     () => tiposSimples.find((t) => t.id_tipo_movimiento === idConcepto),
     [tiposSimples, idConcepto]
@@ -269,13 +272,19 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
                   {t.nombre} ({t.signo === 1 ? "+ suma" : "− resta"})
                 </option>
               ))}
+              <option value={INGRESO_COMPRA_SENTINEL}>Ingreso por compra</option>
               {hayTransferencia ? (
                 <option value={TRANSFERENCIA_SENTINEL}>
                   Transferencia de mercadería
                 </option>
               ) : null}
             </select>
-            {signo != null ? (
+            {esIngresoCompra ? (
+              <p className="text-xs text-palacio-muted">
+                Recepción de mercadería contra una factura de compra: elegí la
+                factura y cargá lo que llegó. Suma stock e impacta el lote.
+              </p>
+            ) : signo != null ? (
               <p
                 className={`text-xs font-medium ${signo === 1 ? "text-green-600" : "text-red-600"}`}
               >
@@ -286,18 +295,10 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
                     : "Este concepto resta stock."}
               </p>
             ) : null}
-            <p className="text-xs text-palacio-muted">
-              ¿Necesitás cargar mercadería de una compra?{" "}
-              <Link
-                href="/inventario/stock/lotes/nuevo"
-                className="text-palacio-red hover:underline"
-              >
-                Registrar lote
-              </Link>
-              .
-            </p>
           </Campo>
 
+          {esIngresoCompra ? null : (
+          <>
           <Campo
             label={esTransferencia ? "Depósito origen" : "Depósito"}
             error={errores.id_deposito}
@@ -448,34 +449,44 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
               ) : null}
             </div>
           ) : null}
+          </>
+          )}
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-2 border-t border-palacio-border pt-4">
-          <button
-            type="button"
-            onClick={agregarALaLista}
-            className="palacio-btn-secondary px-4 py-2.5 text-sm"
-          >
-            Agregar a la lista
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/inventario/movimientos")}
-            disabled={pending}
-            className="palacio-btn-secondary px-4 py-2.5 text-sm"
-          >
-            Cancelar
-          </button>
-        </div>
+        {esIngresoCompra ? null : (
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-palacio-border pt-4">
+            <button
+              type="button"
+              onClick={agregarALaLista}
+              className="palacio-btn-secondary px-4 py-2.5 text-sm"
+            >
+              Agregar a la lista
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/inventario/movimientos")}
+              disabled={pending}
+              className="palacio-btn-secondary px-4 py-2.5 text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
       </div>
 
-      <MovimientosLoteTable
-        items={carrito}
-        onQuitar={quitarDeLaLista}
-        onRegistrar={registrarLote}
-        pending={pending}
-        errorServer={errorServer}
-      />
+      {esIngresoCompra ? (
+        <div className="mt-6">
+          <LoteForm depositos={depositos} />
+        </div>
+      ) : (
+        <MovimientosLoteTable
+          items={carrito}
+          onQuitar={quitarDeLaLista}
+          onRegistrar={registrarLote}
+          pending={pending}
+          errorServer={errorServer}
+        />
+      )}
     </>
   );
 }

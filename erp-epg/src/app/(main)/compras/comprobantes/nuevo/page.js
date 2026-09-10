@@ -26,7 +26,6 @@ export default async function RegistrarComprobantePage() {
     id_tipo_comprobante: t.id_tipo_comprobante,
     nombre_tipo_comprobante: t.nombre_tipo_comprobante,
     letra: t.letra ?? null,
-    signo: t.signo,
   }));
 
   const productos = (productosRes.data ?? [])

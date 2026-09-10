@@ -6,11 +6,10 @@
  * | CPB01  | nombre | Nombre vacío                                           |
  * | CPB02  | nombre | Nombre duplicado                                       |
  * | CPB03  | —      | El tipo de comprobante ya no existe (recargar tabla)   |
- * | CPB04  | signo  | Signo inválido (debe ser 1 o -1)                       |
  * | CPB05  | letra  | Letra informada pero no es A, B ni C                   |
  */
 
-/** @typedef {{ field: "nombre" | "signo" | "letra" | null, message: string, reload?: boolean }} ErrorUI */
+/** @typedef {{ field: "nombre" | "letra" | null, message: string, reload?: boolean }} ErrorUI */
 
 const MAPA = {
   CPB01: { field: "nombre", message: "El nombre es obligatorio." },
@@ -23,10 +22,6 @@ const MAPA = {
     message:
       "El tipo de comprobante ya no existe (puede haber sido eliminado por otro usuario).",
     reload: true,
-  },
-  CPB04: {
-    field: "signo",
-    message: "El signo debe ser 1 (suma al saldo) o -1 (resta del saldo).",
   },
   CPB05: {
     field: "letra",

@@ -12,10 +12,9 @@
  * | CMP07  | detalle      | Detalle vacío o con líneas inválidas                        |
  * | CMP08  | —            | Comprobante inexistente (recargar)                          |
  * | CMP09  | id_proveedor | Proveedor inactivo                                          |
- * | CMP10  | detalle      | La suma del detalle no coincide con el total (confirmar)    |
  */
 
-/** @typedef {{ field: "id_proveedor" | "id_tipo_comprobante" | "numero" | "importe" | "fechas" | "detalle" | null, message: string, reload?: boolean, confirmable?: boolean }} ErrorUI */
+/** @typedef {{ field: "id_proveedor" | "id_tipo_comprobante" | "numero" | "importe" | "fechas" | "detalle" | null, message: string, reload?: boolean }} ErrorUI */
 
 const MAPA = {
   CMP01: {
@@ -59,12 +58,6 @@ const MAPA = {
     field: "id_proveedor",
     message: "El proveedor está inactivo y no admite nuevos comprobantes.",
   },
-  CMP10: {
-    field: "detalle",
-    message:
-      "La suma del detalle no coincide con el importe total. Revisá los valores o confirmá la diferencia.",
-    confirmable: true,
-  },
 };
 
 /**
@@ -75,10 +68,6 @@ export function mapErrorComprobante(result) {
   const code = result?.code ?? null;
 
   if (code && MAPA[code]) {
-    // CMP10 lleva la diferencia calculada en el mensaje de la función.
-    if (code === "CMP10" && result?.error) {
-      return { ...MAPA[code], message: result.error };
-    }
     return MAPA[code];
   }
 

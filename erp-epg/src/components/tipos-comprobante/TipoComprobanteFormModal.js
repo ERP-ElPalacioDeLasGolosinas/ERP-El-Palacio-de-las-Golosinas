@@ -19,7 +19,6 @@ import { mapErrorTipoComprobante } from "@/lib/tipos-comprobante/errores";
  *     nombre_tipo_comprobante: string,
  *     letra: string | null,
  *     es_fiscal: boolean,
- *     signo: number,
  *     aplica_venta?: boolean,
  *     aplica_pago?: boolean,
  *   } | null,
@@ -38,14 +37,10 @@ export function TipoComprobanteFormModal({
   const [letra, setLetra] = useState(() =>
     tipoComprobante?.letra ? String(tipoComprobante.letra).toUpperCase() : ""
   );
-  const [signo, setSigno] = useState(() =>
-    tipoComprobante?.signo != null ? String(tipoComprobante.signo) : ""
-  );
   const [esFiscal, setEsFiscal] = useState(
     () => tipoComprobante?.es_fiscal ?? true
   );
   const [errorNombre, setErrorNombre] = useState(null);
-  const [errorSigno, setErrorSigno] = useState(null);
   const [errorLetra, setErrorLetra] = useState(null);
   const [errorServer, setErrorServer] = useState(null);
   const nombreRef = useRef(null);
@@ -72,13 +67,6 @@ export function TipoComprobanteFormModal({
       setErrorNombre(null);
     }
 
-    if (signo !== "1" && signo !== "-1") {
-      setErrorSigno("Debés seleccionar el signo.");
-      ok = false;
-    } else {
-      setErrorSigno(null);
-    }
-
     if (letra && letra !== "A" && letra !== "B" && letra !== "C") {
       setErrorLetra("La letra debe ser A, B o C (o dejarse vacía).");
       ok = false;
@@ -96,7 +84,6 @@ export function TipoComprobanteFormModal({
 
     const formData = new FormData();
     formData.set("nombre_tipo_comprobante", nombre.trim());
-    formData.set("signo", signo);
     if (letra) formData.set("letra", letra);
     if (esFiscal) formData.set("es_fiscal", "on");
     if (isEdit && tipoComprobante?.aplica_venta) {
@@ -118,8 +105,6 @@ export function TipoComprobanteFormModal({
         const ui = mapErrorTipoComprobante(result);
         if (ui.field === "nombre") {
           setErrorNombre(ui.message);
-        } else if (ui.field === "signo") {
-          setErrorSigno(ui.message);
         } else if (ui.field === "letra") {
           setErrorLetra(ui.message);
         } else {
@@ -177,53 +162,27 @@ export function TipoComprobanteFormModal({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="tipo-comprobante-letra"
-                className="text-sm font-medium text-zinc-800"
-              >
-                Letra
-              </label>
-              <select
-                id="tipo-comprobante-letra"
-                value={letra}
-                onChange={(e) => setLetra(e.target.value)}
-                className="palacio-input"
-              >
-                <option value="">Sin letra</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-              </select>
-              {errorLetra ? (
-                <p className="text-xs text-red-600">{errorLetra}</p>
-              ) : null}
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="tipo-comprobante-signo"
-                className="text-sm font-medium text-zinc-800"
-              >
-                Signo <span className="text-palacio-red">*</span>
-              </label>
-              <select
-                id="tipo-comprobante-signo"
-                value={signo}
-                onChange={(e) => setSigno(e.target.value)}
-                className="palacio-input"
-              >
-                <option value="" disabled>
-                  Seleccionar…
-                </option>
-                <option value="1">Suma al saldo (+1)</option>
-                <option value="-1">Resta del saldo (-1)</option>
-              </select>
-              {errorSigno ? (
-                <p className="text-xs text-red-600">{errorSigno}</p>
-              ) : null}
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="tipo-comprobante-letra"
+              className="text-sm font-medium text-zinc-800"
+            >
+              Letra
+            </label>
+            <select
+              id="tipo-comprobante-letra"
+              value={letra}
+              onChange={(e) => setLetra(e.target.value)}
+              className="palacio-input"
+            >
+              <option value="">Sin letra</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+            </select>
+            {errorLetra ? (
+              <p className="text-xs text-red-600">{errorLetra}</p>
+            ) : null}
           </div>
 
           <label className="flex items-start gap-2.5 rounded-lg border border-palacio-border bg-zinc-50 px-4 py-3 text-sm text-zinc-800">

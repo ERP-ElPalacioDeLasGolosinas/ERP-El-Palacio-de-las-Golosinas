@@ -1,6 +1,6 @@
 /**
- * Mapeo de los ERRCODE custom de `fn_lote_registrar_completo` / `fn_lote_eliminar`
- * a mensajes de UI.
+ * Mapeo de los ERRCODE custom de `fn_lote_registrar_desde_comprobante` /
+ * `fn_lote_eliminar` a mensajes de UI.
  *
  * | Código | Significado                                                  |
  * |--------|---------------------------------------------------------------|
@@ -10,9 +10,9 @@
  * | LOT04  | El lote tiene stock consumido, no se puede eliminar           |
  * | LOT05  | Inconsistencia de stock detectada (quedaría negativo)         |
  * | LOT06  | No se encontró un tipo de movimiento requerido                |
- * | LOT07  | La compra asociada no existe                                  |
- * | LOT08  | La compra ya tiene stock aplicado                             |
- * | LOT09  | La compra no está en un estado válido para recepción          |
+ * | LOT07  | La factura asociada no existe                                 |
+ * | LOT08  | La factura ya tiene un lote de recepción                      |
+ * | LOT09  | La factura está anulada o no corresponde a una compra         |
  */
 
 /** @typedef {{ field: string | null, message: string }} ErrorUI */
@@ -47,17 +47,17 @@ const MAPA = {
   },
   LOT07: {
     field: null,
-    message: "La compra seleccionada no existe.",
+    message: "La factura seleccionada no existe.",
   },
   LOT08: {
     field: null,
     message:
-      "Esa compra ya tiene stock aplicado. No se puede volver a recibir mercadería contra ella.",
+      "Esa factura ya tiene un lote de recepción. No se puede volver a recibir mercadería contra ella.",
   },
   LOT09: {
     field: null,
     message:
-      "La compra no está en un estado válido para recibir mercadería (debe estar Pendiente o Enviada).",
+      "La factura está anulada o su tipo de comprobante no corresponde a una compra.",
   },
 };
 

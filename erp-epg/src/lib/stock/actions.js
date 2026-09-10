@@ -243,83 +243,6 @@ export async function listarLotesRecientes(idDeposito = null, limite = 50) {
 }
 
 /**
- * Registra un lote completo (datos generales + N productos) en una sola
- * operación atómica vía RPC `fn_lote_registrar_completo`. Internamente crea la
- * compra de soporte, el `inventario` / `inventario_producto` y el movimiento de
- * ingreso por producto para que `stock` quede reflejado.
- *
- * @param {{
- *   idDeposito: string,
- *   idProveedor: string,
- *   detalleLote?: string | null,
- *   productos: Array<{
- *     id_producto: string,
- *     cantidad: number,
- *     fecha_elaboracion?: string | null,
- *     fecha_vencimiento?: string | null,
- *     observaciones?: string | null,
- *   }>,
- * }} input
- * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null, data?: unknown }>}
- */
-export async function registrarLote({
-  idDeposito,
-  idProveedor,
-  detalleLote,
-  productos,
-}) {
-  if (!Array.isArray(productos) || productos.length === 0) {
-    return {
-      ok: false,
-      code: "LOT01",
-      error: "Cargá al menos un producto antes de registrar el lote.",
-    };
-  }
-
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return {
-      ok: false,
-      code: null,
-      error: "Debés iniciar sesión para registrar un lote.",
-    };
-  }
-
-  const items = productos.map((p) => ({
-    id_producto: p.id_producto,
-    cantidad: Number(p.cantidad) || 0,
-    fecha_elaboracion: p.fecha_elaboracion ?? null,
-    fecha_vencimiento: p.fecha_vencimiento ?? null,
-    observaciones: p.observaciones?.trim() ? p.observaciones.trim() : null,
-  }));
-
-  const { data, error } = await supabase.rpc("fn_lote_registrar_completo", {
-    p_id_deposito: idDeposito || null,
-    p_id_proveedor: idProveedor || null,
-    p_detalle_lote: detalleLote?.trim() ? detalleLote.trim() : null,
-    p_creado_por: user.id,
-    p_productos: items,
-  });
-
-  if (error) {
-    return {
-      ok: false,
-      code: error.code ?? null,
-      error: error.message || "No se pudo registrar el lote.",
-    };
-  }
-
-  revalidatePath("/inventario/stock");
-  revalidatePath("/inventario/stock/lotes");
-  return { ok: true, error: null, code: null, data };
-}
-
-/**
  * Chequeo previo de UX antes de eliminar un lote. Devuelve el motivo de
  * bloqueo (texto en español, p. ej. si ya tiene stock consumido) o `null` si
  * el lote se puede eliminar. La validación real la hace igual `fn_lote_eliminar`
@@ -350,9 +273,9 @@ export async function motivoBloqueoEliminarLote(idLote) {
 }
 
 /**
- * Elimina un lote completo (y su compra de soporte, si existía) revirtiendo
- * el stock que había aportado, vía RPC `fn_lote_eliminar`. Bloquea con `LOT04`
- * si algún producto del lote ya tiene stock consumido.
+ * Elimina un lote completo revirtiendo el stock que había aportado, vía RPC
+ * `fn_lote_eliminar`. Bloquea con `LOT04` si algún producto del lote ya tiene
+ * stock consumido.
  *
  * @param {string} idLote
  * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}

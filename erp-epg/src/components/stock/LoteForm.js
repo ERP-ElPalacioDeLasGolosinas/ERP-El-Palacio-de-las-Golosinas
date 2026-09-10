@@ -2,10 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  listarComprasDisponibles,
-  registrarIngresoPorCompra,
-} from "@/lib/movimientos/actions";
+import { registrarIngresoPorComprobante } from "@/lib/movimientos/actions";
+import { listarComprobantesParaRecepcion } from "@/lib/comprobantes/actions";
 import { mapErrorLote } from "@/lib/stock/errores";
 import { CarritoLoteIngreso } from "@/components/movimientos/CarritoLoteIngreso";
 import { ProductoBuscadorLote } from "@/components/movimientos/ProductoBuscadorLote";
@@ -16,13 +14,13 @@ const monedaFmt = new Intl.NumberFormat("es-AR", {
 });
 
 /**
- * Alta de un lote contra una compra YA EXISTENTE: se elige depósito + compra
- * asociada una vez, y N productos se cargan a una tabla editable antes de
- * registrar todo junto vía `fn_lote_registrar_desde_compra`.
+ * Alta de un lote de recepción contra una factura de compra existente: se elige
+ * depósito + factura una vez, y N productos se cargan a una tabla editable antes
+ * de registrar todo junto vía `fn_lote_registrar_desde_comprobante`.
  *
- * El carrito reutiliza `CarritoLoteIngreso` (mismo componente que "ingreso por
- * compra" dentro de Movimientos): se busca un producto por código o nombre,
- * se agrega como fila y se editan cantidad / fechas / observaciones ahí mismo.
+ * El carrito reutiliza `CarritoLoteIngreso`: se busca un producto por código o
+ * nombre, se agrega como fila y se editan cantidad / fechas / observaciones ahí
+ * mismo (lo que realmente llegó, sin precios).
  *
  * @param {{
  *   depositos: Array<{ id_deposito: string, nombre_deposito: string }>,
@@ -33,8 +31,8 @@ export function LoteForm({ depositos }) {
   const [pending, startTransition] = useTransition();
 
   const [idDeposito, setIdDeposito] = useState("");
-  const [compras, setCompras] = useState([]);
-  const [idCompra, setIdCompra] = useState("");
+  const [facturas, setFacturas] = useState([]);
+  const [idComprobante, setIdComprobante] = useState("");
   const [detalleLote, setDetalleLote] = useState("");
 
   const [carrito, setCarrito] = useState([]);
@@ -42,10 +40,12 @@ export function LoteForm({ depositos }) {
   const [errorServer, setErrorServer] = useState(null);
 
   useEffect(() => {
-    listarComprasDisponibles().then(({ data }) => setCompras(data ?? []));
+    listarComprobantesParaRecepcion().then(({ data }) =>
+      setFacturas(data ?? [])
+    );
   }, []);
 
-  const sinCompras = compras.length === 0;
+  const sinFacturas = facturas.length === 0;
 
   function agregarProducto(producto) {
     setErrorServer(null);
@@ -76,7 +76,7 @@ export function LoteForm({ depositos }) {
   function validarGeneral() {
     const next = {};
     if (!idDeposito) next.idDeposito = "Elegí un depósito.";
-    if (!idCompra) next.idCompra = "Elegí una compra.";
+    if (!idComprobante) next.idComprobante = "Elegí una factura.";
     setErrores((prev) => ({ ...prev, ...next }));
     return Object.keys(next).length === 0;
   }
@@ -105,8 +105,8 @@ export function LoteForm({ depositos }) {
     }
 
     startTransition(async () => {
-      const result = await registrarIngresoPorCompra({
-        id_compra: idCompra,
+      const result = await registrarIngresoPorComprobante({
+        id_comprobante: idComprobante,
         id_deposito: idDeposito,
         detalle_lote: detalleLote.trim() || null,
         productos: carrito.map((r) => ({
@@ -122,7 +122,7 @@ export function LoteForm({ depositos }) {
         setErrorServer(mapErrorLote(result).message);
         return;
       }
-      router.push("/inventario/stock/lotes");
+      router.push("/inventario/movimientos");
       router.refresh();
     });
   }
@@ -131,7 +131,7 @@ export function LoteForm({ depositos }) {
     !pending &&
     carrito.length > 0 &&
     idDeposito &&
-    idCompra &&
+    idComprobante &&
     filasInvalidas.length === 0;
 
   return (
@@ -139,7 +139,7 @@ export function LoteForm({ depositos }) {
       {/* Datos generales del lote */}
       <div className="palacio-card p-5 md:p-6">
         <h2 className="mb-4 text-sm font-semibold text-zinc-900">
-          Datos del lote
+          Datos del ingreso
         </h2>
         <div className="grid gap-4 md:grid-cols-2">
           <Campo label="Depósito" error={errores.idDeposito} requerido>
@@ -160,27 +160,30 @@ export function LoteForm({ depositos }) {
             </select>
           </Campo>
 
-          <Campo label="Compra" error={errores.idCompra} requerido>
+          <Campo label="Factura de compra" error={errores.idComprobante} requerido>
             <select
-              value={idCompra}
+              value={idComprobante}
               onChange={(e) => {
-                setIdCompra(e.target.value);
-                setErrores((prev) => ({ ...prev, idCompra: null }));
+                setIdComprobante(e.target.value);
+                setErrores((prev) => ({ ...prev, idComprobante: null }));
               }}
-              disabled={sinCompras}
+              disabled={sinFacturas}
               className="palacio-input"
             >
-              <option value="">Seleccioná una compra…</option>
-              {compras.map((c) => (
-                <option key={c.id_compra} value={c.id_compra}>
-                  {c.nombre_proveedor} —{" "}
-                  {c.total ? monedaFmt.format(Number(c.total)) : "sin total"}
+              <option value="">Seleccioná una factura…</option>
+              {facturas.map((c) => (
+                <option key={c.id_comprobante} value={c.id_comprobante}>
+                  {c.nombre_proveedor} — {c.numero_formateado} (
+                  {c.importe_total
+                    ? monedaFmt.format(Number(c.importe_total))
+                    : "sin total"}
+                  )
                 </option>
               ))}
             </select>
-            {sinCompras ? (
+            {sinFacturas ? (
               <p className="text-xs text-red-600">
-                No hay compras pendientes de recepción.
+                No hay facturas de compra pendientes de recepción.
               </p>
             ) : null}
           </Campo>
@@ -205,11 +208,11 @@ export function LoteForm({ depositos }) {
         </h2>
         <ProductoBuscadorLote
           onSeleccionar={agregarProducto}
-          disabled={!idDeposito || !idCompra}
+          disabled={!idDeposito || !idComprobante}
         />
         <p className="mt-1 text-xs text-palacio-muted">
-          {!idDeposito || !idCompra
-            ? "Elegí depósito y compra para poder buscar y agregar productos."
+          {!idDeposito || !idComprobante
+            ? "Elegí depósito y factura para poder buscar y agregar productos."
             : "La cantidad, las fechas y las observaciones se editan en la tabla de abajo."}
         </p>
       </div>
@@ -247,11 +250,11 @@ export function LoteForm({ depositos }) {
             disabled={!puedeRegistrar}
             className="palacio-btn-primary px-4 py-2.5 text-sm"
           >
-            {pending ? "Registrando…" : "Registrar lote"}
+            {pending ? "Registrando…" : "Registrar ingreso"}
           </button>
           <button
             type="button"
-            onClick={() => router.push("/inventario/stock/lotes")}
+            onClick={() => router.push("/inventario/movimientos")}
             disabled={pending}
             className="palacio-btn-secondary px-4 py-2.5 text-sm"
           >

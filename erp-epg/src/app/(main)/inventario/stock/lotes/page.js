@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { listarLotesRecientes } from "@/lib/stock/actions";
 import { listarDepositos } from "@/lib/depositos/actions";
 import { listarProductos } from "@/lib/productos/actions";
@@ -82,15 +81,7 @@ export default async function LotesPage({ searchParams }) {
           { label: "Lotes" },
         ]}
         title="Últimos lotes ingresados"
-        description="Historial de lotes por producto y depósito, del más reciente al más antiguo."
-        actions={
-          <Link
-            href="/inventario/stock/lotes/nuevo"
-            className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
-          >
-            Registrar lote
-          </Link>
-        }
+        description="Historial de lotes por producto y depósito, del más reciente al más antiguo. Para registrar uno nuevo, usá el concepto “Ingreso por compra” en Registrar movimiento."
       />
 
       {error ? (

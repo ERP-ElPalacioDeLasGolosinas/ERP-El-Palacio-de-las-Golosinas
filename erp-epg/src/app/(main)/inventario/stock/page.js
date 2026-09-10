@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { consultarStockResumen } from "@/lib/stock/actions";
 import { listarProductos } from "@/lib/productos/actions";
 import { listarMarcas } from "@/lib/marcas/actions";
@@ -72,14 +71,6 @@ export default async function StockPage({ searchParams }) {
         crumbs={[{ label: "Inventario" }, { label: "Stock" }]}
         title="Consultar stock"
         description="Stock total por producto. Entrá a un producto para ver el desglose por depósito y sus lotes."
-        actions={
-          <Link
-            href="/inventario/stock/lotes/nuevo"
-            className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
-          >
-            Registrar lote
-          </Link>
-        }
       />
 
       {error ? (
