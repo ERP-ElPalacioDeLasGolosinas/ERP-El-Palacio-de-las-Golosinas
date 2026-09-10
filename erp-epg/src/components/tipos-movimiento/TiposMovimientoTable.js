@@ -27,12 +27,14 @@ function formatFecha(valor) {
  *   tiposMovimiento: Array<{
  *     id_tipo_movimiento: string,
  *     nombre: string,
+ *     descripcion: string | null,
  *     signo: number,
  *     requiere_control_stock: boolean,
  *     activo: boolean,
  *     creado: string,
  *     editado: string,
  *     creado_por: string | null,
+ *     creado_por_nombre: string | null,
  *   }>,
  *   incluirInactivas: boolean,
  * }} props
@@ -160,8 +162,15 @@ export function TiposMovimientoTable({ tiposMovimiento, incluirInactivas }) {
                       t.activo ? "" : "opacity-60",
                     ].join(" ")}
                   >
-                    <td className="px-5 py-4 align-middle font-medium text-zinc-900">
-                      {t.nombre}
+                    <td className="px-5 py-4 align-middle">
+                      <span className="font-medium text-zinc-900">
+                        {t.nombre}
+                      </span>
+                      {t.descripcion ? (
+                        <span className="mt-0.5 block text-xs text-palacio-muted">
+                          {t.descripcion}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-5 py-4 text-center align-middle">
                       {t.signo === 1 ? (
@@ -193,7 +202,7 @@ export function TiposMovimientoTable({ tiposMovimiento, incluirInactivas }) {
                       {formatFecha(t.editado)}
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
-                      {t.creado_por ? `${t.creado_por.slice(0, 8)}…` : "—"}
+                      {t.creado_por_nombre || "—"}
                     </td>
                     <td className="px-5 py-4 align-middle">
                       <div className="flex flex-wrap justify-end gap-2">

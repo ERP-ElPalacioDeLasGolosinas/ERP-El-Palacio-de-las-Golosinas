@@ -83,6 +83,7 @@ export async function crearTipoMovimiento(formData) {
     p_signo: entero(formData, "signo"),
     p_creado_por: user.id,
     p_requiere_control_stock: booleano(formData, "requiere_control_stock"),
+    p_descripcion: texto(formData, "descripcion"),
   });
 
   if (error) {
@@ -106,7 +107,7 @@ export async function actualizarTipoMovimiento(id_tipo_movimiento, formData) {
   const { error } = await supabase.rpc("fn_tipo_movimiento_modificar", {
     p_id_tipo_movimiento: id_tipo_movimiento,
     p_nombre: texto(formData, "nombre"),
-    p_signo: entero(formData, "signo"),
+    p_descripcion: texto(formData, "descripcion"),
     p_requiere_control_stock: booleano(formData, "requiere_control_stock"),
   });
 

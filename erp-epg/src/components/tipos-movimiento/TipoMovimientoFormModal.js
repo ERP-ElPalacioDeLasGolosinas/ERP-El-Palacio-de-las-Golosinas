@@ -17,6 +17,7 @@ import { mapErrorTipoMovimiento } from "@/lib/tipos-movimiento/errores";
  *   tipoMovimiento?: {
  *     id_tipo_movimiento: string,
  *     nombre: string,
+ *     descripcion: string | null,
  *     signo: number,
  *     requiere_control_stock: boolean,
  *   } | null,
@@ -27,6 +28,9 @@ export function TipoMovimientoFormModal({ onClose, tipoMovimiento = null }) {
   const isEdit = Boolean(tipoMovimiento?.id_tipo_movimiento);
   const [pending, startTransition] = useTransition();
   const [nombre, setNombre] = useState(() => tipoMovimiento?.nombre ?? "");
+  const [descripcion, setDescripcion] = useState(
+    () => tipoMovimiento?.descripcion ?? "",
+  );
   const [signo, setSigno] = useState(() =>
     tipoMovimiento?.signo != null ? String(tipoMovimiento.signo) : "",
   );
@@ -60,7 +64,7 @@ export function TipoMovimientoFormModal({ onClose, tipoMovimiento = null }) {
       setErrorNombre(null);
     }
 
-    if (signo !== "1" && signo !== "-1") {
+    if (!isEdit && signo !== "1" && signo !== "-1") {
       setErrorSigno("Debés seleccionar el signo (entrada o salida).");
       ok = false;
     } else {
@@ -77,6 +81,7 @@ export function TipoMovimientoFormModal({ onClose, tipoMovimiento = null }) {
 
     const formData = new FormData();
     formData.set("nombre", nombre.trim());
+    formData.set("descripcion", descripcion.trim());
     formData.set("signo", signo);
     if (requiereControlStock) formData.set("requiere_control_stock", "on");
 
@@ -149,6 +154,24 @@ export function TipoMovimientoFormModal({ onClose, tipoMovimiento = null }) {
 
           <div className="flex flex-col gap-1.5">
             <label
+              htmlFor="tipo-movimiento-descripcion"
+              className="text-sm font-medium text-zinc-800"
+            >
+              Descripción
+            </label>
+            <textarea
+              id="tipo-movimiento-descripcion"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              className="palacio-input"
+              rows={2}
+              placeholder="Opcional. Detalle o uso previsto del tipo de movimiento."
+              maxLength={280}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label
               htmlFor="tipo-movimiento-signo"
               className="text-sm font-medium text-zinc-800"
             >
@@ -159,6 +182,7 @@ export function TipoMovimientoFormModal({ onClose, tipoMovimiento = null }) {
               value={signo}
               onChange={(e) => setSigno(e.target.value)}
               className="palacio-input"
+              disabled={isEdit}
             >
               <option value="" disabled>
                 Seleccionar…
@@ -166,6 +190,11 @@ export function TipoMovimientoFormModal({ onClose, tipoMovimiento = null }) {
               <option value="1">Entrada (+1)</option>
               <option value="-1">Salida (-1)</option>
             </select>
+            {isEdit ? (
+              <p className="text-xs text-palacio-muted">
+                El signo no puede modificarse una vez creado el tipo.
+              </p>
+            ) : null}
             {errorSigno ? (
               <p className="text-xs text-red-600">{errorSigno}</p>
             ) : null}

@@ -8,6 +8,7 @@
  * | TMV03  | —      | El tipo de movimiento ya no existe (recargar tabla)   |
  * | TMV04  | signo  | Signo inválido (debe ser 1 o -1)                      |
  * | TMV05  | signo  | Signo obligatorio                                     |
+ * | TMV06  | signo  | Signo inmutable (no se puede cambiar tras el alta)    |
  */
 
 /** @typedef {{ field: "nombre" | "signo" | null, message: string, reload?: boolean }} ErrorUI */
@@ -31,6 +32,11 @@ const MAPA = {
   TMV05: {
     field: "signo",
     message: "Debés definir el signo del tipo de movimiento.",
+  },
+  TMV06: {
+    field: "signo",
+    message: "El signo no puede modificarse una vez creado el tipo.",
+    reload: true,
   },
 };
 
