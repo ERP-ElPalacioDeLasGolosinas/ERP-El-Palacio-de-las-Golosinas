@@ -3,6 +3,7 @@ import {
   obtenerResumenComprobantes,
 } from "@/lib/comprobantes/actions";
 import { listarProveedores } from "@/lib/proveedores/actions";
+import { listarTiposComprobante } from "@/lib/tipos-comprobante/actions";
 import { ComprobantesTable } from "@/components/comprobantes/ComprobantesTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -11,7 +12,7 @@ export const metadata = {
 };
 
 /**
- * @param {{ searchParams: Promise<{ proveedor?: string, estado?: string, desde?: string, hasta?: string }> }} props
+ * @param {{ searchParams: Promise<{ proveedor?: string, estado?: string, desde?: string, hasta?: string, tipo?: string }> }} props
  */
 export default async function ComprobantesPage({ searchParams }) {
   const sp = await searchParams;
@@ -20,14 +21,20 @@ export default async function ComprobantesPage({ searchParams }) {
     estado: sp?.estado || null,
     desde: sp?.desde || null,
     hasta: sp?.hasta || null,
+    idTipoComprobante: sp?.tipo || null,
   };
 
-  const [{ data, error }, { data: resumen }, { data: proveedores }] =
-    await Promise.all([
-      listarComprobantes(filtros),
-      obtenerResumenComprobantes(filtros),
-      listarProveedores(true),
-    ]);
+  const [
+    { data, error },
+    { data: resumen },
+    { data: proveedores },
+    { data: tipos },
+  ] = await Promise.all([
+    listarComprobantes(filtros),
+    obtenerResumenComprobantes(filtros),
+    listarProveedores(true),
+    listarTiposComprobante(false),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
@@ -47,11 +54,13 @@ export default async function ComprobantesPage({ searchParams }) {
           comprobantes={data ?? []}
           resumen={resumen}
           proveedores={proveedores ?? []}
+          tipos={tipos ?? []}
           filtros={{
             proveedor: filtros.idProveedor ?? "",
             estado: filtros.estado ?? "",
             desde: filtros.desde ?? "",
             hasta: filtros.hasta ?? "",
+            tipo: filtros.idTipoComprobante ?? "",
           }}
         />
       )}

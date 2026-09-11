@@ -41,3 +41,18 @@ const BADGE_ESTADO = {
 export function badgeEstadoComprobante(estado) {
   return BADGE_ESTADO[estado] ?? "palacio-badge-inactivo";
 }
+
+/**
+ * Etiqueta a mostrar para el estado de un comprobante. El remito no participa
+ * del circuito de pago (S2-7 paso 3): se registra en `Pendiente` por
+ * consistencia de esquema, pero para el usuario es simplemente "Registrado".
+ *
+ * @param {string | null | undefined} estado
+ * @param {string | null | undefined} clase
+ * @returns {string}
+ */
+export function labelEstadoComprobante(estado, clase) {
+  const valor = estado ?? "Pendiente";
+  if (clase === "remito" && valor === "Pendiente") return "Registrado";
+  return valor;
+}

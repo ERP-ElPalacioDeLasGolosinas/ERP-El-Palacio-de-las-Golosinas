@@ -63,6 +63,7 @@ function letra(input, key) {
  *   id_tipo_comprobante: string,
  *   nombre_tipo_comprobante: string,
  *   letra: string | null,
+ *   clase: string,
  *   es_fiscal: boolean,
  *   aplica_compra: boolean,
  *   aplica_venta: boolean,
@@ -118,6 +119,7 @@ export async function crearTipoComprobante(formData) {
     p_aplica_compra: true,
     p_aplica_venta: false,
     p_aplica_pago: false,
+    p_clase: texto(formData, "clase") || "factura",
   });
 
   if (error) {
@@ -155,6 +157,8 @@ export async function actualizarTipoComprobante(
     // Conservar flags de otros módulos (esta pantalla no los edita).
     p_aplica_venta: booleano(formData, "aplica_venta"),
     p_aplica_pago: booleano(formData, "aplica_pago"),
+    // null ⇒ la función conserva la clase actual.
+    p_clase: texto(formData, "clase") || null,
   });
 
   if (error) {

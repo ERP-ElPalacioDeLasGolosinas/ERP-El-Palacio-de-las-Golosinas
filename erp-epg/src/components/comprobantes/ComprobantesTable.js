@@ -31,10 +31,17 @@ function formatFecha(valor) {
  *   comprobantes: Array<Record<string, any>>,
  *   resumen: { cantidad: number, importe_total: number, importe_pagado: number, saldo_pendiente: number } | null,
  *   proveedores: Array<{ id_proveedor: string, nombre_proveedor: string }>,
- *   filtros: { proveedor: string, estado: string, desde: string, hasta: string },
+ *   tipos: Array<{ id_tipo_comprobante: string, nombre_tipo_comprobante: string, letra: string | null }>,
+ *   filtros: { proveedor: string, estado: string, desde: string, hasta: string, tipo: string },
  * }} props
  */
-export function ComprobantesTable({ comprobantes, resumen, proveedores, filtros }) {
+export function ComprobantesTable({
+  comprobantes,
+  resumen,
+  proveedores,
+  tipos,
+  filtros,
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -71,7 +78,11 @@ export function ComprobantesTable({ comprobantes, resumen, proveedores, filtros 
   }
 
   const hayFiltros =
-    filtros.proveedor || filtros.estado || filtros.desde || filtros.hasta;
+    filtros.proveedor ||
+    filtros.estado ||
+    filtros.desde ||
+    filtros.hasta ||
+    filtros.tipo;
 
   function anular(c) {
     const ok = window.confirm(
@@ -121,6 +132,22 @@ export function ComprobantesTable({ comprobantes, resumen, proveedores, filtros 
               {ESTADOS_COMPROBANTE.map((estado) => (
                 <option key={estado} value={estado}>
                   {estado}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+            Tipo
+            <select
+              value={filtros.tipo}
+              onChange={(e) => setParam("tipo", e.target.value)}
+              className="palacio-input max-w-xs"
+            >
+              <option value="">Todos</option>
+              {tipos.map((t) => (
+                <option key={t.id_tipo_comprobante} value={t.id_tipo_comprobante}>
+                  {t.nombre_tipo_comprobante}
+                  {t.letra ? ` (${t.letra})` : ""}
                 </option>
               ))}
             </select>

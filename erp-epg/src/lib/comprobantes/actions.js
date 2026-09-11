@@ -32,9 +32,10 @@ function textoOpcional(valor) {
 }
 
 /**
- * Lista comprobantes de proveedor vía `fn_comprobante_listar`.
+ * Lista comprobantes de proveedor vía `fn_comprobante_listar`. Cada fila
+ * incluye `clase` e `id_tipo_comprobante` (S2-7).
  *
- * @param {{ idProveedor?: string | null, soloPendientes?: boolean, desde?: string | null, hasta?: string | null, estado?: string | null }} [filtros]
+ * @param {{ idProveedor?: string | null, soloPendientes?: boolean, desde?: string | null, hasta?: string | null, estado?: string | null, idTipoComprobante?: string | null }} [filtros]
  * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
  */
 export async function listarComprobantes(filtros = {}) {
@@ -45,6 +46,7 @@ export async function listarComprobantes(filtros = {}) {
     p_desde: filtros.desde || null,
     p_hasta: filtros.hasta || null,
     p_estado: filtros.estado || null,
+    p_id_tipo_comprobante: filtros.idTipoComprobante || null,
   });
 
   if (error) {
@@ -307,6 +309,201 @@ export async function registrarComprobante(entrada) {
 
   if (error) {
     return errorResult(error, "No se pudo registrar el comprobante.");
+  }
+
+  revalidatePath(PATH);
+  return { ok: true, error: null, code: null };
+}
+
+/**
+ * Alta transaccional de una nota de débito de proveedor (cabecera en
+ * `comprobante_proveedor` + `nota_debito_proveedor` + su detalle de
+ * conceptos) vía `fn_nota_debito_registrar` (S2-7). La cabecera queda en
+ * estado `Pendiente` con `saldo_pendiente = importe_total`.
+ *
+ * @param {{
+ *   id_proveedor: string,
+ *   id_tipo_comprobante: string,
+ *   punto_venta: number | string,
+ *   numero: number | string,
+ *   fecha_comprobante: string,
+ *   id_comprobante_asociado?: string | null,
+ *   motivo: string,
+ *   observaciones?: string | null,
+ *   detalle: Array<{ concepto: string, importe: number | string, impuesto?: number | string }>,
+ * }} entrada
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
+ */
+export async function registrarNotaDebito(entrada) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      code: null,
+      error: "Debés iniciar sesión para registrar una nota de débito.",
+    };
+  }
+
+  const detalle = Array.isArray(entrada.detalle) ? entrada.detalle : [];
+
+  const { error } = await supabase.rpc("fn_nota_debito_registrar", {
+    p_id_proveedor: entrada.id_proveedor || null,
+    p_id_tipo_comprobante: entrada.id_tipo_comprobante || null,
+    p_punto_venta: numero(entrada.punto_venta),
+    p_numero: numero(entrada.numero),
+    p_fecha_comprobante: entrada.fecha_comprobante || null,
+    p_id_comprobante_asociado: entrada.id_comprobante_asociado || null,
+    p_motivo: textoOpcional(entrada.motivo),
+    p_observaciones: textoOpcional(entrada.observaciones),
+    p_detalle: detalle.map((linea) => ({
+      concepto: textoOpcional(linea.concepto),
+      importe: numero(linea.importe) ?? 0,
+      impuesto: numero(linea.impuesto) ?? 0,
+    })),
+    p_creado_por: user.id,
+  });
+
+  if (error) {
+    return errorResult(error, "No se pudo registrar la nota de débito.");
+  }
+
+  revalidatePath(PATH);
+  return { ok: true, error: null, code: null };
+}
+
+/**
+ * Alta transaccional de un remito de proveedor (cabecera con importes en
+ * cero + `remito_proveedor` + su detalle de productos/cantidades) vía
+ * `fn_remito_registrar` (S2-7). No alimenta stock: la recepción sigue
+ * siendo contra factura (D-020).
+ *
+ * @param {{
+ *   id_proveedor: string,
+ *   id_tipo_comprobante: string,
+ *   punto_venta: number | string,
+ *   numero: number | string,
+ *   fecha_comprobante: string,
+ *   id_comprobante_asociado?: string | null,
+ *   observaciones?: string | null,
+ *   detalle: Array<{ id_producto: string, cantidad: number | string }>,
+ * }} entrada
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
+ */
+export async function registrarRemito(entrada) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      code: null,
+      error: "Debés iniciar sesión para registrar un remito.",
+    };
+  }
+
+  const detalle = Array.isArray(entrada.detalle) ? entrada.detalle : [];
+
+  const { error } = await supabase.rpc("fn_remito_registrar", {
+    p_id_proveedor: entrada.id_proveedor || null,
+    p_id_tipo_comprobante: entrada.id_tipo_comprobante || null,
+    p_punto_venta: numero(entrada.punto_venta),
+    p_numero: numero(entrada.numero),
+    p_fecha_comprobante: entrada.fecha_comprobante || null,
+    p_id_comprobante_asociado: entrada.id_comprobante_asociado || null,
+    p_observaciones: textoOpcional(entrada.observaciones),
+    p_detalle: detalle.map((linea) => ({
+      id_producto: linea.id_producto || null,
+      cantidad: numero(linea.cantidad),
+    })),
+    p_creado_por: user.id,
+  });
+
+  if (error) {
+    return errorResult(error, "No se pudo registrar el remito.");
+  }
+
+  revalidatePath(PATH);
+  return { ok: true, error: null, code: null };
+}
+
+/**
+ * Alta transaccional de una nota de crédito de proveedor (cabecera en
+ * `comprobante_proveedor` + `nota_credito_proveedor` + su detalle) vía
+ * `fn_nota_credito_registrar` (S2-7). La factura asociada es obligatoria.
+ * Según `motivo`: `devolucion_mercaderia` exige líneas con producto,
+ * cantidad, precio e `id_detalle_origen` (línea de la factura); el resto
+ * exige concepto + importe. La cabecera queda en `Pendiente` con
+ * `saldo_pendiente = 0` y **no** modifica el saldo de la factura de origen.
+ *
+ * @param {{
+ *   id_proveedor: string,
+ *   id_tipo_comprobante: string,
+ *   punto_venta: number | string,
+ *   numero: number | string,
+ *   fecha_comprobante: string,
+ *   id_comprobante_asociado: string,
+ *   motivo: string,
+ *   observaciones?: string | null,
+ *   detalle: Array<{
+ *     id_producto?: string | null,
+ *     id_detalle_origen?: string | null,
+ *     concepto?: string | null,
+ *     cantidad?: number | string | null,
+ *     precio_unitario?: number | string | null,
+ *     importe: number | string,
+ *     impuesto?: number | string,
+ *   }>,
+ * }} entrada
+ * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
+ */
+export async function registrarNotaCredito(entrada) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      code: null,
+      error: "Debés iniciar sesión para registrar una nota de crédito.",
+    };
+  }
+
+  const detalle = Array.isArray(entrada.detalle) ? entrada.detalle : [];
+
+  const { error } = await supabase.rpc("fn_nota_credito_registrar", {
+    p_id_proveedor: entrada.id_proveedor || null,
+    p_id_tipo_comprobante: entrada.id_tipo_comprobante || null,
+    p_punto_venta: numero(entrada.punto_venta),
+    p_numero: numero(entrada.numero),
+    p_fecha_comprobante: entrada.fecha_comprobante || null,
+    p_id_comprobante_asociado: entrada.id_comprobante_asociado || null,
+    p_motivo: textoOpcional(entrada.motivo),
+    p_observaciones: textoOpcional(entrada.observaciones),
+    p_detalle: detalle.map((linea) => ({
+      id_producto: linea.id_producto || null,
+      id_detalle_origen: linea.id_detalle_origen || null,
+      concepto: textoOpcional(linea.concepto),
+      cantidad: numero(linea.cantidad),
+      precio_unitario: numero(linea.precio_unitario),
+      importe: numero(linea.importe) ?? 0,
+      impuesto: numero(linea.impuesto) ?? 0,
+    })),
+    p_creado_por: user.id,
+  });
+
+  if (error) {
+    return errorResult(error, "No se pudo registrar la nota de crédito.");
   }
 
   revalidatePath(PATH);

@@ -6,6 +6,7 @@ import {
   habilitarTipoComprobante,
   inhabilitarTipoComprobante,
 } from "@/lib/tipos-comprobante/actions";
+import { claseComprobanteLabel } from "@/lib/tipos-comprobante/clases";
 import { TipoComprobanteFormModal } from "./TipoComprobanteFormModal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
@@ -28,6 +29,7 @@ function formatFecha(valor) {
  *     id_tipo_comprobante: string,
  *     nombre_tipo_comprobante: string,
  *     letra: string | null,
+ *     clase: string,
  *     es_fiscal: boolean,
  *     aplica_compra: boolean,
  *     aplica_venta: boolean,
@@ -147,6 +149,7 @@ export function TiposComprobanteTable({ tipos, incluirInactivos }) {
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
                   <Th>Nombre</Th>
                   <Th className="text-center">Letra</Th>
+                  <Th>Clase</Th>
                   <Th className="text-center">Fiscal</Th>
                   <Th className="text-center">Estado</Th>
                   <Th>Creado</Th>
@@ -169,6 +172,9 @@ export function TiposComprobanteTable({ tipos, incluirInactivos }) {
                     </td>
                     <td className="px-5 py-4 text-center align-middle text-palacio-muted">
                       {t.letra || "—"}
+                    </td>
+                    <td className="px-5 py-4 align-middle text-palacio-muted">
+                      {claseComprobanteLabel(t.clase)}
                     </td>
                     <td className="px-5 py-4 text-center align-middle text-palacio-muted">
                       {t.es_fiscal ? "Sí" : "No"}

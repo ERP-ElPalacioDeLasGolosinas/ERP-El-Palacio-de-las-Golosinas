@@ -7,9 +7,10 @@
  * | CPB02  | nombre | Nombre duplicado                                       |
  * | CPB03  | —      | El tipo de comprobante ya no existe (recargar tabla)   |
  * | CPB05  | letra  | Letra informada pero no es A, B ni C                   |
+ * | CPB06  | clase  | Clase informada fuera del set permitido                |
  */
 
-/** @typedef {{ field: "nombre" | "letra" | null, message: string, reload?: boolean }} ErrorUI */
+/** @typedef {{ field: "nombre" | "letra" | "clase" | null, message: string, reload?: boolean }} ErrorUI */
 
 const MAPA = {
   CPB01: { field: "nombre", message: "El nombre es obligatorio." },
@@ -26,6 +27,10 @@ const MAPA = {
   CPB05: {
     field: "letra",
     message: "La letra debe ser A, B o C (o dejarse vacía).",
+  },
+  CPB06: {
+    field: "clase",
+    message: "La clase seleccionada no es válida.",
   },
 };
 

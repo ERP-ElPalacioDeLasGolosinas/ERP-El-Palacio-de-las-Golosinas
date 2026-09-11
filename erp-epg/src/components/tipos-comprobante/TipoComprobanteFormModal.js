@@ -7,6 +7,7 @@ import {
   crearTipoComprobante,
 } from "@/lib/tipos-comprobante/actions";
 import { mapErrorTipoComprobante } from "@/lib/tipos-comprobante/errores";
+import { CLASES_COMPROBANTE } from "@/lib/tipos-comprobante/clases";
 
 /**
  * Modal de alta / edición de tipo de comprobante (C-06: compras).
@@ -18,6 +19,7 @@ import { mapErrorTipoComprobante } from "@/lib/tipos-comprobante/errores";
  *     id_tipo_comprobante: string,
  *     nombre_tipo_comprobante: string,
  *     letra: string | null,
+ *     clase?: string,
  *     es_fiscal: boolean,
  *     aplica_venta?: boolean,
  *     aplica_pago?: boolean,
@@ -40,8 +42,12 @@ export function TipoComprobanteFormModal({
   const [esFiscal, setEsFiscal] = useState(
     () => tipoComprobante?.es_fiscal ?? true
   );
+  const [clase, setClase] = useState(
+    () => tipoComprobante?.clase ?? "factura"
+  );
   const [errorNombre, setErrorNombre] = useState(null);
   const [errorLetra, setErrorLetra] = useState(null);
+  const [errorClase, setErrorClase] = useState(null);
   const [errorServer, setErrorServer] = useState(null);
   const nombreRef = useRef(null);
 
@@ -74,6 +80,13 @@ export function TipoComprobanteFormModal({
       setErrorLetra(null);
     }
 
+    if (!CLASES_COMPROBANTE.some((c) => c.value === clase)) {
+      setErrorClase("Elegí una clase.");
+      ok = false;
+    } else {
+      setErrorClase(null);
+    }
+
     return ok;
   }
 
@@ -84,6 +97,7 @@ export function TipoComprobanteFormModal({
 
     const formData = new FormData();
     formData.set("nombre_tipo_comprobante", nombre.trim());
+    formData.set("clase", clase);
     if (letra) formData.set("letra", letra);
     if (esFiscal) formData.set("es_fiscal", "on");
     if (isEdit && tipoComprobante?.aplica_venta) {
@@ -107,6 +121,8 @@ export function TipoComprobanteFormModal({
           setErrorNombre(ui.message);
         } else if (ui.field === "letra") {
           setErrorLetra(ui.message);
+        } else if (ui.field === "clase") {
+          setErrorClase(ui.message);
         } else {
           setErrorServer(ui.message);
         }
@@ -159,6 +175,34 @@ export function TipoComprobanteFormModal({
             />
             {errorNombre ? (
               <p className="text-xs text-red-600">{errorNombre}</p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="tipo-comprobante-clase"
+              className="text-sm font-medium text-zinc-800"
+            >
+              Clase <span className="text-palacio-red">*</span>
+            </label>
+            <select
+              id="tipo-comprobante-clase"
+              value={clase}
+              onChange={(e) => setClase(e.target.value)}
+              className="palacio-input"
+            >
+              {CLASES_COMPROBANTE.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-palacio-muted">
+              Define la estructura del documento (factura, nota de crédito,
+              nota de débito o remito).
+            </p>
+            {errorClase ? (
+              <p className="text-xs text-red-600">{errorClase}</p>
             ) : null}
           </div>
 

@@ -5,8 +5,24 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { anularComprobante } from "@/lib/comprobantes/actions";
 import { mapErrorComprobante } from "@/lib/comprobantes/errores";
-import { badgeEstadoComprobante } from "@/lib/comprobantes/estado";
+import {
+  badgeEstadoComprobante,
+  labelEstadoComprobante,
+} from "@/lib/comprobantes/estado";
 import { badgeEstadoOrdenPago } from "@/lib/ordenes-pago/constantes";
+
+/** Motivos de ND (`NotaDebitoCampos`) y NC (`NotaCreditoCampos`), para mostrar la etiqueta en el detalle. */
+const MOTIVOS_LABEL = {
+  interes_mora: "Interés por mora",
+  flete: "Flete",
+  diferencia_cambio: "Diferencia de cambio",
+  gasto_bancario: "Gasto bancario",
+  otro: "Otro",
+  devolucion_mercaderia: "Devolución de mercadería",
+  bonificacion: "Bonificación / ajuste",
+  error_facturacion: "Error de facturación",
+  anulacion: "Anulación",
+};
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -50,6 +66,13 @@ export function ComprobanteDetalle({
   const impuestoTotal = Number(comprobante.impuesto_total) || 0;
   const importeTotal = Number(comprobante.importe_total) || 0;
 
+  const clase = comprobante.clase ?? "factura";
+  const mostrarCantidad = clase !== "nota_debito";
+  const mostrarPrecio = clase === "factura" || clase === "nota_credito";
+  const mostrarDescuento = clase === "factura";
+  const mostrarImpuesto = clase !== "remito";
+  const mostrarImporte = clase !== "remito";
+
   function anular() {
     const ok = window.confirm(
       `¿Anular el comprobante ${comprobante.nombre_tipo_comprobante} ${comprobante.numero_formateado} de ${comprobante.nombre_proveedor}? Esta acción es una baja lógica.`
@@ -78,8 +101,9 @@ export function ComprobanteDetalle({
             Datos del comprobante
           </h2>
           <span className={badgeEstadoComprobante(comprobante.estado)}>
-            {comprobante.estado ??
-              (comprobante.anulado ? "Anulado" : "Pendiente")}
+            {comprobante.anulado
+              ? "Anulado"
+              : labelEstadoComprobante(comprobante.estado, clase)}
           </span>
         </div>
 
@@ -100,6 +124,28 @@ export function ComprobanteDetalle({
             label="Vencimiento"
             valor={formatFecha(comprobante.fecha_vencimiento)}
           />
+          {comprobante.motivo ? (
+            <Dato
+              label="Motivo"
+              valor={MOTIVOS_LABEL[comprobante.motivo] ?? comprobante.motivo}
+            />
+          ) : null}
+          {comprobante.id_comprobante_asociado ? (
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-xs font-medium tracking-wide text-palacio-muted uppercase">
+                Comprobante asociado
+              </dt>
+              <dd className="text-zinc-900">
+                <Link
+                  href={`/compras/comprobantes/${comprobante.id_comprobante_asociado}`}
+                  className="palacio-action-btn"
+                >
+                  {comprobante.nombre_tipo_comprobante_asociado}{" "}
+                  {comprobante.numero_formateado_asociado}
+                </Link>
+              </dd>
+            </div>
+          ) : null}
           <Dato label="Subtotal" valor={monedaFmt.format(subtotal)} />
           <Dato
             label="Descuentos"
@@ -154,11 +200,21 @@ export function ComprobanteDetalle({
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
                   <Th className="w-12 text-right">#</Th>
                   <Th>Artículo / concepto</Th>
-                  <Th className="w-24 text-right">Cantidad</Th>
-                  <Th className="w-28 text-right">Precio unit.</Th>
-                  <Th className="w-28 text-right">Descuento</Th>
-                  <Th className="w-28 text-right">Impuesto</Th>
-                  <Th className="w-32 text-right">Importe</Th>
+                  {mostrarCantidad ? (
+                    <Th className="w-24 text-right">Cantidad</Th>
+                  ) : null}
+                  {mostrarPrecio ? (
+                    <Th className="w-28 text-right">Precio unit.</Th>
+                  ) : null}
+                  {mostrarDescuento ? (
+                    <Th className="w-28 text-right">Descuento</Th>
+                  ) : null}
+                  {mostrarImpuesto ? (
+                    <Th className="w-28 text-right">Impuesto</Th>
+                  ) : null}
+                  {mostrarImporte ? (
+                    <Th className="w-32 text-right">Importe</Th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -173,21 +229,31 @@ export function ComprobanteDetalle({
                     <td className="px-3 py-2 align-middle text-zinc-900">
                       {l.nombre_producto ?? l.concepto ?? "—"}
                     </td>
-                    <td className="px-3 py-2 text-right align-middle">
-                      {cantidadFmt.format(Number(l.cantidad) || 0)}
-                    </td>
-                    <td className="px-3 py-2 text-right align-middle">
-                      {monedaFmt.format(Number(l.precio_unitario) || 0)}
-                    </td>
-                    <td className="px-3 py-2 text-right align-middle">
-                      {monedaFmt.format(Number(l.descuento) || 0)}
-                    </td>
-                    <td className="px-3 py-2 text-right align-middle">
-                      {monedaFmt.format(Number(l.impuesto) || 0)}
-                    </td>
-                    <td className="px-3 py-2 text-right align-middle font-medium text-zinc-800">
-                      {monedaFmt.format(Number(l.importe_linea) || 0)}
-                    </td>
+                    {mostrarCantidad ? (
+                      <td className="px-3 py-2 text-right align-middle">
+                        {cantidadFmt.format(Number(l.cantidad) || 0)}
+                      </td>
+                    ) : null}
+                    {mostrarPrecio ? (
+                      <td className="px-3 py-2 text-right align-middle">
+                        {monedaFmt.format(Number(l.precio_unitario) || 0)}
+                      </td>
+                    ) : null}
+                    {mostrarDescuento ? (
+                      <td className="px-3 py-2 text-right align-middle">
+                        {monedaFmt.format(Number(l.descuento) || 0)}
+                      </td>
+                    ) : null}
+                    {mostrarImpuesto ? (
+                      <td className="px-3 py-2 text-right align-middle">
+                        {monedaFmt.format(Number(l.impuesto) || 0)}
+                      </td>
+                    ) : null}
+                    {mostrarImporte ? (
+                      <td className="px-3 py-2 text-right align-middle font-medium text-zinc-800">
+                        {monedaFmt.format(Number(l.importe_linea) || 0)}
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
