@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
- * Pantalla placeholder para módulos aún no implementados (Sprint 2).
+ * Pantalla placeholder para módulos aún no implementados.
  *
  * @param {{
  *   crumbs?: Array<{ label: string, href?: string }>,

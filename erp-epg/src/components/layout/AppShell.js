@@ -110,6 +110,44 @@ const NAV = [
     ],
   },
   {
+    section: "VENTAS",
+    items: [
+      {
+        href: "/ventas/clientes",
+        label: "Clientes",
+        icon: UsersIcon,
+        match: (p) => p.startsWith("/ventas/clientes"),
+      },
+      {
+        href: "/ventas/tipos-de-cliente",
+        label: "Tipos de cliente",
+        icon: UserTagIcon,
+        match: (p) => p.startsWith("/ventas/tipos-de-cliente"),
+      },
+      {
+        label: "Ventas",
+        icon: BagIcon,
+        match: (p) => p.startsWith("/ventas/ordenes"),
+        children: [
+          { href: "/ventas/ordenes/nuevo", label: "Registrar venta" },
+          { href: "/ventas/ordenes", label: "Historial" },
+        ],
+      },
+      {
+        label: "Comprobantes",
+        icon: ReceiptIcon,
+        match: (p) => p.startsWith("/ventas/comprobantes"),
+        children: [
+          {
+            href: "/ventas/comprobantes/nuevo",
+            label: "Emitir comprobante",
+          },
+          { href: "/ventas/comprobantes", label: "Historial" },
+        ],
+      },
+    ],
+  },
+  {
     section: "TESORERÍA",
     items: [
       {
@@ -424,6 +462,42 @@ function CartIcon({ className }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M3 4h2l1.5 10h11L20 7H7m0 0L6 4m11 14.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-8 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
+      />
+    </svg>
+  );
+}
+
+function UsersIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16 19v-1.5A3.5 3.5 0 0 0 12.5 14h-5A3.5 3.5 0 0 0 4 17.5V19m11.5-10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm5.5 10.5v-1a3 3 0 0 0-2.2-2.9M16.5 7.2a2.5 2.5 0 0 1 0 4.6"
+      />
+    </svg>
+  );
+}
+
+function UserTagIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 14.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 0c-3 0-5.5 1.7-5.5 3.8V20h11v-1.7c0-2.1-2.5-3.8-5.5-3.8Zm5.5-7.5 3.5 3.5-3.5 3.5"
+      />
+    </svg>
+  );
+}
+
+function BagIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5 8h14l-1 12H6L5 8Zm3 0V6a4 4 0 0 1 8 0v2"
       />
     </svg>
   );

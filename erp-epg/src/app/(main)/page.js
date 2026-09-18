@@ -20,6 +20,11 @@ const MODULOS = [
     descripcion: "Proveedores y comprobantes de proveedor.",
   },
   {
+    href: "/ventas/clientes",
+    titulo: "Ventas",
+    descripcion: "Clientes, ventas y comprobantes de venta.",
+  },
+  {
     href: "/tesoreria/cuentas",
     titulo: "Tesorería",
     descripcion: "Cuentas, pagos, medios de pago y tipos de comprobante.",
