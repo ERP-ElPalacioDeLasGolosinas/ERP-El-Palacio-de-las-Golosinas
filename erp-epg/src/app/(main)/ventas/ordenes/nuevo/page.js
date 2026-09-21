@@ -9,11 +9,11 @@ export default function RegistrarVentaPage() {
     <PlaceholderModule
       crumbs={[
         { label: "Ventas" },
-        { label: "Ventas", href: "/ventas/ordenes" },
+        { label: "Ventas mayoristas", href: "/ventas/ordenes" },
         { label: "Registrar venta" },
       ]}
       title="Registrar venta"
-      description="Registro de venta presencial, con medios de pago"
+      description="Registro de venta mayorista"
       hu="V-10"
     />
   );

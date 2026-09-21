@@ -22,7 +22,7 @@ const MODULOS = [
   {
     href: "/ventas/clientes",
     titulo: "Ventas",
-    descripcion: "Clientes, ventas y comprobantes de venta.",
+    descripcion: "Clientes, ventas mayoristas y cajas.",
   },
   {
     href: "/tesoreria/cuentas",

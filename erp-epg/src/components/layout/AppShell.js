@@ -125,7 +125,7 @@ const NAV = [
         match: (p) => p.startsWith("/ventas/tipos-de-cliente"),
       },
       {
-        label: "Ventas",
+        label: "Ventas mayoristas",
         icon: BagIcon,
         match: (p) => p.startsWith("/ventas/ordenes"),
         children: [
@@ -134,16 +134,10 @@ const NAV = [
         ],
       },
       {
-        label: "Comprobantes",
-        icon: ReceiptIcon,
-        match: (p) => p.startsWith("/ventas/comprobantes"),
-        children: [
-          {
-            href: "/ventas/comprobantes/nuevo",
-            label: "Emitir comprobante",
-          },
-          { href: "/ventas/comprobantes", label: "Historial" },
-        ],
+        href: "/ventas/cajas",
+        label: "Cajas",
+        icon: CashIcon,
+        match: (p) => p.startsWith("/ventas/cajas"),
       },
     ],
   },

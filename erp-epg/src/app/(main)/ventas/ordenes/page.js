@@ -9,11 +9,11 @@ export default function HistorialVentasPage() {
     <PlaceholderModule
       crumbs={[
         { label: "Ventas" },
-        { label: "Ventas", href: "/ventas/ordenes" },
+        { label: "Ventas mayoristas", href: "/ventas/ordenes" },
         { label: "Historial" },
       ]}
       title="Historial de ventas"
-      description="Consulta de órdenes de venta registradas"
+      description="Consulta de ventas mayoristas registradas"
       hu="V-19"
     />
   );
