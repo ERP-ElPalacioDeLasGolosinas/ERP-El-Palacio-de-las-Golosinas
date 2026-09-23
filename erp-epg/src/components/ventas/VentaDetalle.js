@@ -158,15 +158,36 @@ export function VentaDetalle({ venta, detalle, cobro }) {
       <div className="palacio-card mt-6 p-5 md:p-6">
         <h2 className="mb-3 text-sm font-semibold text-zinc-900">Cobro</h2>
         {cobro ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-            <p className="text-zinc-900">
-              Cobrada el {formatFecha(cobro.fecha_cobro)} por{" "}
-              {monedaFmt.format(Number(cobro.importe_total) || 0)} · {cobro.creado_por_nombre}
-            </p>
-            <Link href={`/tesoreria/cobranzas/${cobro.id_cobro}`} className="palacio-action-btn palacio-action-primary">
-              Ver cobro
-            </Link>
-          </div>
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+              <p className="text-zinc-900">
+                Cobrada el {formatFecha(cobro.fecha_cobro)} por{" "}
+                {monedaFmt.format(Number(cobro.importe_total) || 0)} · {cobro.creado_por_nombre}
+              </p>
+              <Link href={`/tesoreria/cobranzas/${cobro.id_cobro}`} className="palacio-action-btn palacio-action-primary">
+                Ver cobro
+              </Link>
+            </div>
+            {cobro.medios?.length ? (
+              <ul className="mt-3 divide-y divide-palacio-border rounded-lg border border-palacio-border text-sm">
+                {cobro.medios.map((m) => (
+                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                    <span className="text-zinc-900">
+                      {m.nombre_medio_pago}
+                      <span className="text-palacio-muted">
+                        {" "}
+                        · {m.nombre_cuenta}
+                        {m.referencia ? ` · Ref. ${m.referencia}` : ""}
+                      </span>
+                    </span>
+                    <span className="font-medium text-zinc-900">
+                      {monedaFmt.format(Number(m.importe) || 0)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </>
         ) : (
           <p className="text-sm text-palacio-muted">
             {venta.estado === "Despachado"
