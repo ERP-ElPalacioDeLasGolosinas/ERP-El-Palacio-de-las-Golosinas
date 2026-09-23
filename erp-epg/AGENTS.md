@@ -193,6 +193,33 @@ RLS está **habilitado** en las tablas de `public`. El estado de políticas es d
 - **Proveedores (C-01)** — implementado (ver sección Proveedor arriba).
 - **Medios de pago (V-03)** — implementado en `/tesoreria/medios-de-pago` (ver sección Medio de pago arriba).
 
+### Ventas mayoristas y cobranzas (Sprint 3 — migración `20260923170000_s3_ventas_mayoristas`)
+
+**Modelo:** una sola tabla para venta + comprobante (mismo criterio que compras), sin tabla `venta` aparte.
+
+| Tabla | Notas clave |
+|---|---|
+| `comprobante_venta` | FK → `cliente`, `tipo_comprobante`; `punto_venta` (default 1) + `numero` autonumerado por tipo (`UNIQUE(tipo, pv, numero)`); `fecha_comprobante`, `canal` (`canal_venta`, default `Presencial`), `subtotal`, `descuento_total`, `importe_total` (>0, = subtotal − descuento), `saldo_pendiente`, `estado` (enum `estado_venta`: `En preparación` → `Despachado` → `Pagado`), `fecha_despacho`, `observaciones`, auditoría |
+| `comprobante_venta_detalle` | `nro_linea`, FK → `producto`, `deposito`; `cantidad`, `precio_unitario` (se toma de `precio_mayorista_producto`), `descuento` ($ por línea), `importe_linea` (generada), `id_movimiento` → `movimiento_stock` (la salida generada) |
+| `cobro` | 1:1 con la venta (`id_comprobante` UNIQUE), `id_cliente`, `fecha_cobro`, `importe_total`, `observaciones`, auditoría. Inmutable (RLS solo SELECT/INSERT) |
+| `cobro_medio` | FK → `cobro`, `medio_pago`, `cuenta_tesoreria`; `importe`, `referencia` |
+| `movimiento_tesoreria.id_cobro` | FK nueva: los ingresos generados por un cobro |
+
+**Funciones (INVOKER, EXECUTE solo `authenticated`/`service_role`):**
+- `fn_venta_registrar(p_id_cliente, p_id_tipo_comprobante, p_fecha_comprobante, p_observaciones, p_detalle jsonb [{id_producto, id_deposito, cantidad, descuento?}], p_creado_por)` → `comprobante_venta`. Cliente activo, **Mayorista** y no consumidor final; tipo factura de venta activo; valida stock agregado por producto×depósito; por cada línea llama `fn_movimiento_stock_registrar` con el tipo **"Salida por venta"** (remito `Venta 00001-0000000N`). Nace `En preparación`.
+- `fn_venta_despachar(p_id_comprobante)` → solo desde `En preparación`.
+- `fn_venta_listar(p_id_cliente, p_desde, p_hasta, p_estado)` (incluye `numero_formateado`, `cantidad_articulos`, `id_cobro`, `creado_por_nombre`), `fn_venta_obtener(p_id)` → jsonb `{venta, detalle[], cobro|null}`.
+- `fn_cobro_registrar(p_id_comprobante, p_fecha_cobro, p_observaciones, p_medios jsonb [{id_medio_pago, id_cuenta_tesoreria, importe, referencia?}], p_creado_por)`: solo ventas `Despachado`; **cobro total** (suma de medios = saldo); cuenta debe estar vinculada al medio (`medio_pago_cuenta`); rechaza `Cheque propio`. Genera un `movimiento_tesoreria` `Ingreso` por medio (suma `saldo_actual`) y pasa la venta a `Pagado` con saldo 0.
+- `fn_cobro_listar(p_id_cliente, p_desde, p_hasta)`, `fn_cobro_obtener(p_id_cobro)` → jsonb `{cobro, medios[], movimientos[]}`.
+- `fn_movimiento_stock_listar` ahora resuelve `documento_ligado` = `Venta <tipo> <nro>` para salidas por venta.
+- Errores: `VTA01` cliente inexistente/inactivo, `VTA02` no mayorista / consumidor final, `VTA03` tipo inválido, `VTA04` fecha nula/futura, `VTA05` líneas inválidas / descuento > importe, `VTA06` producto, `VTA07` depósito, `VTA08` stock insuficiente, `VTA09` venta inexistente, `VTA10` estado no permite despachar, `VTA11` total ≤ 0, `VTA12` falta tipo "Salida por venta". `COB01` venta inexistente, `COB02` ya pagada / no despachada, `COB03` medios vacíos o suma ≠ saldo, `COB04` medio/cuenta inválidos o no vinculados, `COB05` falta referencia, `COB06` cheque propio, `COB07` fecha futura.
+
+**Frontend:**
+- Ventas mayoristas: `/ventas/ordenes/nuevo` (`components/ventas/VentaForm.js`), `/ventas/ordenes` (`VentasTable`, filtros cliente/estado/fechas), `/ventas/ordenes/[id]` (`VentaDetalle`, botón "Marcar como despachada" y "Registrar cobro"). Lib: `lib/ventas/{actions,errores,estado}.js`.
+- Cobranzas (Tesorería): `/tesoreria/cobranzas/nuevo?venta=<id>` (`components/cobros/CobroForm.js`; sin `?venta` lista las ventas despachadas), `/tesoreria/cobranzas` (`CobrosTable`), `/tesoreria/cobranzas/[id]` (`CobroDetalle`). Lib: `lib/cobros/{actions,errores}.js`.
+- `/ventas/cajas` queda vacío a propósito (ventas minoristas, sprint futuro).
+- **Efectivo (decisión pendiente):** cobros y pagos tratan `Efectivo` igual que cualquier medio (exigen cuenta vinculada en `medio_pago_cuenta`). Hoy `Efectivo` no tiene cuentas y no existe ninguna cuenta tipo `Caja`, así que no se puede cobrar ni pagar en efectivo. Se decidió dejarlo así y resolverlo cuando se implemente el módulo Cajas.
+
 ---
 
 ## Triggers relevantes
