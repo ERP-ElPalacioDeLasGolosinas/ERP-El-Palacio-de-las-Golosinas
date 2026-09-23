@@ -165,6 +165,15 @@ const NAV = [
         ],
       },
       {
+        label: "Cobranzas",
+        icon: CashIcon,
+        match: (p) => p.startsWith("/tesoreria/cobranzas"),
+        children: [
+          { href: "/tesoreria/cobranzas/nuevo", label: "Registrar cobro" },
+          { href: "/tesoreria/cobranzas", label: "Historial" },
+        ],
+      },
+      {
         href: "/tesoreria/medios-de-pago",
         label: "Medios de pago",
         icon: CardIcon,
