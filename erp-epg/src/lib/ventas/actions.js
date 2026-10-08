@@ -48,6 +48,47 @@ export async function listarTiposComprobanteVenta() {
 }
 
 /**
+ * Lista Mayorista vigente hoy (`fn_lista_precio_vigente` + `fn_lista_precio_obtener`)
+ * con sus precios por artículo activo. `data` es `null` si no hay lista vigente.
+ *
+ * @returns {Promise<{ data: { id_lista_precio: string, nombre_lista_precio: string, precios: Record<string, number> } | null, error: string | null }>}
+ */
+export async function obtenerListaVigenteVenta() {
+  const supabase = await createClient();
+  const { data: vigente, error } = await supabase.rpc("fn_lista_precio_vigente", {
+    p_tipo_lista: "Mayorista",
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudo cargar la lista de precios vigente." };
+  }
+
+  const cabecera = Array.isArray(vigente) ? vigente[0] : vigente;
+  if (!cabecera?.id_lista_precio) return { data: null, error: null };
+
+  const { data: lista, error: errLista } = await supabase.rpc("fn_lista_precio_obtener", {
+    p_id_lista_precio: cabecera.id_lista_precio,
+  });
+
+  if (errLista || !lista) {
+    return { data: null, error: "No se pudieron cargar los precios de la lista vigente." };
+  }
+
+  return {
+    data: {
+      id_lista_precio: lista.id_lista_precio,
+      nombre_lista_precio: lista.nombre_lista_precio,
+      precios: Object.fromEntries(
+        (lista.precios ?? [])
+          .filter((p) => p.activo)
+          .map((p) => [p.id_producto, Number(p.precio) || 0])
+      ),
+    },
+    error: null,
+  };
+}
+
+/**
  * Lista ventas mayoristas vía `fn_venta_listar` (V-19).
  *
  * @param {{ idCliente?: string | null, desde?: string | null, hasta?: string | null, estado?: string | null }} [filtros]
@@ -101,7 +142,8 @@ export async function obtenerVenta(idComprobante) {
  *   id_tipo_comprobante: string,
  *   fecha_comprobante: string,
  *   observaciones?: string | null,
- *   detalle: Array<{ id_producto: string, id_deposito: string, cantidad: number | string, descuento?: number | string | null }>,
+ *   descuento_porcentaje?: number | string | null,
+ *   detalle: Array<{ id_producto: string, id_deposito: string, cantidad: number | string }>,
  * }} entrada
  * @returns {Promise<{ ok: boolean, id?: string | null, error: string | null, code?: string | null }>}
  */
@@ -125,7 +167,6 @@ export async function registrarVenta(entrada) {
       id_producto: l.id_producto || null,
       id_deposito: l.id_deposito || null,
       cantidad: numero(l.cantidad),
-      descuento: numero(l.descuento) ?? 0,
     })
   );
 
@@ -135,6 +176,7 @@ export async function registrarVenta(entrada) {
     p_fecha_comprobante: entrada.fecha_comprobante || null,
     p_observaciones: entrada.observaciones?.trim() || null,
     p_detalle: detalle,
+    p_descuento_porcentaje: numero(entrada.descuento_porcentaje) ?? 0,
     p_creado_por: user.id,
   });
 

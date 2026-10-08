@@ -226,8 +226,6 @@ export function ProductosTable({
                   <Th>Categoría</Th>
                   <Th>Rubro</Th>
                   <Th className="text-right">Costo</Th>
-                  <Th className="text-right">P. mayorista</Th>
-                  <Th className="text-right">P. minorista</Th>
                   <Th>Creado</Th>
                   <Th>Editado</Th>
                   <Th>Creado por</Th>
@@ -260,12 +258,6 @@ export function ProductosTable({
                     </td>
                     <td className="px-5 py-4 text-right align-middle tabular-nums text-zinc-700">
                       {formatMoneda(p.costo_producto)}
-                    </td>
-                    <td className="px-5 py-4 text-right align-middle tabular-nums text-zinc-700">
-                      {formatMoneda(p.precio_mayorista_producto)}
-                    </td>
-                    <td className="px-5 py-4 text-right align-middle tabular-nums text-zinc-700">
-                      {formatMoneda(p.precio_minorista_producto)}
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">
                       {formatFecha(p.creado)}

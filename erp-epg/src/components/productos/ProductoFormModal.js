@@ -52,14 +52,6 @@ export function ProductoFormModal({
     id_categoria: producto?.id_categoria ?? "",
     costo_producto:
       producto?.costo_producto != null ? String(producto.costo_producto) : "",
-    precio_mayorista_producto:
-      producto?.precio_mayorista_producto != null
-        ? String(producto.precio_mayorista_producto)
-        : "",
-    precio_minorista_producto:
-      producto?.precio_minorista_producto != null
-        ? String(producto.precio_minorista_producto)
-        : "",
   }));
   const [errores, setErrores] = useState({});
   const [errorServer, setErrorServer] = useState(null);
@@ -111,15 +103,9 @@ export function ProductoFormModal({
     const nm = Number(form.numero_medida);
     if (form.numero_medida.trim() === "" || !Number.isFinite(nm) || nm <= 0)
       next.numero_medida = "Ingresá un número mayor a 0.";
-    for (const campo of [
-      "costo_producto",
-      "precio_mayorista_producto",
-      "precio_minorista_producto",
-    ]) {
-      const v = form[campo].trim();
-      if (v !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0)) {
-        next[campo] = "Debe ser un número ≥ 0.";
-      }
+    const costo = form.costo_producto.trim();
+    if (costo !== "" && (!Number.isFinite(Number(costo)) || Number(costo) < 0)) {
+      next.costo_producto = "Debe ser un número ≥ 0.";
     }
     setErrores(next);
     return Object.keys(next).length === 0;
@@ -291,40 +277,6 @@ export function ProductoFormModal({
                 min="0"
                 value={form.costo_producto}
                 onChange={(e) => set("costo_producto", e.target.value)}
-                className="palacio-input"
-                placeholder="0"
-              />
-            </Campo>
-
-            <Campo
-              label="Precio mayorista"
-              error={errores.precio_mayorista_producto}
-            >
-              <input
-                type="number"
-                step="any"
-                min="0"
-                value={form.precio_mayorista_producto}
-                onChange={(e) =>
-                  set("precio_mayorista_producto", e.target.value)
-                }
-                className="palacio-input"
-                placeholder="0"
-              />
-            </Campo>
-
-            <Campo
-              label="Precio minorista"
-              error={errores.precio_minorista_producto}
-            >
-              <input
-                type="number"
-                step="any"
-                min="0"
-                value={form.precio_minorista_producto}
-                onChange={(e) =>
-                  set("precio_minorista_producto", e.target.value)
-                }
                 className="palacio-input"
                 placeholder="0"
               />

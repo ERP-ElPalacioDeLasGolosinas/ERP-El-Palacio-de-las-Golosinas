@@ -16,6 +16,8 @@
  * | VTA10  | —        | La venta no está en preparación (no se puede despachar)       |
  * | VTA11  | detalle  | El importe total es cero                                      |
  * | VTA12  | —        | Falta el tipo de movimiento "Salida por venta"                |
+ * | VTA13  | detalle  | No hay lista Mayorista vigente                                |
+ * | VTA14  | detalle  | Artículo sin precio en la lista vigente                       |
  * | MOV05  | detalle  | Stock insuficiente al descontar (carrera con otra operación)  |
  */
 
@@ -63,6 +65,12 @@ const MAPA = {
     field: null,
     message: "Falta el tipo de movimiento “Salida por venta”. Pedile a un administrador que lo cree o lo habilite.",
   },
+  VTA13: {
+    field: "detalle",
+    message: "No hay una lista de precios Mayorista vigente. Cargala en Listas de precios.",
+    reload: true,
+  },
+  VTA14: { field: "detalle", message: "Un artículo no tiene precio en la lista vigente.", reload: true },
   MOV05: {
     field: "detalle",
     message: "El stock cambió mientras cargabas la venta. Revisá las cantidades.",
@@ -70,7 +78,7 @@ const MAPA = {
   },
 };
 
-const CON_MENSAJE_DE_BASE = new Set(["VTA05", "VTA08", "VTA10", "MOV05"]);
+const CON_MENSAJE_DE_BASE = new Set(["VTA05", "VTA08", "VTA10", "VTA14", "MOV05"]);
 
 /**
  * @param {{ code?: string | null, error?: string | null } | null | undefined} result

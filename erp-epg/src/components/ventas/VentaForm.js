@@ -21,23 +21,24 @@ function nuevaLinea(base = {}) {
     id_deposito: base.id_deposito ?? "",
     id_producto: "",
     cantidad: "",
-    descuento: "",
   };
 }
 
 /**
  * V-10 / V-11 / S-07 · Registro de una venta mayorista. Cada línea elige
- * depósito → artículo con stock en ese depósito → cantidad. El precio es el
- * mayorista del artículo y lo vuelve a tomar la base al confirmar.
+ * depósito → artículo con stock en ese depósito (y precio en la lista) → cantidad.
+ * El precio sale de la lista Mayorista vigente y lo vuelve a tomar la base al
+ * confirmar; el descuento es un % sobre el total.
  *
  * @param {{
  *   clientes: Array<{ id_cliente: string, nombre_cliente: string, documento_cliente: string | null }>,
  *   tipos: Array<{ id_tipo_comprobante: string, nombre_tipo_comprobante: string, letra: string | null }>,
  *   depositos: Array<{ id_deposito: string, nombre_deposito: string }>,
- *   precios: Record<string, number>,
+ *   lista: { id_lista_precio: string, nombre_lista_precio: string, precios: Record<string, number> } | null,
  * }} props
  */
-export function VentaForm({ clientes, tipos, depositos, precios }) {
+export function VentaForm({ clientes, tipos, depositos, lista }) {
+  const precios = useMemo(() => lista?.precios ?? {}, [lista]);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -45,6 +46,7 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
   const [idTipo, setIdTipo] = useState(tipos[0]?.id_tipo_comprobante ?? "");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [observaciones, setObservaciones] = useState("");
+  const [descuentoPct, setDescuentoPct] = useState("");
   const [lineas, setLineas] = useState(() => [
     nuevaLinea({ id_deposito: depositos.length === 1 ? depositos[0].id_deposito : "" }),
   ]);
@@ -103,9 +105,10 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
     limpiarErrores();
   }
 
+  /** Artículos con stock en el depósito que además tienen precio en la lista. */
   function productosDe(idDeposito) {
-    const lista = productosPorDeposito[idDeposito];
-    return Array.isArray(lista) ? lista : [];
+    const stock = productosPorDeposito[idDeposito];
+    return Array.isArray(stock) ? stock.filter((p) => p.id_producto in precios) : [];
   }
 
   function disponibleDe(linea) {
@@ -127,34 +130,30 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
   const calculadas = lineas.map((l) => {
     const precio = l.id_producto ? Number(precios[l.id_producto]) || 0 : 0;
     const cantidad = Number(l.cantidad) || 0;
-    const descuento = Number(l.descuento) || 0;
-    const bruto = redondear(precio * cantidad);
-    return { precio, bruto, descuento, importe: redondear(bruto - descuento) };
+    return { precio, importe: redondear(precio * cantidad) };
   });
 
-  const subtotal = redondear(calculadas.reduce((a, c) => a + c.bruto, 0));
-  const descuentoTotal = redondear(calculadas.reduce((a, c) => a + c.descuento, 0));
+  const subtotal = redondear(calculadas.reduce((a, c) => a + c.importe, 0));
+  const pct = Number(descuentoPct) || 0;
+  const descuentoTotal = redondear((subtotal * pct) / 100);
   const total = redondear(subtotal - descuentoTotal);
 
   function validar() {
     const next = {};
+    if (!lista) next.detalle = "No hay una lista de precios Mayorista vigente.";
     if (!idCliente) next.cliente = "Elegí un cliente mayorista.";
     if (!idTipo) next.tipo = "Elegí el tipo de comprobante.";
     if (!fecha) next.fecha = "La fecha es obligatoria.";
     else if (fecha > new Date().toISOString().slice(0, 10))
       next.fecha = "La fecha no puede ser futura.";
 
-    for (const [idx, l] of lineas.entries()) {
+    if (descuentoPct !== "" && !(pct >= 0 && pct <= 100)) {
+      next.descuento = "El descuento debe estar entre 0 y 100.";
+    }
+
+    for (const l of lineas) {
       if (!l.id_deposito || !l.id_producto || !(Number(l.cantidad) > 0)) {
         next.detalle = "Cada línea necesita depósito, artículo y cantidad mayor a cero.";
-        break;
-      }
-      if (Number(l.descuento) < 0) {
-        next.detalle = "El descuento no puede ser negativo.";
-        break;
-      }
-      if (calculadas[idx].descuento > calculadas[idx].bruto) {
-        next.detalle = "El descuento de una línea no puede superar su importe.";
         break;
       }
       const disponible = disponibleDe(l);
@@ -165,7 +164,7 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
         break;
       }
     }
-    if (!next.detalle && total <= 0) next.detalle = "El total de la venta tiene que ser mayor a cero.";
+    if (!next.detalle && !next.descuento && total <= 0) next.detalle = "El total de la venta tiene que ser mayor a cero.";
 
     setErrores(next);
     return Object.keys(next).length === 0;
@@ -181,11 +180,11 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
         id_tipo_comprobante: idTipo,
         fecha_comprobante: fecha,
         observaciones,
+        descuento_porcentaje: pct,
         detalle: lineas.map((l) => ({
           id_producto: l.id_producto,
           id_deposito: l.id_deposito,
           cantidad: Number(l.cantidad),
-          descuento: Number(l.descuento) || 0,
         })),
       });
 
@@ -283,7 +282,8 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Artículos</h2>
           <span className="text-xs text-palacio-muted">
-            Precio mayorista · el stock se descuenta al confirmar
+            {lista ? `Lista: ${lista.nombre_lista_precio}` : "Sin lista vigente"} · el stock se
+            descuenta al confirmar
           </span>
         </div>
 
@@ -297,7 +297,7 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
             return (
               <div
                 key={l.key}
-                className="grid gap-3 rounded-lg border border-palacio-border p-3 md:grid-cols-[1fr_1.6fr_7rem_8rem_auto]"
+                className="grid gap-3 rounded-lg border border-palacio-border p-3 md:grid-cols-[1fr_1.6fr_7rem_auto]"
               >
                 <select
                   value={l.id_deposito}
@@ -330,7 +330,7 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
                   </select>
                   {l.id_deposito && !cargando && productos.length === 0 ? (
                     <p className="mt-1 text-xs text-amber-700">
-                      Ese depósito no tiene artículos con stock.
+                      Ese depósito no tiene artículos con stock y precio en la lista.
                     </p>
                   ) : null}
                   {l.id_producto ? (
@@ -349,16 +349,6 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
                   onChange={(e) => setLinea(idx, { cantidad: e.target.value })}
                   className="palacio-input text-right"
                   placeholder="Cantidad"
-                />
-
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={l.descuento}
-                  onChange={(e) => setLinea(idx, { descuento: e.target.value })}
-                  className="palacio-input text-right"
-                  placeholder="Descuento $"
                 />
 
                 <button
@@ -388,13 +378,30 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
           >
             Agregar artículo
           </button>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-zinc-800">Descuento %</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={descuentoPct}
+              onChange={(e) => {
+                setDescuentoPct(e.target.value);
+                limpiarErrores();
+              }}
+              className="palacio-input w-28 text-right"
+              placeholder="0"
+            />
+            {errores.descuento ? <p className="text-xs text-red-700">{errores.descuento}</p> : null}
+          </div>
           <dl className="space-y-0.5 text-right text-sm">
             <div>
               <dt className="inline text-palacio-muted">Subtotal: </dt>
               <dd className="inline text-zinc-900">{monedaFmt.format(subtotal)}</dd>
             </div>
             <div>
-              <dt className="inline text-palacio-muted">Descuentos: </dt>
+              <dt className="inline text-palacio-muted">Descuento{pct ? ` (${pct}%)` : ""}: </dt>
               <dd className="inline text-zinc-900">{monedaFmt.format(descuentoTotal)}</dd>
             </div>
             <div>
@@ -415,7 +422,7 @@ export function VentaForm({ clientes, tipos, depositos, precios }) {
         <button
           type="button"
           onClick={enviar}
-          disabled={pending}
+          disabled={pending || !lista}
           className="palacio-btn-primary px-4 py-2.5 text-sm"
         >
           {pending ? "Registrando…" : "Registrar venta"}

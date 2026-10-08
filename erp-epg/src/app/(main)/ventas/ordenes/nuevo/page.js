@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { listarClientes } from "@/lib/clientes/actions";
 import { listarDepositos } from "@/lib/depositos/actions";
-import { listarProductos } from "@/lib/productos/actions";
-import { listarTiposComprobanteVenta } from "@/lib/ventas/actions";
+import { listarTiposComprobanteVenta, obtenerListaVigenteVenta } from "@/lib/ventas/actions";
 import { VentaForm } from "@/components/ventas/VentaForm";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -10,15 +10,15 @@ export const metadata = {
 };
 
 export default async function RegistrarVentaPage() {
-  const [clientesRes, tiposRes, depositosRes, productosRes] = await Promise.all([
+  const [clientesRes, tiposRes, depositosRes, listaRes] = await Promise.all([
     listarClientes(false),
     listarTiposComprobanteVenta(),
     listarDepositos(false),
-    listarProductos(false),
+    obtenerListaVigenteVenta(),
   ]);
 
   const error =
-    clientesRes.error || tiposRes.error || depositosRes.error || productosRes.error;
+    clientesRes.error || tiposRes.error || depositosRes.error || listaRes.error;
 
   const clientes = (clientesRes.data ?? [])
     .filter((c) => c.activo && !c.es_consumidor_final && c.lista_precio === "Mayorista")
@@ -38,9 +38,7 @@ export default async function RegistrarVentaPage() {
     .filter((d) => d.activo)
     .map((d) => ({ id_deposito: d.id_deposito, nombre_deposito: d.nombre_deposito }));
 
-  const precios = Object.fromEntries(
-    (productosRes.data ?? []).map((p) => [p.id_producto, Number(p.precio_mayorista_producto) || 0])
-  );
+  const lista = listaRes.data;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8">
@@ -60,7 +58,20 @@ export default async function RegistrarVentaPage() {
           <p className="mt-1 text-amber-900/80">{error}</p>
         </div>
       ) : (
-        <VentaForm clientes={clientes} tipos={tipos} depositos={depositos} precios={precios} />
+        <>
+          {lista ? null : (
+            <div className="palacio-card mb-6 border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
+              <p className="font-medium">No hay una lista de precios Mayorista vigente</p>
+              <p className="mt-1 text-amber-900/80">
+                No se pueden registrar ventas hasta que haya una.{" "}
+                <Link href="/ventas/listas-de-precios" className="underline">
+                  Ir a Listas de precios
+                </Link>
+              </p>
+            </div>
+          )}
+          <VentaForm clientes={clientes} tipos={tipos} depositos={depositos} lista={lista} />
+        </>
       )}
     </div>
   );

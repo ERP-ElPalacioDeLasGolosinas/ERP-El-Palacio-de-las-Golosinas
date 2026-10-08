@@ -125,6 +125,12 @@ const NAV = [
         match: (p) => p.startsWith("/ventas/tipos-de-cliente"),
       },
       {
+        href: "/ventas/listas-de-precios",
+        label: "Listas de precios",
+        icon: TagIcon,
+        match: (p) => p.startsWith("/ventas/listas-de-precios"),
+      },
+      {
         label: "Ventas mayoristas",
         icon: BagIcon,
         match: (p) => p.startsWith("/ventas/ordenes"),

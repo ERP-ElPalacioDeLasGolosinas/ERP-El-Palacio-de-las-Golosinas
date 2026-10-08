@@ -102,6 +102,8 @@ export function VentaDetalle({ venta, detalle, cobro }) {
           <Dato label="Despachada" valor={venta.fecha_despacho ? formatFecha(venta.fecha_despacho) : "—"} />
           <Dato label="Registrada por" valor={venta.creado_por_nombre} />
           <Dato label="Registrada" valor={formatFecha(venta.creado)} />
+          <Dato label="Lista de precios" valor={venta.nombre_lista_precio} />
+          <Dato label="Descuento" valor={`${Number(venta.descuento_porcentaje) || 0}%`} />
           <Dato label="Total" valor={monedaFmt.format(Number(venta.importe_total) || 0)} />
           {venta.observaciones ? <Dato label="Observaciones" valor={venta.observaciones} full /> : null}
         </dl>
@@ -123,7 +125,6 @@ export function VentaDetalle({ venta, detalle, cobro }) {
                 <Th>Depósito</Th>
                 <Th className="text-right">Cantidad</Th>
                 <Th className="text-right">Precio</Th>
-                <Th className="text-right">Descuento</Th>
                 <Th className="text-right">Importe</Th>
               </tr>
             </thead>
@@ -137,9 +138,6 @@ export function VentaDetalle({ venta, detalle, cobro }) {
                   <td className="px-5 py-3 text-right align-middle text-palacio-muted">
                     {monedaFmt.format(Number(d.precio_unitario) || 0)}
                   </td>
-                  <td className="px-5 py-3 text-right align-middle text-palacio-muted">
-                    {monedaFmt.format(Number(d.descuento) || 0)}
-                  </td>
                   <td className="px-5 py-3 text-right align-middle font-medium text-zinc-900">
                     {monedaFmt.format(Number(d.importe_linea) || 0)}
                   </td>
@@ -148,7 +146,7 @@ export function VentaDetalle({ venta, detalle, cobro }) {
             </tbody>
             <tfoot>
               <FilaTotal label="Subtotal" valor={venta.subtotal} />
-              <FilaTotal label="Descuentos" valor={venta.descuento_total} />
+              <FilaTotal label={`Descuento (${Number(venta.descuento_porcentaje) || 0}%)`} valor={venta.descuento_total} />
               <FilaTotal label="Total" valor={venta.importe_total} fuerte />
             </tfoot>
           </table>
@@ -209,7 +207,7 @@ export function VentaDetalle({ venta, detalle, cobro }) {
 function FilaTotal({ label, valor, fuerte = false }) {
   return (
     <tr className="border-t border-palacio-border bg-zinc-50/60">
-      <td className="px-5 py-2 text-right font-medium text-palacio-muted" colSpan={6}>
+      <td className="px-5 py-2 text-right font-medium text-palacio-muted" colSpan={5}>
         {label}
       </td>
       <td className={`px-5 py-2 text-right text-zinc-900 ${fuerte ? "font-semibold" : ""}`}>

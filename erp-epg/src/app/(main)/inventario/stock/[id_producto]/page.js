@@ -141,16 +141,6 @@ export default async function StockDetallePage({ params }) {
               ? monedaFmt.format(Number(producto.costo_producto))
               : "—"}
           </Dato>
-          <Dato label="Precio mayorista">
-            {producto.precio_mayorista_producto != null
-              ? monedaFmt.format(Number(producto.precio_mayorista_producto))
-              : "—"}
-          </Dato>
-          <Dato label="Precio minorista">
-            {producto.precio_minorista_producto != null
-              ? monedaFmt.format(Number(producto.precio_minorista_producto))
-              : "—"}
-          </Dato>
         </dl>
 
         <div className="mt-6 border-t border-palacio-border pt-5">
