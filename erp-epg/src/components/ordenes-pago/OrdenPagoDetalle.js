@@ -53,6 +53,7 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios }) {
     (acc, m) => acc + (Number(m.importe) || 0),
     0
   );
+  const favorOrden = Number(orden.importe_saldo_favor) || 0;
 
   function accion(fn, confirmMsg) {
     if (confirmMsg && !window.confirm(confirmMsg)) return;
@@ -80,6 +81,12 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios }) {
         <dl className="grid gap-4 text-sm md:grid-cols-2">
           <Dato label="Proveedor" valor={orden.nombre_proveedor} />
           <Dato label="Importe total" valor={monedaFmt.format(Number(orden.importe_total) || 0)} />
+          {favorOrden > 0 ? (
+            <Dato
+              label="Saldo a favor usado"
+              valor={monedaFmt.format(favorOrden)}
+            />
+          ) : null}
           <Dato label="Fecha prevista de pago" valor={formatFecha(orden.fecha_prevista)} />
           <Dato label="Referencia" valor={orden.referencia} />
           <Dato label="Creada" valor={formatFecha(orden.creado)} />
@@ -164,7 +171,9 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios }) {
         </div>
         {medios.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-palacio-muted">
-            La orden todavía no tiene medios de pago cargados.
+            {favorOrden > 0
+              ? `Esta orden no usa un medio de pago. ${monedaFmt.format(favorOrden)} se cubren con saldo a favor.`
+              : "La orden todavía no tiene medios de pago cargados."}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -202,6 +211,16 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios }) {
                 ))}
               </tbody>
               <tfoot>
+                {favorOrden > 0 ? (
+                  <tr className="border-t border-palacio-border">
+                    <td className="px-5 py-3 text-right font-medium text-palacio-muted" colSpan={3}>
+                      Saldo a favor
+                    </td>
+                    <td className="px-5 py-3 text-right font-semibold text-zinc-900">
+                      {monedaFmt.format(favorOrden)}
+                    </td>
+                  </tr>
+                ) : null}
                 <tr className="border-t border-palacio-border bg-zinc-50/60">
                   <td className="px-5 py-3 text-right font-medium text-palacio-muted" colSpan={3}>
                     Total medios

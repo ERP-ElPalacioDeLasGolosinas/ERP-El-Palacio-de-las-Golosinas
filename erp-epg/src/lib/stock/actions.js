@@ -305,5 +305,91 @@ export async function eliminarLote(idLote) {
 
   revalidatePath("/inventario/stock");
   revalidatePath("/inventario/stock/lotes");
+  revalidatePath("/inventario/stock/alertas");
+  revalidatePath("/compras/alertas-stock");
   return { ok: true, code: null, error: null };
+}
+
+/**
+ * Umbrales de stock mínimo y máximo de un artículo, un renglón por depósito
+ * activo. RPC `fn_stock_umbral_listar`.
+ *
+ * @param {string} idProducto
+ */
+export async function listarUmbrales(idProducto) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_stock_umbral_listar", {
+    p_id_producto: idProducto,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar los umbrales de stock." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Guarda (o borra, si ambos valores van vacíos) el umbral de un artículo en
+ * un depósito. RPC `fn_stock_umbral_guardar`.
+ *
+ * @param {{ id_producto: string, id_deposito: string, stock_minimo?: string | number | null, stock_maximo?: string | number | null }} entrada
+ */
+export async function guardarUmbral(entrada) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, code: null, error: "Debés iniciar sesión para guardar el umbral." };
+  }
+
+  const { error } = await supabase.rpc("fn_stock_umbral_guardar", {
+    p_id_producto: entrada.id_producto,
+    p_id_deposito: entrada.id_deposito,
+    p_stock_minimo: numeroOpcional(entrada.stock_minimo),
+    p_stock_maximo: numeroOpcional(entrada.stock_maximo),
+    p_creado_por: user.id,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      code: error.code ?? null,
+      error: error.message || "No se pudo guardar el umbral.",
+    };
+  }
+
+  revalidatePath("/inventario/stock");
+  revalidatePath(`/inventario/stock/${entrada.id_producto}`);
+  revalidatePath("/inventario/stock/alertas");
+  revalidatePath("/compras/alertas-stock");
+  return { ok: true, code: null, error: null };
+}
+
+/**
+ * Artículos con stock actual en o por debajo del mínimo configurado.
+ * RPC `fn_stock_alertas_listar`.
+ *
+ * @param {string | null} [idDeposito]
+ */
+export async function listarAlertasStock(idDeposito = null) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_stock_alertas_listar", {
+    p_id_deposito: idDeposito || null,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar las alertas de stock." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/** @param {unknown} valor @returns {number | null} */
+function numeroOpcional(valor) {
+  if (valor == null || valor === "") return null;
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : null;
 }

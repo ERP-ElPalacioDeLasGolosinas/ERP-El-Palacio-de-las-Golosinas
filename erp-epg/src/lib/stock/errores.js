@@ -59,6 +59,34 @@ const MAPA = {
     message:
       "La factura está anulada o su tipo de comprobante no corresponde a una compra.",
   },
+  OCO09: {
+    field: null,
+    message: "La orden de compra está cancelada y no admite recepción.",
+  },
+  OCO11: {
+    field: null,
+    message: "El producto recibido no está en la orden de compra.",
+  },
+  OCO12: {
+    field: null,
+    message: "La cantidad recibida supera la solicitada en la orden de compra.",
+  },
+  STU01: {
+    field: null,
+    message: "El artículo indicado no existe o está inactivo.",
+  },
+  STU02: {
+    field: null,
+    message: "El depósito indicado no existe o está inactivo.",
+  },
+  STU03: {
+    field: null,
+    message: "El stock mínimo y el máximo no pueden ser negativos.",
+  },
+  STU04: {
+    field: null,
+    message: "El stock mínimo no puede ser mayor que el máximo.",
+  },
 };
 
 /**

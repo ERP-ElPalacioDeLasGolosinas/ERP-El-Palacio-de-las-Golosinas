@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { obtenerOrdenPago } from "@/lib/ordenes-pago/actions";
+import {
+  obtenerOrdenPago,
+  obtenerSaldoFavorProveedor,
+} from "@/lib/ordenes-pago/actions";
 import { listarMediosPago } from "@/lib/medios-pago/actions";
 import { PagoForm } from "@/components/pagos/PagoForm";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -55,6 +58,10 @@ export default async function NuevoPagoPage({ searchParams }) {
     listarMediosPago(false),
   ]);
 
+  const favorRes = data?.orden?.id_proveedor
+    ? await obtenerSaldoFavorProveedor(data.orden.id_proveedor, idOrden)
+    : { data: 0 };
+
   const ordenInvalida =
     error || !data?.orden || !ESTADOS_PAGABLES.has(data.orden.estado);
 
@@ -105,6 +112,7 @@ export default async function NuevoPagoPage({ searchParams }) {
         comprobantes={data.comprobantes ?? []}
         mediosOrden={data.medios ?? []}
         medios={medios}
+        saldoFavor={Number(favorRes.data) || 0}
       />
     </div>
   );

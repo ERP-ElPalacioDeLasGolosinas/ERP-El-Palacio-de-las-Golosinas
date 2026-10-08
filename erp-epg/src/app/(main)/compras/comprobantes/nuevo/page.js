@@ -2,6 +2,7 @@ import { listarProveedores } from "@/lib/proveedores/actions";
 import { listarTiposComprobante } from "@/lib/tipos-comprobante/actions";
 import { listarProductos } from "@/lib/productos/actions";
 import { listarComprobantes } from "@/lib/comprobantes/actions";
+import { listarOrdenes } from "@/lib/ordenes-compra/actions";
 import { ComprobanteForm } from "@/components/comprobantes/ComprobanteForm";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -10,12 +11,13 @@ export const metadata = {
 };
 
 export default async function RegistrarComprobantePage() {
-  const [proveedoresRes, tiposRes, productosRes, comprobantesRes] =
+  const [proveedoresRes, tiposRes, productosRes, comprobantesRes, ordenesRes] =
     await Promise.all([
       listarProveedores(false),
       listarTiposComprobante(false),
       listarProductos(false),
       listarComprobantes(),
+      listarOrdenes(),
     ]);
 
   const proveedores = (proveedoresRes.data ?? [])
@@ -43,6 +45,15 @@ export default async function RegistrarComprobantePage() {
   // Facturas no anuladas para el selector de "comprobante asociado" de
   // notas de débito / crédito / remitos (se filtra por proveedor en el
   // cliente).
+  const ordenes = (ordenesRes.data ?? [])
+    .filter((o) => o.estado !== "Cancelada")
+    .map((o) => ({
+      id_orden_compra: o.id_orden_compra,
+      id_proveedor: o.id_proveedor,
+      numero_formateado: o.numero_formateado,
+      estado: o.estado,
+    }));
+
   const facturas = (comprobantesRes.data ?? [])
     .filter((c) => c.clase === "factura" && !c.anulado)
     .map((c) => ({
@@ -70,6 +81,7 @@ export default async function RegistrarComprobantePage() {
         tipos={tipos}
         productos={productos}
         facturas={facturas}
+        ordenes={ordenes}
       />
     </div>
   );

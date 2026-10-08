@@ -128,6 +128,7 @@ export async function obtenerPago(idPago) {
  *   confirmar_diferencia?: boolean,
  *   medios: Array<{ id_medio_pago: string, id_cuenta_tesoreria: string, importe: number | string, referencia?: string | null }>,
  *   aplicaciones: Array<{ id_comprobante: string, importe_aplicado: number | string }>,
+ *   importe_saldo_favor?: number | string | null,
  * }} entrada
  * @returns {Promise<{ ok: boolean, id?: string | null, error: string | null, code?: string | null }>}
  */
@@ -146,10 +147,14 @@ export async function registrarPago(entrada) {
     };
   }
 
+  const medios = mapMedios(entrada.medios);
+  const favor = numero(entrada.importe_saldo_favor);
+  if (favor > 0) medios.push({ importe_saldo_favor: favor });
+
   const { data, error } = await supabase.rpc("fn_pago_registrar", {
     p_id_orden_pago: entrada.id_orden_pago || null,
     p_fecha_pago: entrada.fecha_pago || null,
-    p_medios: mapMedios(entrada.medios),
+    p_medios: medios,
     p_aplicaciones: mapAplicaciones(entrada.aplicaciones),
     p_confirmar_diferencia: Boolean(entrada.confirmar_diferencia),
     p_creado_por: user.id,

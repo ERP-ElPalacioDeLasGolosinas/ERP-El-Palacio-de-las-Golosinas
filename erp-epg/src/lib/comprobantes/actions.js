@@ -260,6 +260,7 @@ export async function listarOrdenesPagoComprobante(id_comprobante) {
  *   fecha_comprobante: string,
  *   fecha_vencimiento?: string | null,
  *   observaciones?: string | null,
+ *   id_orden_compra?: string | null,
  *   detalle: Array<{
  *     id_producto?: string | null,
  *     concepto?: string | null,
@@ -296,6 +297,7 @@ export async function registrarComprobante(entrada) {
     p_fecha_comprobante: entrada.fecha_comprobante || null,
     p_fecha_vencimiento: entrada.fecha_vencimiento || null,
     p_observaciones: textoOpcional(entrada.observaciones),
+    p_id_orden_compra: entrada.id_orden_compra || null,
     p_detalle: detalle.map((linea) => ({
       id_producto: linea.id_producto || null,
       concepto: textoOpcional(linea.concepto),

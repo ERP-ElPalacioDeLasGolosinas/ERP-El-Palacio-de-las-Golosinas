@@ -65,6 +65,12 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos }) {
             label="Importe total"
             valor={monedaFmt.format(Number(pago.importe_total) || 0)}
           />
+          {Number(pago.importe_saldo_favor) > 0 ? (
+            <Dato
+              label="Saldo a favor usado"
+              valor={monedaFmt.format(Number(pago.importe_saldo_favor) || 0)}
+            />
+          ) : null}
           <Dato label="Fecha del pago" valor={formatFecha(pago.fecha_pago)} />
           <Dato label="Estado de la orden" valor={pago.estado_orden} />
           <Dato label="Registrado" valor={formatFecha(pago.creado)} />

@@ -19,9 +19,16 @@ import { RemitoCampos } from "./alta/RemitoCampos";
  *   tipos: Array<{ id_tipo_comprobante: string, nombre_tipo_comprobante: string, letra: string | null, clase?: string }>,
  *   productos: Array<{ id_producto: string, nombre_completo: string, codigo_producto?: string | null }>,
  *   facturas?: Array<{ id_comprobante: string, id_proveedor: string, numero_formateado: string, nombre_tipo_comprobante: string, letra: string | null }>,
+ *   ordenes?: Array<{ id_orden_compra: string, id_proveedor: string, numero_formateado: string, estado: string }>,
  * }} props
  */
-export function ComprobanteForm({ proveedores, tipos, productos, facturas = [] }) {
+export function ComprobanteForm({
+  proveedores,
+  tipos,
+  productos,
+  facturas = [],
+  ordenes = [],
+}) {
   const [cab, setCab] = useState({
     id_proveedor: "",
     id_tipo_comprobante: "",
@@ -30,6 +37,7 @@ export function ComprobanteForm({ proveedores, tipos, productos, facturas = [] }
     fecha_comprobante: "",
     fecha_vencimiento: "",
     observaciones: "",
+    id_orden_compra: "",
   });
   const [erroresCab, setErroresCab] = useState({});
   const [errorServer, setErrorServer] = useState(null);
@@ -40,8 +48,20 @@ export function ComprobanteForm({ proveedores, tipos, productos, facturas = [] }
   const claseActual = tipoSel?.clase ?? "factura";
 
   function setCampo(campo, valor) {
-    setCab((prev) => ({ ...prev, [campo]: valor }));
-    setErroresCab((prev) => ({ ...prev, [campo]: null }));
+    setCab((prev) => {
+      const next = { ...prev, [campo]: valor };
+      if (campo === "id_proveedor" && prev.id_orden_compra) {
+        const sigue = ordenes.some(
+          (o) =>
+            o.id_orden_compra === prev.id_orden_compra &&
+            o.id_proveedor === valor &&
+            o.estado !== "Cancelada"
+        );
+        if (!sigue) next.id_orden_compra = "";
+      }
+      return next;
+    });
+    setErroresCab((prev) => ({ ...prev, [campo]: null, orden: null }));
     setErrorServer(null);
   }
 
@@ -58,6 +78,8 @@ export function ComprobanteForm({ proveedores, tipos, productos, facturas = [] }
       next.numero = "El punto de venta debe ser mayor a cero.";
     else if (!(Number(cab.numero) > 0))
       next.numero = "El número debe ser mayor a cero.";
+    if (claseActual === "factura" && !cab.id_orden_compra)
+      next.orden = "Elegí la orden de compra de esta factura.";
     if (!cab.fecha_comprobante)
       next.fechas = "La fecha del comprobante es obligatoria.";
     else if (
@@ -90,6 +112,7 @@ export function ComprobanteForm({ proveedores, tipos, productos, facturas = [] }
         proveedores={proveedores}
         tipos={tipos}
         claseActual={claseActual}
+        ordenes={ordenes}
       />
 
       {claseActual === "nota_debito" ? (

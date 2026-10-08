@@ -105,6 +105,20 @@ const MAPA = {
     field: "id_proveedor",
     message: "El proveedor está inactivo y no admite nuevos comprobantes.",
   },
+  CMP11: {
+    field: "orden",
+    message:
+      "La factura tiene que vincularse a una orden de compra del mismo proveedor, que no esté cancelada.",
+  },
+  CMP12: {
+    field: "detalle",
+    message: "Hay un artículo de la factura que no está en la orden de compra.",
+  },
+  CMP13: {
+    field: "detalle",
+    message:
+      "La cantidad facturada supera la solicitada en la orden de compra.",
+  },
 
   // Notas de débito (S2-7)
   NDB01: {

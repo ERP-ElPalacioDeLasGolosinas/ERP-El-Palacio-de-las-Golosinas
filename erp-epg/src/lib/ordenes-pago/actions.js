@@ -7,6 +7,28 @@ import { ESTADOS_ORDEN_PAGO } from "@/lib/ordenes-pago/constantes";
 const PATH = "/tesoreria/ordenes-de-pago";
 
 /**
+ * Saldo a favor disponible de un proveedor (cuenta corriente negativa,
+ * menos lo ya reservado en otras órdenes abiertas).
+ *
+ * @param {string} idProveedor
+ * @param {string | null} [excluirOrden] Orden cuya reserva no se descuenta
+ *   (la que se está pagando).
+ */
+export async function obtenerSaldoFavorProveedor(idProveedor, excluirOrden = null) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_proveedor_saldo_favor", {
+    p_id_proveedor: idProveedor,
+    p_excluir_orden: excluirOrden || null,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudo consultar el saldo a favor." };
+  }
+
+  return { data: Number(data) || 0, error: null };
+}
+
+/**
  * @param {{ message?: string, code?: string } | null | undefined} error
  * @param {string} fallback
  */
@@ -118,6 +140,7 @@ export async function obtenerOrdenPago(idOrdenPago) {
  *   confirmar?: boolean,
  *   imputaciones: Array<{ id_comprobante: string, importe_imputado: number | string }>,
  *   medios: Array<{ id_medio_pago: string, id_cuenta_tesoreria: string, importe: number | string, referencia?: string | null }>,
+ *   importe_saldo_favor?: number | string | null,
  * }} entrada
  * @returns {Promise<{ ok: boolean, id?: string | null, error: string | null, code?: string | null }>}
  */
@@ -136,13 +159,17 @@ export async function crearOrdenPago(entrada) {
     };
   }
 
+  const medios = mapMedios(entrada.medios);
+  const favor = numero(entrada.importe_saldo_favor);
+  if (favor > 0) medios.push({ importe_saldo_favor: favor });
+
   const { data, error } = await supabase.rpc("fn_orden_pago_crear", {
     p_id_proveedor: entrada.id_proveedor || null,
     p_fecha_prevista: entrada.fecha_prevista || null,
     p_referencia: textoOpcional(entrada.referencia),
     p_observaciones: textoOpcional(entrada.observaciones),
     p_imputaciones: mapImputaciones(entrada.imputaciones),
-    p_medios: mapMedios(entrada.medios),
+    p_medios: medios,
     p_confirmar: Boolean(entrada.confirmar),
     p_creado_por: user.id,
   });

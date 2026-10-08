@@ -12,6 +12,7 @@ import { Campo } from "./ui";
  *   proveedores: Array<{ id_proveedor: string, nombre_proveedor: string }>,
  *   tipos: Array<{ id_tipo_comprobante: string, nombre_tipo_comprobante: string, letra: string | null }>,
  *   claseActual: string,
+ *   ordenes?: Array<{ id_orden_compra: string, id_proveedor: string, numero_formateado: string, estado: string }>,
  * }} props
  */
 export function CabeceraComprobante({
@@ -21,7 +22,11 @@ export function CabeceraComprobante({
   proveedores,
   tipos,
   claseActual,
+  ordenes = [],
 }) {
+  const ordenesDelProveedor = ordenes.filter(
+    (o) => o.id_proveedor === cab.id_proveedor && o.estado !== "Cancelada"
+  );
   return (
     <div className="palacio-card p-5 md:p-6">
       <h2 className="mb-4 text-sm font-semibold text-zinc-900">
@@ -95,6 +100,33 @@ export function CabeceraComprobante({
             className="palacio-input"
           />
         </Campo>
+
+        {claseActual === "factura" ? (
+          <Campo label="Orden de compra" error={errores.orden} requerido>
+            <select
+              value={cab.id_orden_compra || ""}
+              onChange={(e) => setCampo("id_orden_compra", e.target.value)}
+              className="palacio-input"
+              disabled={!cab.id_proveedor}
+            >
+              <option value="">
+                {cab.id_proveedor
+                  ? "Seleccioná una orden…"
+                  : "Primero elegí el proveedor"}
+              </option>
+              {ordenesDelProveedor.map((o) => (
+                <option key={o.id_orden_compra} value={o.id_orden_compra}>
+                  {o.numero_formateado} · {o.estado}
+                </option>
+              ))}
+            </select>
+            {cab.id_proveedor && ordenesDelProveedor.length === 0 ? (
+              <p className="text-xs text-palacio-muted">
+                Este proveedor no tiene órdenes abiertas. Registrá una antes de cargar la factura.
+              </p>
+            ) : null}
+          </Campo>
+        ) : null}
 
         {claseActual === "factura" ? (
           <Campo label="Vencimiento (opcional)">

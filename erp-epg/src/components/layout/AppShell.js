@@ -38,6 +38,7 @@ const NAV = [
         match: (p) => p.startsWith("/inventario/stock"),
         children: [
           { href: "/inventario/stock", label: "General" },
+          { href: "/inventario/stock/alertas", label: "Alertas" },
           { href: "/inventario/stock/lotes", label: "Lotes" },
         ],
       },
@@ -106,6 +107,21 @@ const NAV = [
             label: "Registrar comprobante",
           },
         ],
+      },
+      {
+        label: "Órdenes de compra",
+        icon: ReceiptIcon,
+        match: (p) => p.startsWith("/compras/ordenes"),
+        children: [
+          { href: "/compras/ordenes", label: "Historial" },
+          { href: "/compras/ordenes/nuevo", label: "Registrar orden" },
+        ],
+      },
+      {
+        href: "/compras/alertas-stock",
+        label: "Alertas de stock",
+        icon: ChartIcon,
+        match: (p) => p.startsWith("/compras/alertas-stock"),
       },
     ],
   },

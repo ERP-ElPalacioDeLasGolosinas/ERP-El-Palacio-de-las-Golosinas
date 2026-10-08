@@ -117,6 +117,27 @@ export function ComprobanteDetalle({
 
         <dl className="grid gap-4 text-sm md:grid-cols-2">
           <Dato label="Proveedor" valor={comprobante.nombre_proveedor} />
+          {clase === "factura" ? (
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-xs font-medium tracking-wide text-palacio-muted uppercase">
+                Orden de compra
+              </dt>
+              <dd>
+                {comprobante.id_orden_compra ? (
+                  <Link
+                    href={`/compras/ordenes/${comprobante.id_orden_compra}`}
+                    className="font-medium text-palacio-red underline"
+                  >
+                    {comprobante.numero_orden}
+                  </Link>
+                ) : (
+                  <span className="text-palacio-muted">
+                    Sin orden (comprobante anterior)
+                  </span>
+                )}
+              </dd>
+            </div>
+          ) : null}
           <Dato
             label="Tipo"
             valor={`${comprobante.nombre_tipo_comprobante}${

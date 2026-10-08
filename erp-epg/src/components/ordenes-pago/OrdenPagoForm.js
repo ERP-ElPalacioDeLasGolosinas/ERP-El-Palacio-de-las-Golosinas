@@ -7,7 +7,10 @@ import {
   obtenerResumenPendientes,
 } from "@/lib/comprobantes/actions";
 import { listarCuentasCompatibles } from "@/lib/medios-pago/actions";
-import { crearOrdenPago } from "@/lib/ordenes-pago/actions";
+import {
+  crearOrdenPago,
+  obtenerSaldoFavorProveedor,
+} from "@/lib/ordenes-pago/actions";
 import { mapErrorOrdenPago } from "@/lib/ordenes-pago/errores";
 
 const monedaFmt = new Intl.NumberFormat("es-AR", {
@@ -63,6 +66,9 @@ export function OrdenPagoForm({ proveedores, medios }) {
   /** @type {[Record<string, { checked: boolean, importe: string }>, Function]} */
   const [imputaciones, setImputaciones] = useState({});
   const [lineasMedios, setLineasMedios] = useState([nuevaLineaMedio()]);
+  const [saldoFavor, setSaldoFavor] = useState(0);
+  const [usarFavor, setUsarFavor] = useState(false);
+  const [importeFavor, setImporteFavor] = useState("");
   const [cab, setCab] = useState({
     fecha_prevista: "",
     referencia: "",
@@ -82,13 +88,17 @@ export function OrdenPagoForm({ proveedores, medios }) {
     setResumenPend(null);
     setImputaciones({});
     setLineasMedios([nuevaLineaMedio()]);
+    setSaldoFavor(0);
+    setUsarFavor(false);
+    setImporteFavor("");
     limpiarErrores();
     if (!id) return;
 
     startCargaPendientes(async () => {
-      const [lista, resumen] = await Promise.all([
+      const [lista, resumen, favor] = await Promise.all([
         listarComprobantesPendientes(id, "vencimiento"),
         obtenerResumenPendientes(id),
+        obtenerSaldoFavorProveedor(id),
       ]);
       if (lista.error) {
         setErrorServer(lista.error);
@@ -96,6 +106,7 @@ export function OrdenPagoForm({ proveedores, medios }) {
       }
       setPendientes(lista.data ?? []);
       setResumenPend(resumen.data ?? null);
+      setSaldoFavor(Number(favor.data) || 0);
     });
   }
 
@@ -200,8 +211,24 @@ export function OrdenPagoForm({ proveedores, medios }) {
     [lineasMedios]
   );
 
-  const diferencia = redondear(totalMedios - totalImputado);
-  const mediosCoinciden = mediosCargados.length > 0 && diferencia === 0;
+  const topeFavor = redondear(Math.min(saldoFavor, totalImputado));
+  const favorPedido = usarFavor
+    ? redondear(importeFavor === "" ? topeFavor : Number(importeFavor) || 0)
+    : 0;
+  const favorUsado = redondear(Math.min(Math.max(favorPedido, 0), topeFavor));
+  const aPagarConMedios = redondear(totalImputado - favorUsado);
+  const diferencia = redondear(totalMedios - aPagarConMedios);
+  const cubiertoConFavor = totalImputado > 0 && favorUsado === totalImputado;
+  const mediosCoinciden =
+    totalImputado > 0 &&
+    diferencia === 0 &&
+    (cubiertoConFavor || mediosCargados.length > 0);
+
+  function activarFavor(checked) {
+    setUsarFavor(checked);
+    setImporteFavor("");
+    limpiarErrores();
+  }
 
   function medioDe(idMedio) {
     return medios.find((m) => m.id_medio_pago === idMedio) ?? null;
@@ -228,8 +255,8 @@ export function OrdenPagoForm({ proveedores, medios }) {
     const lineasConDatos = lineasMedios.filter(
       (l) => l.id_medio_pago || l.id_cuenta_tesoreria || l.importe
     );
-    if (conMedios || lineasConDatos.length > 0) {
-      if (conMedios && mediosCargados.length === 0)
+    if (conMedios || lineasConDatos.length > 0 || favorUsado > 0) {
+      if (conMedios && !cubiertoConFavor && mediosCargados.length === 0)
         next.medios = "Cargá al menos un medio de pago para confirmar.";
       for (const l of lineasConDatos) {
         if (!l.id_medio_pago || !l.id_cuenta_tesoreria || !(Number(l.importe) > 0)) {
@@ -243,9 +270,11 @@ export function OrdenPagoForm({ proveedores, medios }) {
           break;
         }
       }
-      if (!next.medios && lineasConDatos.length > 0 && diferencia !== 0)
+      if (!next.medios && diferencia !== 0)
         next.medios = `La suma de los medios (${monedaFmt.format(
           totalMedios
+        )}) más el saldo a favor (${monedaFmt.format(
+          favorUsado
         )}) no coincide con lo imputado (${monedaFmt.format(totalImputado)}).`;
     }
 
@@ -263,6 +292,7 @@ export function OrdenPagoForm({ proveedores, medios }) {
       referencia: cab.referencia || null,
       observaciones: cab.observaciones || null,
       confirmar,
+      importe_saldo_favor: favorUsado,
       imputaciones: seleccionadas.map((s) => ({
         id_comprobante: s.comp.id_comprobante,
         importe_imputado: s.importe,
@@ -461,6 +491,59 @@ export function OrdenPagoForm({ proveedores, medios }) {
           </span>
         </div>
 
+        {saldoFavor > 0 ? (
+          <div className="mx-4 mt-4 rounded-lg border border-palacio-border bg-zinc-50/70 p-4">
+            <p className="text-sm text-zinc-900">
+              Saldo a favor:{" "}
+              <span className="font-semibold">{monedaFmt.format(saldoFavor)}</span>
+            </p>
+            <label className="mt-3 flex items-center gap-2 text-sm text-zinc-800">
+              <input
+                type="checkbox"
+                checked={usarFavor}
+                onChange={(e) => activarFavor(e.target.checked)}
+                className="size-4 accent-palacio-red"
+              />
+              Usar saldo a favor en esta orden
+            </label>
+            {usarFavor ? (
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+                  Importe a usar
+                  <input
+                    type="number"
+                    min="0"
+                    max={topeFavor}
+                    step="0.01"
+                    value={importeFavor === "" ? (topeFavor > 0 ? String(topeFavor) : "") : importeFavor}
+                    onChange={(e) => {
+                      setImporteFavor(e.target.value);
+                      limpiarErrores();
+                    }}
+                    className="palacio-input w-40 text-right"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="palacio-action-btn"
+                  onClick={() => {
+                    setImporteFavor("");
+                    limpiarErrores();
+                  }}
+                >
+                  Usar {topeFavor >= totalImputado && totalImputado > 0 ? "la totalidad" : "el máximo"}
+                </button>
+                <p className="text-sm text-palacio-muted">
+                  Queda por pagar con un medio:{" "}
+                  <span className="font-semibold text-zinc-900">
+                    {monedaFmt.format(aPagarConMedios)}
+                  </span>
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="space-y-3 p-4">
           {lineasMedios.map((l, idx) => {
             const m = medioDe(l.id_medio_pago);
@@ -563,7 +646,15 @@ export function OrdenPagoForm({ proveedores, medios }) {
                 {monedaFmt.format(totalMedios)}
               </span>
             </p>
-            {mediosCargados.length > 0 && diferencia !== 0 ? (
+            {favorUsado > 0 ? (
+              <p className="text-palacio-muted">
+                Saldo a favor:{" "}
+                <span className="font-semibold text-zinc-900">
+                  {monedaFmt.format(favorUsado)}
+                </span>
+              </p>
+            ) : null}
+            {(mediosCargados.length > 0 || favorUsado > 0) && diferencia !== 0 ? (
               <p className="text-amber-700">
                 Diferencia con lo imputado: {monedaFmt.format(diferencia)}
               </p>

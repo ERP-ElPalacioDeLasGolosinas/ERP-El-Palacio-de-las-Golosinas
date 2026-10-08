@@ -6,7 +6,13 @@ import { registrarComprobante } from "@/lib/comprobantes/actions";
 import { mapErrorComprobante } from "@/lib/comprobantes/errores";
 import { Th, monedaFmt } from "./ui";
 
-const CAMPOS_CABECERA = ["id_proveedor", "id_tipo_comprobante", "numero", "fechas"];
+const CAMPOS_CABECERA = [
+  "id_proveedor",
+  "id_tipo_comprobante",
+  "numero",
+  "fechas",
+  "orden",
+];
 
 let contadorLinea = 0;
 function nuevaLinea() {
@@ -144,6 +150,7 @@ export function FacturaCampos({
         fecha_comprobante: cab.fecha_comprobante,
         fecha_vencimiento: cab.fecha_vencimiento || null,
         observaciones: cab.observaciones || null,
+        id_orden_compra: cab.id_orden_compra || null,
         detalle: lineas.map((l) => ({
           id_producto: l.modo === "producto" ? l.id_producto : null,
           concepto: l.modo === "concepto" ? l.concepto : null,

@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
+  listarUmbrales,
   obtenerProductoDetalle,
   obtenerStockPorDeposito,
   obtenerUltimosLotes,
 } from "@/lib/stock/actions";
+import { UmbralStockForm } from "@/components/stock/UmbralStockForm";
 import { EliminarLoteButton } from "@/components/stock/EliminarLoteButton";
 
 export const metadata = {
@@ -35,10 +37,11 @@ function formatFecha(valor) {
 export default async function StockDetallePage({ params }) {
   const { id_producto: idProducto } = await params;
 
-  const [productoRes, depositosRes, lotesRes] = await Promise.all([
+  const [productoRes, depositosRes, lotesRes, umbralesRes] = await Promise.all([
     obtenerProductoDetalle(idProducto),
     obtenerStockPorDeposito(idProducto),
     obtenerUltimosLotes(idProducto),
+    listarUmbrales(idProducto),
   ]);
 
   if (productoRes.error) {
@@ -178,6 +181,24 @@ export default async function StockDetallePage({ params }) {
             </div>
           )}
         </div>
+      </section>
+
+      <section className="palacio-card mb-6 overflow-hidden p-5 md:p-6">
+        <h2 className="text-sm font-semibold text-zinc-900">
+          Stock mínimo y máximo
+        </h2>
+        <p className="mt-1 mb-4 text-sm text-palacio-muted">
+          El mínimo dispara la alerta de ese depósito. Dejá ambos vacíos para
+          quitar el umbral. El máximo es solo un tope de referencia.
+        </p>
+        {umbralesRes.error ? (
+          <p className="text-sm text-red-600">{umbralesRes.error}</p>
+        ) : (
+          <UmbralStockForm
+            idProducto={idProducto}
+            filas={umbralesRes.data ?? []}
+          />
+        )}
       </section>
 
       {/* Sección 2 — lotes agrupados por depósito */}
