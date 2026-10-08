@@ -8,6 +8,7 @@ import { mapErrorComprobante } from "@/lib/comprobantes/errores";
 import {
   badgeEstadoComprobante,
   ESTADOS_COMPROBANTE,
+  labelEstadoComprobante,
 } from "@/lib/comprobantes/estado";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
@@ -282,8 +283,18 @@ export function ComprobantesTable({
                       {monedaFmt.format(Number(c.saldo_pendiente) || 0)}
                     </td>
                     <td className="px-5 py-4 text-center align-middle">
-                      <span className={badgeEstadoComprobante(c.estado)}>
-                        {c.estado ?? (c.anulado ? "Anulado" : "Pendiente")}
+                      <span
+                        className={badgeEstadoComprobante(
+                          c.anulado
+                            ? "Anulado"
+                            : c.clase === "nota_credito"
+                              ? "Confirmada"
+                              : c.estado
+                        )}
+                      >
+                        {c.anulado
+                          ? "Anulado"
+                          : labelEstadoComprobante(c.estado, c.clase)}
                       </span>
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">

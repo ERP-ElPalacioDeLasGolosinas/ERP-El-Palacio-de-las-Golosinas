@@ -100,7 +100,15 @@ export function ComprobanteDetalle({
           <h2 className="text-sm font-semibold text-zinc-900">
             Datos del comprobante
           </h2>
-          <span className={badgeEstadoComprobante(comprobante.estado)}>
+          <span
+            className={badgeEstadoComprobante(
+              comprobante.anulado
+                ? "Anulado"
+                : clase === "nota_credito"
+                  ? "Confirmada"
+                  : comprobante.estado
+            )}
+          >
             {comprobante.anulado
               ? "Anulado"
               : labelEstadoComprobante(comprobante.estado, clase)}

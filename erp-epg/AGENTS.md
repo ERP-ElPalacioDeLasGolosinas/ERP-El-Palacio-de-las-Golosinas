@@ -270,6 +270,21 @@ Vigente = hoy dentro de `[inicio, fin]`. Vencida = solo lectura; futura y vigent
 
 **Medio "Mercado Pago (simulado)":** seed de la migración, tipo `Mercado Pago` (nuevo valor del enum `tipo_medio_pago`, también en `TIPOS_MEDIO_PAGO` del frontend). No mueve plata real: la referencia simulada la genera la base.
 
+### Cuentas corrientes (Sprint 4 — migración `20261008160000_s4_cuentas_corrientes`; T-06, T-07)
+
+No hay asientos manuales. El saldo sale de los comprobantes.
+
+| Lado | Suma | Resta | Lectura del saldo |
+|---|---|---|---|
+| Proveedor | Factura y nota de débito | Nota de crédito y pago | Positivo: le debemos (en contra). Negativo: saldo a nuestro favor |
+| Cliente | Venta mayorista | Cobro | Positivo: nos debe (a favor). Minorista, consumidor final y notas de venta no entran |
+
+Anulados y remitos no entran. Al registrar una nota de crédito, `fn_nota_credito_aplicar_factura` descuenta el saldo libre de la factura (saldo menos lo imputado en una orden `Borrador` / `Pendiente de pago` / `Pagada parcial`) y guarda esa parte en `nota_credito_proveedor.importe_aplicado`. Lo que no entra en la factura queda a favor en la cuenta. La nota queda en estado `Confirmada` (no recorre Pendiente / Pagado); si se anula, pasa a `Anulado`. La suma de notas de una factura no puede superar su total (`NCR10`). Anular la nota devuelve `importe_aplicado` al saldo de la factura.
+
+**Funciones:** `fn_cuenta_corriente_proveedor_listar()`, `_movimientos(p_id_proveedor, p_desde, p_hasta)`, y el par de cliente. Las de líneas `_fn_cc_*_lineas` arman el detalle.
+
+**Frontend:** Tesorería → Cuentas corrientes → Proveedores / Clientes. `/tesoreria/cuentas-corrientes/proveedores` y `/clientes`, con historial en `[id]`. Lib: `lib/cuentas-corrientes/{actions,posicion}.js`.
+
 ---
 
 ## Triggers relevantes

@@ -157,7 +157,16 @@ const NAV = [
         href: "/tesoreria/cuentas",
         label: "Cuentas",
         icon: WalletIcon,
-        match: (p) => p.startsWith("/tesoreria/cuentas"),
+        match: (p) => p === "/tesoreria/cuentas" || p.startsWith("/tesoreria/cuentas/"),
+      },
+      {
+        label: "Cuentas corrientes",
+        icon: BookIcon,
+        match: (p) => p.startsWith("/tesoreria/cuentas-corrientes"),
+        children: [
+          { href: "/tesoreria/cuentas-corrientes/proveedores", label: "Proveedores" },
+          { href: "/tesoreria/cuentas-corrientes/clientes", label: "Clientes" },
+        ],
       },
       {
         label: "Pagos",
@@ -522,6 +531,18 @@ function ReceiptIcon({ className }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M7 3h10v18l-2-1.5L13 21l-2-1.5L9 21l-2-1.5V3Zm3 5h4M10 12h4M10 16h3"
+      />
+    </svg>
+  );
+}
+
+function BookIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 6.5c-2-1.4-4.4-2-7-2v13c2.6 0 5 .6 7 2m0-13c2-1.4 4.4-2 7-2v13c-2.6 0-5 .6-7 2m0-13v13"
       />
     </svg>
   );

@@ -6,7 +6,7 @@
  * detalle.
  */
 
-/** @typedef {"Pendiente" | "En orden de pago" | "Pagado parcial" | "Pagado" | "Anulado"} EstadoComprobante */
+/** @typedef {"Pendiente" | "En orden de pago" | "Pagado parcial" | "Pagado" | "Anulado" | "Confirmada"} EstadoComprobante */
 
 /**
  * Valores del enum `estado_comprobante_proveedor`, en orden de circuito.
@@ -19,6 +19,7 @@ export const ESTADOS_COMPROBANTE = [
   "En orden de pago",
   "Pagado parcial",
   "Pagado",
+  "Confirmada",
   "Anulado",
 ];
 
@@ -28,6 +29,7 @@ const BADGE_ESTADO = {
   "En orden de pago": "palacio-badge-disponible",
   "Pagado parcial": "palacio-badge-disponible",
   Pagado: "palacio-badge-activo",
+  Confirmada: "palacio-badge-activo",
   Anulado: "palacio-badge-inactivo",
 };
 
@@ -43,9 +45,10 @@ export function badgeEstadoComprobante(estado) {
 }
 
 /**
- * Etiqueta a mostrar para el estado de un comprobante. El remito no participa
- * del circuito de pago (S2-7 paso 3): se registra en `Pendiente` por
- * consistencia de esquema, pero para el usuario es simplemente "Registrado".
+ * Etiqueta a mostrar para el estado de un comprobante.
+ * La nota de crédito se acredita al registrarse: no recorre el circuito de
+ * pago, así que se muestra siempre "Confirmada" (salvo que esté anulada).
+ * El remito tampoco se paga: para el usuario es "Registrado".
  *
  * @param {string | null | undefined} estado
  * @param {string | null | undefined} clase
@@ -53,6 +56,7 @@ export function badgeEstadoComprobante(estado) {
  */
 export function labelEstadoComprobante(estado, clase) {
   const valor = estado ?? "Pendiente";
+  if (clase === "nota_credito" && valor !== "Anulado") return "Confirmada";
   if (clase === "remito" && valor === "Pendiente") return "Registrado";
   return valor;
 }

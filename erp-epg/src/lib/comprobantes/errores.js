@@ -239,7 +239,7 @@ const MAPA = {
   NCR10: {
     field: "importe",
     message:
-      "El importe total de la nota de crédito debe ser mayor a cero y no puede superar el total de la factura asociada.",
+      "El importe de la nota de crédito tiene que ser mayor a cero. Ni esa nota ni la suma de las notas de la factura pueden superar el total.",
   },
   NCR11: {
     field: "numero",

@@ -440,8 +440,9 @@ export async function registrarRemito(entrada) {
  * `fn_nota_credito_registrar` (S2-7). La factura asociada es obligatoria.
  * Según `motivo`: `devolucion_mercaderia` exige líneas con producto,
  * cantidad, precio e `id_detalle_origen` (línea de la factura); el resto
- * exige concepto + importe. La cabecera queda en `Pendiente` con
- * `saldo_pendiente = 0` y **no** modifica el saldo de la factura de origen.
+ * exige concepto + importe. Queda confirmada al instante, con
+ * `saldo_pendiente = 0`. Si la factura asociada todavía tiene saldo libre,
+ * se le descuenta; el resto queda a favor en la cuenta corriente.
  *
  * @param {{
  *   id_proveedor: string,

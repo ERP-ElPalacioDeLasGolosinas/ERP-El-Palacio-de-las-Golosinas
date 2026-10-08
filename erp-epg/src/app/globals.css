@@ -171,6 +171,17 @@ body {
   padding: 0.15rem 0.55rem;
 }
 
+.palacio-badge-en-contra {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+}
+
 .palacio-badge-inactivo {
   display: inline-flex;
   align-items: center;
