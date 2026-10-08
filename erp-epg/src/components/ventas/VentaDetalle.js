@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { despacharVenta } from "@/lib/ventas/actions";
 import { mapErrorVenta } from "@/lib/ventas/errores";
-import { badgeEstadoVenta } from "@/lib/ventas/estado";
+import { badgeEstadoVenta, seCobraEnCaja } from "@/lib/ventas/estado";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -31,9 +31,10 @@ function formatFecha(valor) {
  *   venta: Record<string, any>,
  *   detalle: Array<Record<string, any>>,
  *   cobro: Record<string, any> | null,
+ *   cobroCaja?: Array<Record<string, any>> | null,
  * }} props
  */
-export function VentaDetalle({ venta, detalle, cobro }) {
+export function VentaDetalle({ venta, detalle, cobro, cobroCaja = null }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState(null);
@@ -66,7 +67,7 @@ export function VentaDetalle({ venta, detalle, cobro }) {
             <span className={badgeEstadoVenta(venta.estado)}>{venta.estado}</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {venta.estado === "En preparación" ? (
+            {!seCobraEnCaja(venta.tipo_venta) && venta.estado === "En preparación" ? (
               <button
                 type="button"
                 onClick={despachar}
@@ -76,7 +77,7 @@ export function VentaDetalle({ venta, detalle, cobro }) {
                 {pending ? "Despachando…" : "Marcar como despachada"}
               </button>
             ) : null}
-            {venta.estado === "Despachado" ? (
+            {!seCobraEnCaja(venta.tipo_venta) && venta.estado === "Despachado" ? (
               <Link
                 href={`/tesoreria/cobranzas/nuevo?venta=${venta.id_comprobante}`}
                 className="palacio-btn-primary inline-flex px-4 py-2 text-sm"
@@ -94,6 +95,7 @@ export function VentaDetalle({ venta, detalle, cobro }) {
         ) : null}
 
         <dl className="grid gap-4 text-sm md:grid-cols-3">
+          <Dato label="Tipo de venta" valor={venta.tipo_venta} />
           <Dato label="Cliente" valor={venta.nombre_cliente} />
           <Dato label="Documento" valor={venta.documento_cliente} />
           <Dato label="Tipo de cliente" valor={venta.nombre_tipo_cliente} />
@@ -154,8 +156,39 @@ export function VentaDetalle({ venta, detalle, cobro }) {
       </div>
 
       <div className="palacio-card mt-6 p-5 md:p-6">
-        <h2 className="mb-3 text-sm font-semibold text-zinc-900">Cobro</h2>
-        {cobro ? (
+        <h2 className="mb-3 text-sm font-semibold text-zinc-900">
+          {seCobraEnCaja(venta.tipo_venta) ? "Cobro en caja" : "Cobro"}
+        </h2>
+        {cobroCaja?.length ? (
+          <>
+            <p className="mb-3 text-sm text-palacio-muted">
+              Cobrada en caja al registrarse · {cobroCaja[0].creado_por_nombre}
+              {venta.id_caja ? (
+                <>
+                  {" · "}
+                  <Link href={`/ventas/cajas/${venta.id_caja}`} className="hover:text-palacio-red hover:underline">
+                    Ver caja
+                  </Link>
+                </>
+              ) : null}
+            </p>
+            <ul className="divide-y divide-palacio-border rounded-lg border border-palacio-border text-sm">
+              {cobroCaja.map((m) => (
+                <li key={m.id_movimiento_caja} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                  <span className="text-zinc-900">
+                    {m.nombre_medio_pago}
+                    <span className="text-palacio-muted">
+                      {m.tipo_medio === "Mercado Pago" ? " (simulado)" : ""}
+                      {m.nombre_cuenta ? ` · ${m.nombre_cuenta}` : ""}
+                      {m.referencia ? ` · Ref. ${m.referencia}` : ""}
+                    </span>
+                  </span>
+                  <span className="font-medium text-zinc-900">{monedaFmt.format(Number(m.importe) || 0)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : cobro ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
               <p className="text-zinc-900">

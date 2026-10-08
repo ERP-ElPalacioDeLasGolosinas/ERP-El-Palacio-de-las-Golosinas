@@ -16,7 +16,7 @@ export default async function VentaDetallePage({ params }) {
 
   const crumbsBase = [
     { label: "Ventas" },
-    { label: "Ventas mayoristas", href: "/ventas/ordenes" },
+    { label: "Ventas", href: "/ventas/ordenes" },
   ];
 
   if (!data) {
@@ -41,7 +41,12 @@ export default async function VentaDetallePage({ params }) {
         title="Detalle de la venta"
         description="Comprobante, artículos con el depósito del que salieron y estado del cobro."
       />
-      <VentaDetalle venta={data.venta ?? {}} detalle={data.detalle ?? []} cobro={data.cobro ?? null} />
+      <VentaDetalle
+        venta={data.venta ?? {}}
+        detalle={data.detalle ?? []}
+        cobro={data.cobro ?? null}
+        cobroCaja={data.cobro_caja ?? null}
+      />
     </div>
   );
 }

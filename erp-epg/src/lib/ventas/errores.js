@@ -5,9 +5,9 @@
  * | Código | Campo    | Significado                                                   |
  * |--------|----------|---------------------------------------------------------------|
  * | VTA01  | cliente  | El cliente no existe o está inactivo                          |
- * | VTA02  | cliente  | El cliente no es mayorista (o es consumidor final)            |
+ * | VTA02  | cliente  | El cliente no corresponde al tipo de venta                    |
  * | VTA03  | tipo     | El tipo de comprobante no es una factura de venta activa      |
- * | VTA04  | fecha    | Fecha vacía o futura                                          |
+ * | VTA04  | fecha    | Fecha vacía o futura (o distinta de hoy si se cobra en caja)  |
  * | VTA05  | detalle  | Sin líneas / línea incompleta / descuento mayor al importe    |
  * | VTA06  | detalle  | Artículo inexistente o inhabilitado                           |
  * | VTA07  | detalle  | Depósito inexistente o inhabilitado                           |
@@ -16,12 +16,17 @@
  * | VTA10  | —        | La venta no está en preparación (no se puede despachar)       |
  * | VTA11  | detalle  | El importe total es cero                                      |
  * | VTA12  | —        | Falta el tipo de movimiento "Salida por venta"                |
- * | VTA13  | detalle  | No hay lista Mayorista vigente                                |
+ * | VTA13  | detalle  | No hay lista vigente para el tipo de venta                    |
  * | VTA14  | detalle  | Artículo sin precio en la lista vigente                       |
+ * | VTA15  | medios   | La venta mayorista no se cobra en caja                        |
+ * | VTA16  | detalle  | La venta de caja incluye artículos de otro depósito           |
  * | MOV05  | detalle  | Stock insuficiente al descontar (carrera con otra operación)  |
+ * | CAJ*   | medios   | Errores del cobro en caja (ver `lib/cajas/errores.js`)        |
  */
 
-/** @typedef {{ field: "cliente" | "tipo" | "fecha" | "detalle" | null, message: string, reload?: boolean }} ErrorUI */
+import { mapErrorCaja } from "@/lib/cajas/errores";
+
+/** @typedef {{ field: "cliente" | "tipo" | "fecha" | "detalle" | "medios" | "caja" | null, message: string, reload?: boolean }} ErrorUI */
 
 const MAPA = {
   VTA01: {
@@ -31,7 +36,7 @@ const MAPA = {
   },
   VTA02: {
     field: "cliente",
-    message: "Solo se pueden registrar ventas a clientes mayoristas.",
+    message: "El cliente no corresponde al tipo de venta elegido.",
   },
   VTA03: {
     field: "tipo",
@@ -67,10 +72,18 @@ const MAPA = {
   },
   VTA13: {
     field: "detalle",
-    message: "No hay una lista de precios Mayorista vigente. Cargala en Listas de precios.",
+    message: "No hay una lista de precios vigente para este tipo de venta. Cargala en Listas de precios.",
     reload: true,
   },
   VTA14: { field: "detalle", message: "Un artículo no tiene precio en la lista vigente.", reload: true },
+  VTA15: {
+    field: "medios",
+    message: "La venta mayorista se cobra en Tesorería una vez despachada.",
+  },
+  VTA16: {
+    field: "detalle",
+    message: "La venta de caja solo puede incluir artículos del depósito de la caja.",
+  },
   MOV05: {
     field: "detalle",
     message: "El stock cambió mientras cargabas la venta. Revisá las cantidades.",
@@ -78,7 +91,7 @@ const MAPA = {
   },
 };
 
-const CON_MENSAJE_DE_BASE = new Set(["VTA05", "VTA08", "VTA10", "VTA14", "MOV05"]);
+const CON_MENSAJE_DE_BASE = new Set(["VTA02", "VTA04", "VTA05", "VTA08", "VTA10", "VTA13", "VTA14", "VTA16", "MOV05"]);
 
 /**
  * @param {{ code?: string | null, error?: string | null } | null | undefined} result
@@ -86,6 +99,12 @@ const CON_MENSAJE_DE_BASE = new Set(["VTA05", "VTA08", "VTA10", "VTA14", "MOV05"
  */
 export function mapErrorVenta(result) {
   const code = result?.code ?? null;
+
+  if (code?.startsWith("CAJ")) {
+    const ui = mapErrorCaja(result);
+    const enMedios = code === "CAJ06" || code === "CAJ07" || code === "CAJ08" || code === "CAJ09" || code === "CAJ15";
+    return { ...ui, field: enMedios ? "medios" : "caja" };
+  }
 
   if (code && MAPA[code]) {
     if (CON_MENSAJE_DE_BASE.has(code) && result?.error) {

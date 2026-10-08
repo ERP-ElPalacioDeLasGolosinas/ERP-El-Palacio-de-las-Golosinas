@@ -48,15 +48,16 @@ export async function listarTiposComprobanteVenta() {
 }
 
 /**
- * Lista Mayorista vigente hoy (`fn_lista_precio_vigente` + `fn_lista_precio_obtener`)
+ * Lista vigente hoy del tipo indicado (`fn_lista_precio_vigente` + `fn_lista_precio_obtener`)
  * con sus precios por artículo activo. `data` es `null` si no hay lista vigente.
  *
+ * @param {"Mayorista" | "Minorista"} [tipoLista]
  * @returns {Promise<{ data: { id_lista_precio: string, nombre_lista_precio: string, precios: Record<string, number> } | null, error: string | null }>}
  */
-export async function obtenerListaVigenteVenta() {
+export async function obtenerListaVigenteVenta(tipoLista = "Mayorista") {
   const supabase = await createClient();
   const { data: vigente, error } = await supabase.rpc("fn_lista_precio_vigente", {
-    p_tipo_lista: "Mayorista",
+    p_tipo_lista: tipoLista,
   });
 
   if (error) {
@@ -89,9 +90,9 @@ export async function obtenerListaVigenteVenta() {
 }
 
 /**
- * Lista ventas mayoristas vía `fn_venta_listar` (V-19).
+ * Lista ventas vía `fn_venta_listar` (V-19).
  *
- * @param {{ idCliente?: string | null, desde?: string | null, hasta?: string | null, estado?: string | null }} [filtros]
+ * @param {{ idCliente?: string | null, desde?: string | null, hasta?: string | null, estado?: string | null, tipoVenta?: string | null }} [filtros]
  * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
  */
 export async function listarVentas(filtros = {}) {
@@ -101,6 +102,7 @@ export async function listarVentas(filtros = {}) {
     p_desde: filtros.desde || null,
     p_hasta: filtros.hasta || null,
     p_estado: filtros.estado || null,
+    p_tipo_venta: filtros.tipoVenta || null,
   });
 
   if (error) {
@@ -134,16 +136,20 @@ export async function obtenerVenta(idComprobante) {
 }
 
 /**
- * Registra una venta mayorista (V-10 / V-11 / S-07): emite el comprobante con
- * número automático y descuenta el stock de cada línea.
+ * Registra una venta (V-10 / V-11 / V-21 / S-07): emite el comprobante con
+ * número automático y descuenta el stock de cada línea. Las ventas minoristas
+ * y a consumidor final se cobran en la caja abierta con `medios`.
  *
  * @param {{
- *   id_cliente: string,
+ *   tipo_venta?: "Mayorista" | "Minorista" | "Consumidor final",
+ *   id_cliente?: string | null,
  *   id_tipo_comprobante: string,
  *   fecha_comprobante: string,
  *   observaciones?: string | null,
  *   descuento_porcentaje?: number | string | null,
  *   detalle: Array<{ id_producto: string, id_deposito: string, cantidad: number | string }>,
+ *   medios?: Array<{ id_medio_pago: string, id_cuenta_tesoreria?: string | null, importe: number | string, referencia?: string | null }> | null,
+ *   id_caja?: string | null,
  * }} entrada
  * @returns {Promise<{ ok: boolean, id?: string | null, error: string | null, code?: string | null }>}
  */
@@ -170,6 +176,17 @@ export async function registrarVenta(entrada) {
     })
   );
 
+  const tipoVenta = entrada.tipo_venta || "Mayorista";
+  const medios =
+    tipoVenta === "Mayorista"
+      ? null
+      : (Array.isArray(entrada.medios) ? entrada.medios : []).map((m) => ({
+          id_medio_pago: m.id_medio_pago || null,
+          id_cuenta_tesoreria: m.id_cuenta_tesoreria || null,
+          importe: numero(m.importe),
+          referencia: m.referencia?.trim() || null,
+        }));
+
   const { data, error } = await supabase.rpc("fn_venta_registrar", {
     p_id_cliente: entrada.id_cliente || null,
     p_id_tipo_comprobante: entrada.id_tipo_comprobante || null,
@@ -178,6 +195,9 @@ export async function registrarVenta(entrada) {
     p_detalle: detalle,
     p_descuento_porcentaje: numero(entrada.descuento_porcentaje) ?? 0,
     p_creado_por: user.id,
+    p_tipo_venta: tipoVenta,
+    p_medios: medios,
+    p_id_caja: tipoVenta === "Mayorista" ? null : entrada.id_caja || null,
   });
 
   if (error) {
@@ -185,6 +205,10 @@ export async function registrarVenta(entrada) {
   }
 
   revalidatePath(PATH);
+  if (tipoVenta !== "Mayorista") {
+    revalidatePath("/ventas/cajas");
+    revalidatePath("/tesoreria/cuentas");
+  }
   revalidatePath("/inventario/stock");
   revalidatePath("/inventario/movimientos");
   return { ok: true, id: data?.id_comprobante ?? null, error: null, code: null };

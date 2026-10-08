@@ -22,3 +22,24 @@ const BADGE_ESTADO = {
 export function badgeEstadoVenta(estado) {
   return BADGE_ESTADO[estado] ?? "palacio-badge-inactivo";
 }
+
+/**
+ * Tipos de venta (`comprobante_venta.tipo_venta`, V-21). La mayorista sigue el
+ * circuito despacho → cobro en Tesorería; las otras dos se cobran en la caja
+ * abierta y quedan "Pagado" al registrarse.
+ *
+ * @typedef {"Mayorista" | "Minorista" | "Consumidor final"} TipoVenta
+ */
+
+/** @type {TipoVenta[]} */
+export const TIPOS_VENTA = ["Mayorista", "Minorista", "Consumidor final"];
+
+/** @param {string | null | undefined} tipo */
+export function seCobraEnCaja(tipo) {
+  return tipo === "Minorista" || tipo === "Consumidor final";
+}
+
+/** Lista de precios que usa cada tipo de venta. @param {string | null | undefined} tipo */
+export function listaDeTipoVenta(tipo) {
+  return tipo === "Mayorista" ? "Mayorista" : "Minorista";
+}

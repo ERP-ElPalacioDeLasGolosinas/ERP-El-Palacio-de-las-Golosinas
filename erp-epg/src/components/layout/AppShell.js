@@ -131,7 +131,7 @@ const NAV = [
         match: (p) => p.startsWith("/ventas/listas-de-precios"),
       },
       {
-        label: "Ventas mayoristas",
+        label: "Ventas",
         icon: BagIcon,
         match: (p) => p.startsWith("/ventas/ordenes"),
         children: [
@@ -140,10 +140,13 @@ const NAV = [
         ],
       },
       {
-        href: "/ventas/cajas",
         label: "Cajas",
         icon: CashIcon,
         match: (p) => p.startsWith("/ventas/cajas"),
+        children: [
+          { href: "/ventas/cajas", label: "Cajas abiertas" },
+          { href: "/ventas/cajas/historial", label: "Historial" },
+        ],
       },
     ],
   },

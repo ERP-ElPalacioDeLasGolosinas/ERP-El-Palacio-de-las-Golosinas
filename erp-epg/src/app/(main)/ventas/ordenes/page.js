@@ -1,6 +1,6 @@
 import { listarClientes } from "@/lib/clientes/actions";
 import { listarVentas } from "@/lib/ventas/actions";
-import { ESTADOS_VENTA } from "@/lib/ventas/estado";
+import { ESTADOS_VENTA, TIPOS_VENTA } from "@/lib/ventas/estado";
 import { VentasTable } from "@/components/ventas/VentasTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 /**
- * @param {{ searchParams: Promise<{ cliente?: string, desde?: string, hasta?: string, estado?: string }> }} props
+ * @param {{ searchParams: Promise<{ cliente?: string, desde?: string, hasta?: string, estado?: string, tipo?: string }> }} props
  */
 export default async function HistorialVentasPage({ searchParams }) {
   const sp = await searchParams;
@@ -18,6 +18,7 @@ export default async function HistorialVentasPage({ searchParams }) {
     desde: sp?.desde || null,
     hasta: sp?.hasta || null,
     estado: ESTADOS_VENTA.includes(sp?.estado) ? sp.estado : null,
+    tipoVenta: TIPOS_VENTA.includes(sp?.tipo) ? sp.tipo : null,
   };
 
   const [{ data, error }, clientesRes] = await Promise.all([
@@ -34,11 +35,11 @@ export default async function HistorialVentasPage({ searchParams }) {
       <PageHeader
         crumbs={[
           { label: "Ventas" },
-          { label: "Ventas mayoristas", href: "/ventas/ordenes" },
+          { label: "Ventas", href: "/ventas/ordenes" },
           { label: "Historial" },
         ]}
         title="Historial de ventas"
-        description="Ventas mayoristas registradas. Pasan de “En preparación” a “Despachado” desde el detalle, y a “Pagado” al registrar el cobro en Tesorería."
+        description="Las mayoristas pasan de “En preparación” a “Despachado” desde el detalle y a “Pagado” al cobrarlas en Tesorería. Las minoristas y a consumidor final se cobran en caja y nacen “Pagado”."
       />
 
       {error ? (
@@ -55,6 +56,7 @@ export default async function HistorialVentasPage({ searchParams }) {
             desde: filtros.desde ?? "",
             hasta: filtros.hasta ?? "",
             estado: filtros.estado ?? "",
+            tipo: filtros.tipoVenta ?? "",
           }}
         />
       )}
