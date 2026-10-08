@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
-import { obtenerOrdenPago } from "@/lib/ordenes-pago/actions";
+import {
+  listarNotasOrdenPago,
+  obtenerOrdenPago,
+} from "@/lib/ordenes-pago/actions";
 import { OrdenPagoDetalle } from "@/components/ordenes-pago/OrdenPagoDetalle";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -12,7 +15,10 @@ export const metadata = {
  */
 export default async function OrdenPagoDetallePage({ params }) {
   const { id } = await params;
-  const { data, error } = await obtenerOrdenPago(id);
+  const [{ data, error }, notasRes] = await Promise.all([
+    obtenerOrdenPago(id),
+    listarNotasOrdenPago(id),
+  ]);
 
   if (!data) {
     if (error) {
@@ -54,6 +60,7 @@ export default async function OrdenPagoDetallePage({ params }) {
         orden={data.orden ?? {}}
         comprobantes={data.comprobantes ?? []}
         medios={data.medios ?? []}
+        notas={notasRes.data ?? []}
       />
     </div>
   );

@@ -12,7 +12,7 @@ import { Campo } from "./ui";
  *   proveedores: Array<{ id_proveedor: string, nombre_proveedor: string }>,
  *   tipos: Array<{ id_tipo_comprobante: string, nombre_tipo_comprobante: string, letra: string | null }>,
  *   claseActual: string,
- *   ordenes?: Array<{ id_orden_compra: string, id_proveedor: string, numero_formateado: string, estado: string }>,
+ *   ordenes?: Array<{ id_orden_compra: string, id_proveedor: string, numero_formateado: string, estado: string, pendiente_facturar?: boolean }>,
  * }} props
  */
 export function CabeceraComprobante({
@@ -25,7 +25,10 @@ export function CabeceraComprobante({
   ordenes = [],
 }) {
   const ordenesDelProveedor = ordenes.filter(
-    (o) => o.id_proveedor === cab.id_proveedor && o.estado !== "Cancelada"
+    (o) =>
+      o.id_proveedor === cab.id_proveedor &&
+      o.estado !== "Cancelada" &&
+      o.pendiente_facturar
   );
   return (
     <div className="palacio-card p-5 md:p-6">
@@ -122,7 +125,7 @@ export function CabeceraComprobante({
             </select>
             {cab.id_proveedor && ordenesDelProveedor.length === 0 ? (
               <p className="text-xs text-palacio-muted">
-                Este proveedor no tiene órdenes abiertas. Registrá una antes de cargar la factura.
+                Este proveedor no tiene órdenes con cantidad pendiente de facturar.
               </p>
             ) : null}
           </Campo>

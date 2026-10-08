@@ -29,9 +29,10 @@ function formatFecha(valor) {
  *   medios: Array<Record<string, any>>,
  *   aplicaciones: Array<Record<string, any>>,
  *   movimientos: Array<Record<string, any>>,
+ *   notas?: Array<{ id_comprobante: string, numero_formateado: string, importe: number }>,
  * }} props
  */
-export function PagoDetalle({ pago, medios, aplicaciones, movimientos }) {
+export function PagoDetalle({ pago, medios, aplicaciones, movimientos, notas = [] }) {
   const totalAplicado = aplicaciones.reduce(
     (acc, a) => acc + (Number(a.importe_aplicado) || 0),
     0
@@ -65,10 +66,15 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos }) {
             label="Importe total"
             valor={monedaFmt.format(Number(pago.importe_total) || 0)}
           />
-          {Number(pago.importe_saldo_favor) > 0 ? (
+          {notas.length > 0 ? (
             <Dato
-              label="Saldo a favor usado"
-              valor={monedaFmt.format(Number(pago.importe_saldo_favor) || 0)}
+              label="Notas de crédito"
+              valor={notas
+                .map(
+                  (n) =>
+                    `${n.numero_formateado} ${monedaFmt.format(Number(n.importe) || 0)}`
+                )
+                .join(" · ")}
             />
           ) : null}
           <Dato label="Fecha del pago" valor={formatFecha(pago.fecha_pago)} />
@@ -192,6 +198,19 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos }) {
               ))}
             </tbody>
             <tfoot>
+              {notas.map((n) => (
+                <tr key={n.id_comprobante} className="border-t border-palacio-border">
+                  <td
+                    className="px-5 py-3 text-right font-medium text-palacio-muted"
+                    colSpan={3}
+                  >
+                    Nota de crédito {n.numero_formateado}
+                  </td>
+                  <td className="px-5 py-3 text-right font-semibold text-zinc-900">
+                    {monedaFmt.format(Number(n.importe) || 0)}
+                  </td>
+                </tr>
+              ))}
               <tr className="border-t border-palacio-border bg-zinc-50/60">
                 <td
                   className="px-5 py-3 text-right font-medium text-palacio-muted"

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import {
+  listarNotasCreditoDisponibles,
+  listarNotasOrdenPago,
   obtenerOrdenPago,
-  obtenerSaldoFavorProveedor,
 } from "@/lib/ordenes-pago/actions";
 import { listarMediosPago } from "@/lib/medios-pago/actions";
 import { PagoForm } from "@/components/pagos/PagoForm";
@@ -58,10 +59,6 @@ export default async function NuevoPagoPage({ searchParams }) {
     listarMediosPago(false),
   ]);
 
-  const favorRes = data?.orden?.id_proveedor
-    ? await obtenerSaldoFavorProveedor(data.orden.id_proveedor, idOrden)
-    : { data: 0 };
-
   const ordenInvalida =
     error || !data?.orden || !ESTADOS_PAGABLES.has(data.orden.estado);
 
@@ -84,6 +81,23 @@ export default async function NuevoPagoPage({ searchParams }) {
         </div>
       </div>
     );
+  }
+
+  const [notasDisp, notasOrden] = await Promise.all([
+    listarNotasCreditoDisponibles(data.orden.id_proveedor, idOrden),
+    listarNotasOrdenPago(idOrden),
+  ]);
+  const notasPorId = new Map(
+    (notasDisp.data ?? []).map((n) => [n.id_comprobante, n])
+  );
+  for (const guardada of notasOrden.data ?? []) {
+    if (!notasPorId.has(guardada.id_comprobante)) {
+      notasPorId.set(guardada.id_comprobante, {
+        ...guardada,
+        disponible: 0,
+        importe_total: guardada.importe,
+      });
+    }
   }
 
   const medios = (mediosRes.data ?? [])
@@ -112,7 +126,8 @@ export default async function NuevoPagoPage({ searchParams }) {
         comprobantes={data.comprobantes ?? []}
         mediosOrden={data.medios ?? []}
         medios={medios}
-        saldoFavor={Number(favorRes.data) || 0}
+        notasDisponibles={[...notasPorId.values()]}
+        notasOrden={notasOrden.data ?? []}
       />
     </div>
   );

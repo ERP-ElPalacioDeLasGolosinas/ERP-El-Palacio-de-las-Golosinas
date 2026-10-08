@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { listarCuentasCompatibles } from "@/lib/medios-pago/actions";
+import { NotasCreditoAplicar } from "@/components/ordenes-pago/NotasCreditoAplicar";
 import { registrarPago } from "@/lib/pagos/actions";
 import { mapErrorPago } from "@/lib/pagos/errores";
 
@@ -64,10 +65,18 @@ function nuevaLineaMedio(base = {}) {
  *   comprobantes: Array<Record<string, any>>,
  *   mediosOrden: Array<Record<string, any>>,
  *   medios: Array<{ id_medio_pago: string, nombre_medio_pago: string, tipo: string, requiere_referencia: boolean }>,
- *   saldoFavor?: number,
+ *   notasDisponibles?: Array<{ id_comprobante: string, numero_formateado: string, disponible: number }>,
+ *   notasOrden?: Array<{ id_comprobante: string, importe: number }>,
  * }} props
  */
-export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor = 0 }) {
+export function PagoForm({
+  orden,
+  comprobantes,
+  mediosOrden,
+  medios,
+  notasDisponibles = [],
+  notasOrden = [],
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -105,11 +114,13 @@ export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor 
     )
   );
 
-  const favorOrden = redondear(Number(orden.importe_saldo_favor) || 0);
-  const [usarFavor, setUsarFavor] = useState(favorOrden > 0);
-  const [importeFavor, setImporteFavor] = useState(
-    favorOrden > 0 ? String(favorOrden) : ""
-  );
+  const [usoNotas, setUsoNotas] = useState(() => {
+    const ini = {};
+    for (const n of notasOrden) {
+      if (Number(n.importe) > 0) ini[n.id_comprobante] = String(n.importe);
+    }
+    return ini;
+  });
   const [confirmarDif, setConfirmarDif] = useState(false);
   const [errores, setErrores] = useState({});
   const [errorServer, setErrorServer] = useState(null);
@@ -237,21 +248,35 @@ export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor 
   );
 
   const importeOrden = redondear(orden.importe_total);
-  const topeFavor = redondear(Math.min(Number(saldoFavor) || 0, totalAplicado));
-  const favorPedido = usarFavor
-    ? redondear(importeFavor === "" ? topeFavor : Number(importeFavor) || 0)
-    : 0;
-  const favorUsado = redondear(Math.min(Math.max(favorPedido, 0), topeFavor));
-  const aPagarConMedios = redondear(totalAplicado - favorUsado);
+  const notasConImporte = notasDisponibles.map((n) => {
+    const raw = usoNotas[n.id_comprobante];
+    const pedido = raw == null || raw === "" ? 0 : redondear(Number(raw) || 0);
+    return { ...n, importe: pedido > 0 ? pedido : 0 };
+  });
+  const totalNotas = redondear(notasConImporte.reduce((acc, n) => acc + n.importe, 0));
+  const notasDentro =
+    totalNotas <= totalAplicado &&
+    notasConImporte.every((n) => n.importe <= redondear(Number(n.disponible) || 0));
+  const aPagarConMedios = redondear(totalAplicado - totalNotas);
   const diferenciaMedios = redondear(totalMedios - aPagarConMedios);
-  const cubiertoConFavor = totalAplicado > 0 && favorUsado === totalAplicado;
+  const cubiertoConNotas =
+    totalAplicado > 0 && totalNotas === totalAplicado && notasDentro;
   const diferenciaOrden = redondear(totalAplicado - importeOrden);
   const hayDiferenciaOrden = diferenciaOrden !== 0;
 
-  function activarFavor(checked) {
-    setUsarFavor(checked);
-    setImporteFavor("");
+  function setImporteNota(idComprobante, valor) {
+    setUsoNotas((prev) => ({ ...prev, [idComprobante]: valor }));
     limpiarErrores();
+  }
+
+  function usarMaximoNota(nota) {
+    const otras = notasConImporte
+      .filter((n) => n.id_comprobante !== nota.id_comprobante)
+      .reduce((acc, n) => acc + n.importe, 0);
+    const tope = redondear(
+      Math.max(0, Math.min(Number(nota.disponible) || 0, totalAplicado - otras))
+    );
+    setImporteNota(nota.id_comprobante, tope > 0 ? String(tope) : "");
   }
 
   function medioDe(idMedio) {
@@ -280,7 +305,7 @@ export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor 
     const lineasConDatos = lineasMedios.filter(
       (l) => l.id_medio_pago || l.id_cuenta_tesoreria || l.importe
     );
-    if (!cubiertoConFavor && lineasConDatos.length === 0) {
+    if (!cubiertoConNotas && lineasConDatos.length === 0) {
       next.medios = "Cargá al menos un medio de pago.";
     }
     for (const l of lineasConDatos) {
@@ -302,11 +327,21 @@ export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor 
         break;
       }
     }
+    for (const n of notasConImporte) {
+      if (n.importe > redondear(Number(n.disponible) || 0)) {
+        next.medios = `La nota ${n.numero_formateado} tiene ${monedaFmt.format(
+          Number(n.disponible) || 0
+        )} sin aplicar.`;
+        break;
+      }
+    }
+    if (!next.medios && totalNotas > totalAplicado)
+      next.medios = "Las notas de crédito no pueden superar lo aplicado.";
     if (!next.medios && diferenciaMedios !== 0)
       next.medios = `La suma de los medios (${monedaFmt.format(
         totalMedios
-      )}) más el saldo a favor (${monedaFmt.format(
-        favorUsado
+      )}) más las notas de crédito (${monedaFmt.format(
+        totalNotas
       )}) no coincide con lo aplicado (${monedaFmt.format(totalAplicado)}).`;
 
     if (!next.aplicaciones && hayDiferenciaOrden && !confirmarDif)
@@ -325,7 +360,12 @@ export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor 
       id_orden_pago: orden.id_orden_pago,
       fecha_pago: fechaPago || null,
       confirmar_diferencia: hayDiferenciaOrden ? confirmarDif : false,
-      importe_saldo_favor: favorUsado,
+      notas: notasConImporte
+        .filter((n) => n.importe > 0)
+        .map((n) => ({
+          id_comprobante: n.id_comprobante,
+          importe: n.importe,
+        })),
       aplicaciones: seleccionadas.map((s) => ({
         id_comprobante: s.comp.id_comprobante,
         importe_aplicado: s.importe,
@@ -499,63 +539,19 @@ export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor 
           <h2 className="text-sm font-semibold text-zinc-900">Medios de pago</h2>
         </div>
 
-        {Number(saldoFavor) > 0 ? (
-          <div className="mx-4 mt-4 rounded-lg border border-palacio-border bg-zinc-50/70 p-4">
-            <p className="text-sm text-zinc-900">
-              Saldo a favor disponible:{" "}
-              <span className="font-semibold">{monedaFmt.format(Number(saldoFavor) || 0)}</span>
-            </p>
-            <label className="mt-3 flex items-center gap-2 text-sm text-zinc-800">
-              <input
-                type="checkbox"
-                checked={usarFavor}
-                onChange={(e) => activarFavor(e.target.checked)}
-                className="size-4 accent-palacio-red"
-              />
-              Usar saldo a favor en este pago
-            </label>
-            {usarFavor ? (
-              <div className="mt-3 flex flex-wrap items-end gap-3">
-                <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
-                  Importe a usar
-                  <input
-                    type="number"
-                    min="0"
-                    max={topeFavor}
-                    step="0.01"
-                    value={
-                      importeFavor === ""
-                        ? topeFavor > 0
-                          ? String(topeFavor)
-                          : ""
-                        : importeFavor
-                    }
-                    onChange={(e) => {
-                      setImporteFavor(e.target.value);
-                      limpiarErrores();
-                    }}
-                    className="palacio-input w-40 text-right"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="palacio-action-btn"
-                  onClick={() => {
-                    setImporteFavor("");
-                    limpiarErrores();
-                  }}
-                >
-                  Usar {topeFavor >= totalAplicado && totalAplicado > 0 ? "la totalidad" : "el máximo"}
-                </button>
-                <p className="text-sm text-palacio-muted">
-                  Queda por pagar con un medio:{" "}
-                  <span className="font-semibold text-zinc-900">
-                    {monedaFmt.format(aPagarConMedios)}
-                  </span>
-                </p>
-              </div>
-            ) : null}
-          </div>
+        <NotasCreditoAplicar
+          notas={notasDisponibles}
+          uso={usoNotas}
+          onChange={setImporteNota}
+          onUsarMaximo={usarMaximoNota}
+        />
+        {totalNotas > 0 ? (
+          <p className="px-5 pt-3 text-sm text-palacio-muted">
+            Queda por pagar con un medio:{" "}
+            <span className="font-semibold text-zinc-900">
+              {monedaFmt.format(aPagarConMedios)}
+            </span>
+          </p>
         ) : null}
 
         <div className="space-y-3 p-4">
@@ -734,11 +730,11 @@ export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor 
                 {monedaFmt.format(totalMedios)}
               </span>
             </p>
-            {favorUsado > 0 ? (
+            {totalNotas > 0 ? (
               <p className="text-palacio-muted">
-                Saldo a favor:{" "}
+                Notas de crédito:{" "}
                 <span className="font-semibold text-zinc-900">
-                  {monedaFmt.format(favorUsado)}
+                  {monedaFmt.format(totalNotas)}
                 </span>
               </p>
             ) : null}
@@ -788,6 +784,7 @@ export function PagoForm({ orden, comprobantes, mediosOrden, medios, saldoFavor 
             pending ||
             totalAplicado <= 0 ||
             diferenciaMedios !== 0 ||
+            !notasDentro ||
             (hayDiferenciaOrden && !confirmarDif)
           }
           className="palacio-btn-primary px-4 py-2.5 text-sm"

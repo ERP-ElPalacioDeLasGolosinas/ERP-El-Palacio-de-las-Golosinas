@@ -72,6 +72,40 @@ function mapMedios(medios) {
 }
 
 /**
+ * Marcadores de nota de crédito que viajan en `p_medios` sin medio de pago.
+ *
+ * @param {Array<{ id_comprobante?: string, importe?: number | string }>} notas
+ */
+function mapNotas(notas) {
+  return (Array.isArray(notas) ? notas : [])
+    .map((n) => ({
+      id_nota_credito: n.id_comprobante || null,
+      importe: numero(n.importe),
+    }))
+    .filter((n) => n.id_nota_credito && n.importe > 0);
+}
+
+/**
+ * Notas de crédito aplicadas en un pago.
+ *
+ * @param {string} idPago
+ */
+export async function listarNotasPago(idPago) {
+  if (!idPago) return { data: [], error: null };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_pago_notas_listar", {
+    p_id_pago: idPago,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar las notas del pago." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
  * Lista pagos vía `fn_pago_listar` (incluye `nombre_proveedor`,
  * `cantidad_comprobantes` y `creado_por_nombre`).
  *
@@ -128,7 +162,7 @@ export async function obtenerPago(idPago) {
  *   confirmar_diferencia?: boolean,
  *   medios: Array<{ id_medio_pago: string, id_cuenta_tesoreria: string, importe: number | string, referencia?: string | null }>,
  *   aplicaciones: Array<{ id_comprobante: string, importe_aplicado: number | string }>,
- *   importe_saldo_favor?: number | string | null,
+ *   notas?: Array<{ id_comprobante: string, importe: number | string }>,
  * }} entrada
  * @returns {Promise<{ ok: boolean, id?: string | null, error: string | null, code?: string | null }>}
  */
@@ -147,9 +181,7 @@ export async function registrarPago(entrada) {
     };
   }
 
-  const medios = mapMedios(entrada.medios);
-  const favor = numero(entrada.importe_saldo_favor);
-  if (favor > 0) medios.push({ importe_saldo_favor: favor });
+  const medios = [...mapMedios(entrada.medios), ...mapNotas(entrada.notas)];
 
   const { data, error } = await supabase.rpc("fn_pago_registrar", {
     p_id_orden_pago: entrada.id_orden_pago || null,

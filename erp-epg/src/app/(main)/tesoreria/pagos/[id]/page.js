@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { obtenerPago } from "@/lib/pagos/actions";
+import { listarNotasPago, obtenerPago } from "@/lib/pagos/actions";
 import { PagoDetalle } from "@/components/pagos/PagoDetalle";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -12,7 +12,10 @@ export const metadata = {
  */
 export default async function PagoDetallePage({ params }) {
   const { id } = await params;
-  const { data, error } = await obtenerPago(id);
+  const [{ data, error }, notasRes] = await Promise.all([
+    obtenerPago(id),
+    listarNotasPago(id),
+  ]);
 
   if (!data) {
     if (error) {
@@ -53,6 +56,7 @@ export default async function PagoDetallePage({ params }) {
         medios={data.medios ?? []}
         aplicaciones={data.aplicaciones ?? []}
         movimientos={data.movimientos ?? []}
+        notas={notasRes.data ?? []}
       />
     </div>
   );

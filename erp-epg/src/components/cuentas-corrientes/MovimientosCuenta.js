@@ -94,13 +94,16 @@ export function MovimientosCuenta({ lado, saldo, movimientos, filtros, hayMovimi
               <th className="px-4 py-3 font-medium">Detalle</th>
               <th className="px-4 py-3 font-medium">Efecto</th>
               <th className="px-4 py-3 text-right font-medium">Importe</th>
+              {lado === "proveedor" ? (
+                <th className="px-4 py-3 text-right font-medium">Restante</th>
+              ) : null}
               <th className="px-4 py-3 text-right font-medium">Saldo</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-palacio-border">
             {movimientos.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-palacio-muted">
+                <td colSpan={lado === "proveedor" ? 7 : 6} className="px-4 py-8 text-center text-palacio-muted">
                   {hayMovimientos
                     ? "No hay movimientos en ese rango de fechas."
                     : "Sin movimientos. El saldo es cero."}
@@ -132,6 +135,11 @@ export function MovimientosCuenta({ lado, saldo, movimientos, filtros, hayMovimi
                     <td className="px-4 py-3 text-right font-medium text-zinc-900">
                       {monedaFmt.format(Number(m.importe) || 0)}
                     </td>
+                    {lado === "proveedor" ? (
+                      <td className="px-4 py-3 text-right text-zinc-900">
+                        {m.restante == null ? "—" : monedaFmt.format(Number(m.restante) || 0)}
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3 text-right">
                       <span className="font-medium text-zinc-900">
                         {monedaFmt.format(Math.abs(Number(m.saldo) || 0))}

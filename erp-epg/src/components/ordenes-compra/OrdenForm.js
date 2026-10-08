@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Campo } from "@/components/comprobantes/alta/ui";
+import { Campo, Th, monedaFmt } from "@/components/comprobantes/alta/ui";
 import { registrarOrden } from "@/lib/ordenes-compra/actions";
 import { mapErrorOrden } from "@/lib/ordenes-compra/errores";
 
@@ -102,6 +102,13 @@ export function OrdenForm({ proveedores, productos }) {
     });
   }
 
+  const totalEstimado = lineas.reduce((acc, l) => {
+    const cantidad = Number(l.cantidad);
+    const precio = Number(l.precio_estimado);
+    if (!(cantidad > 0) || l.precio_estimado === "" || !(precio >= 0)) return acc;
+    return acc + cantidad * precio;
+  }, 0);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="palacio-card p-5 md:p-6">
@@ -144,109 +151,138 @@ export function OrdenForm({ proveedores, productos }) {
       <div className="palacio-card overflow-hidden">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Artículos</h2>
+          <span className="text-xs text-palacio-muted">
+            {lineas.length} línea{lineas.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-palacio-border bg-zinc-50/80">
+                <Th>Artículo</Th>
+                <Th className="w-28 text-right">Cantidad</Th>
+                <Th className="w-36 text-right">Precio estimado</Th>
+                <Th className="w-32 text-right">Importe</Th>
+                <Th className="w-16" />
+              </tr>
+            </thead>
+            <tbody>
+              {lineas.map((l) => {
+                const cantidad = Number(l.cantidad);
+                const precio = Number(l.precio_estimado);
+                const importe =
+                  cantidad > 0 && l.precio_estimado !== "" && precio >= 0
+                    ? cantidad * precio
+                    : 0;
+                return (
+                  <tr key={l.key} className="border-b border-palacio-border last:border-0">
+                    <td className="px-3 py-2 align-top">
+                      <select
+                        value={l.id_producto}
+                        onChange={(e) => setLinea(l.key, "id_producto", e.target.value)}
+                        className="palacio-input"
+                      >
+                        <option value="">Seleccioná un artículo…</option>
+                        {productos.map((p) => (
+                          <option key={p.id_producto} value={p.id_producto}>
+                            {p.nombre_completo}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2 text-right align-top">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={l.cantidad}
+                        onChange={(e) => setLinea(l.key, "cantidad", e.target.value)}
+                        className="palacio-input text-right"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right align-top">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={l.precio_estimado}
+                        onChange={(e) => setLinea(l.key, "precio_estimado", e.target.value)}
+                        className="palacio-input text-right"
+                        placeholder="Opcional"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right align-middle font-medium text-zinc-800">
+                      {l.precio_estimado === "" ? "—" : monedaFmt.format(importe)}
+                    </td>
+                    <td className="px-3 py-2 text-right align-middle">
+                      <button
+                        type="button"
+                        className="palacio-action-btn palacio-action-danger"
+                        disabled={lineas.length === 1}
+                        onClick={() =>
+                          setLineas((prev) => prev.filter((x) => x.key !== l.key))
+                        }
+                      >
+                        Quitar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-wrap items-start justify-between gap-3 border-t border-palacio-border px-5 py-3">
           <button
             type="button"
-            className="palacio-btn-secondary"
+            className="palacio-btn-secondary px-3 py-2 text-sm"
             onClick={() => {
               const key = seq + 1;
               setSeq(key);
               setLineas((prev) => [...prev, lineaNueva(key)]);
             }}
           >
-            Agregar artículo
+            Agregar línea
+          </button>
+          <dl className="min-w-52 text-right text-sm">
+            <div className="flex justify-between gap-6 font-semibold text-zinc-900">
+              <dt>Total estimado</dt>
+              <dd className="tabular-nums">{monedaFmt.format(totalEstimado)}</dd>
+            </div>
+          </dl>
+        </div>
+
+        {errores.detalle ? (
+          <p className="mx-5 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errores.detalle}
+          </p>
+        ) : null}
+
+        {errorServer ? (
+          <p className="mx-5 mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errorServer}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2 border-t border-palacio-border px-5 py-4">
+          <button
+            type="button"
+            onClick={registrar}
+            disabled={pending}
+            className="palacio-btn-primary px-4 py-2.5 text-sm"
+          >
+            {pending ? "Registrando…" : "Registrar orden"}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/compras/ordenes")}
+            disabled={pending}
+            className="palacio-btn-secondary px-4 py-2.5 text-sm"
+          >
+            Cancelar
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-palacio-border">
-                <th className="px-3 py-2 text-[11px] font-semibold tracking-wider text-palacio-muted uppercase">
-                  Artículo
-                </th>
-                <th className="px-3 py-2 text-[11px] font-semibold tracking-wider text-palacio-muted uppercase">
-                  Cantidad
-                </th>
-                <th className="px-3 py-2 text-[11px] font-semibold tracking-wider text-palacio-muted uppercase">
-                  Precio estimado
-                </th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {lineas.map((l) => (
-                <tr key={l.key} className="border-b border-palacio-border last:border-0">
-                  <td className="px-3 py-2">
-                    <select
-                      value={l.id_producto}
-                      onChange={(e) => setLinea(l.key, "id_producto", e.target.value)}
-                      className="palacio-input"
-                    >
-                      <option value="">Seleccioná…</option>
-                      {productos.map((p) => (
-                        <option key={p.id_producto} value={p.id_producto}>
-                          {p.nombre_completo}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.001"
-                      value={l.cantidad}
-                      onChange={(e) => setLinea(l.key, "cantidad", e.target.value)}
-                      className="palacio-input w-28"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={l.precio_estimado}
-                      onChange={(e) => setLinea(l.key, "precio_estimado", e.target.value)}
-                      className="palacio-input w-32"
-                      placeholder="Opcional"
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      className="text-sm text-palacio-red underline disabled:opacity-40"
-                      disabled={lineas.length === 1}
-                      onClick={() =>
-                        setLineas((prev) => prev.filter((x) => x.key !== l.key))
-                      }
-                    >
-                      Quitar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {errores.detalle ? (
-          <p className="px-5 py-3 text-sm text-red-600">{errores.detalle}</p>
-        ) : null}
-      </div>
-
-      {errorServer ? (
-        <div className="palacio-card border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-          {errorServer}
-        </div>
-      ) : null}
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          className="palacio-btn-primary"
-          disabled={pending}
-          onClick={registrar}
-        >
-          {pending ? "Registrando…" : "Registrar orden"}
-        </button>
       </div>
     </div>
   );

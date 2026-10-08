@@ -29,6 +29,47 @@ export async function obtenerSaldoFavorProveedor(idProveedor, excluirOrden = nul
 }
 
 /**
+ * Notas de crédito del proveedor con importe todavía sin aplicar
+ * (menos lo reservado en otras órdenes abiertas).
+ *
+ * @param {string} idProveedor
+ * @param {string | null} [excluirOrden]
+ */
+export async function listarNotasCreditoDisponibles(idProveedor, excluirOrden = null) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_nota_credito_disponible_listar", {
+    p_id_proveedor: idProveedor,
+    p_excluir_orden: excluirOrden || null,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar las notas de crédito." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Notas de crédito guardadas en una orden de pago.
+ *
+ * @param {string} idOrden
+ */
+export async function listarNotasOrdenPago(idOrden) {
+  if (!idOrden) return { data: [], error: null };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_orden_pago_notas_listar", {
+    p_id_orden_pago: idOrden,
+  });
+
+  if (error) {
+    return { data: null, error: "No se pudieron cargar las notas de la orden." };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+/**
  * @param {{ message?: string, code?: string } | null | undefined} error
  * @param {string} fallback
  */
@@ -80,6 +121,20 @@ function mapMedios(medios) {
     importe: numero(m.importe),
     referencia: textoOpcional(m.referencia),
   }));
+}
+
+/**
+ * Marcadores de nota de crédito que viajan en `p_medios` sin medio de pago.
+ *
+ * @param {Array<{ id_comprobante?: string, importe?: number | string }>} notas
+ */
+function mapNotas(notas) {
+  return (Array.isArray(notas) ? notas : [])
+    .map((n) => ({
+      id_nota_credito: n.id_comprobante || null,
+      importe: numero(n.importe),
+    }))
+    .filter((n) => n.id_nota_credito && n.importe > 0);
 }
 
 /**
@@ -140,7 +195,7 @@ export async function obtenerOrdenPago(idOrdenPago) {
  *   confirmar?: boolean,
  *   imputaciones: Array<{ id_comprobante: string, importe_imputado: number | string }>,
  *   medios: Array<{ id_medio_pago: string, id_cuenta_tesoreria: string, importe: number | string, referencia?: string | null }>,
- *   importe_saldo_favor?: number | string | null,
+ *   notas?: Array<{ id_comprobante: string, importe: number | string }>,
  * }} entrada
  * @returns {Promise<{ ok: boolean, id?: string | null, error: string | null, code?: string | null }>}
  */
@@ -159,9 +214,7 @@ export async function crearOrdenPago(entrada) {
     };
   }
 
-  const medios = mapMedios(entrada.medios);
-  const favor = numero(entrada.importe_saldo_favor);
-  if (favor > 0) medios.push({ importe_saldo_favor: favor });
+  const medios = [...mapMedios(entrada.medios), ...mapNotas(entrada.notas)];
 
   const { data, error } = await supabase.rpc("fn_orden_pago_crear", {
     p_id_proveedor: entrada.id_proveedor || null,
