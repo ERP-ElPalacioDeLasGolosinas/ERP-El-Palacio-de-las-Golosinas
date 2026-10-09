@@ -59,6 +59,7 @@ export function OrdenesCompraTable({ ordenes, proveedores, filtros }) {
   const resumen = {
     cantidad: ordenes.length,
     pendientes: ordenes.filter((o) => o.estado === "Pendiente").length,
+    facturadas: ordenes.filter((o) => o.estado === "Facturada").length,
     recibidas: ordenes.filter(
       (o) => o.estado === "Recibida parcial" || o.estado === "Recibida total"
     ).length,
@@ -152,9 +153,10 @@ export function OrdenesCompraTable({ ordenes, proveedores, filtros }) {
         </Link>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <ResumenItem label="Órdenes" valor={String(resumen.cantidad)} />
         <ResumenItem label="Pendientes" valor={String(resumen.pendientes)} />
+        <ResumenItem label="Facturadas" valor={String(resumen.facturadas)} />
         <ResumenItem label="Recibidas" valor={String(resumen.recibidas)} />
         <ResumenItem label="Canceladas" valor={String(resumen.canceladas)} />
       </div>

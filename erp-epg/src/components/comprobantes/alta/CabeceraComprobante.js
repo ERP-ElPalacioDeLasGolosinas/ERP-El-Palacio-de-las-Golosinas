@@ -25,10 +25,7 @@ export function CabeceraComprobante({
   ordenes = [],
 }) {
   const ordenesDelProveedor = ordenes.filter(
-    (o) =>
-      o.id_proveedor === cab.id_proveedor &&
-      o.estado !== "Cancelada" &&
-      o.pendiente_facturar
+    (o) => o.id_proveedor === cab.id_proveedor && o.estado === "Pendiente"
   );
   return (
     <div className="palacio-card p-5 md:p-6">
@@ -119,13 +116,13 @@ export function CabeceraComprobante({
               </option>
               {ordenesDelProveedor.map((o) => (
                 <option key={o.id_orden_compra} value={o.id_orden_compra}>
-                  {o.numero_formateado} · {o.estado}
+                  {o.numero_formateado}
                 </option>
               ))}
             </select>
             {cab.id_proveedor && ordenesDelProveedor.length === 0 ? (
               <p className="text-xs text-palacio-muted">
-                Este proveedor no tiene órdenes con cantidad pendiente de facturar.
+                Este proveedor no tiene órdenes pendientes para facturar.
               </p>
             ) : null}
           </Campo>

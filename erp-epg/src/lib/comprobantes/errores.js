@@ -119,6 +119,11 @@ const MAPA = {
     message:
       "La cantidad facturada supera la solicitada en la orden de compra.",
   },
+  CMP14: {
+    field: "orden",
+    message:
+      "Esa orden ya está facturada, recibida o cancelada. Solo se puede vincular una orden pendiente.",
+  },
 
   // Notas de débito (S2-7)
   NDB01: {

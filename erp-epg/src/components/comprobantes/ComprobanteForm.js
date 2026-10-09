@@ -55,8 +55,7 @@ export function ComprobanteForm({
           (o) =>
             o.id_orden_compra === prev.id_orden_compra &&
             o.id_proveedor === valor &&
-            o.estado !== "Cancelada" &&
-            o.pendiente_facturar
+            o.estado === "Pendiente"
         );
         if (!sigue) next.id_orden_compra = "";
       }

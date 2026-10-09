@@ -46,7 +46,7 @@ export default async function RegistrarComprobantePage() {
   // notas de débito / crédito / remitos (se filtra por proveedor en el
   // cliente).
   const ordenes = (ordenesRes.data ?? [])
-    .filter((o) => o.estado !== "Cancelada")
+    .filter((o) => o.estado === "Pendiente")
     .map((o) => ({
       id_orden_compra: o.id_orden_compra,
       id_proveedor: o.id_proveedor,
