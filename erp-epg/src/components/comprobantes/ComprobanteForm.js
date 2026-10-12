@@ -17,7 +17,6 @@ import { RemitoCampos } from "./alta/RemitoCampos";
  * @param {{
  *   proveedores: Array<{ id_proveedor: string, nombre_proveedor: string }>,
  *   tipos: Array<{ id_tipo_comprobante: string, nombre_tipo_comprobante: string, letra: string | null, clase?: string }>,
- *   productos: Array<{ id_producto: string, nombre_completo: string, codigo_producto?: string | null }>,
  *   facturas?: Array<{ id_comprobante: string, id_proveedor: string, numero_formateado: string, nombre_tipo_comprobante: string, letra: string | null }>,
  *   ordenes?: Array<{ id_orden_compra: string, id_proveedor: string, numero_formateado: string, estado: string }>,
  * }} props
@@ -25,7 +24,6 @@ import { RemitoCampos } from "./alta/RemitoCampos";
 export function ComprobanteForm({
   proveedores,
   tipos,
-  productos,
   facturas = [],
   ordenes = [],
 }) {
@@ -120,9 +118,9 @@ export function ComprobanteForm({
       ) : claseActual === "nota_credito" ? (
         <NotaCreditoCampos {...conAsociado} />
       ) : claseActual === "remito" ? (
-        <RemitoCampos {...conAsociado} productos={productos} />
+        <RemitoCampos {...conAsociado} />
       ) : (
-        <FacturaCampos {...comun} productos={productos} />
+        <FacturaCampos {...comun} />
       )}
     </>
   );

@@ -33,7 +33,7 @@ const MAPA = {
   CAJ08: { field: "importe", message: "El egreso supera el saldo disponible de ese medio." },
   CAJ09: { field: "medios", message: "La suma de los medios tiene que ser igual al total de la venta." },
   CAJ10: { field: null, message: "La venta no se puede cobrar en caja.", reload: true },
-  CAJ11: { field: "monto", message: "Ingresá el efectivo contado (cero o más)." },
+  CAJ11: { field: "monto", message: "Revisá el conteo de billetes. Las cantidades tienen que ser cero o más." },
   CAJ12: { field: null, message: "Antes de cerrar la caja tenés que realizar el arqueo." },
   CAJ13: { field: null, message: "Los movimientos y arqueos de caja no se pueden modificar." },
   CAJ14: { field: "deposito", message: "Elegí un depósito activo. La caja vende el stock de esa sucursal." },

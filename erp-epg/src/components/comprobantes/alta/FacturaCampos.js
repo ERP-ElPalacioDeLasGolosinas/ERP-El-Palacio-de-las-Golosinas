@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { registrarComprobante } from "@/lib/comprobantes/actions";
 import { mapErrorComprobante } from "@/lib/comprobantes/errores";
+import { ProductoBuscadorLote } from "@/components/movimientos/ProductoBuscadorLote";
 import { Th, monedaFmt } from "./ui";
 
 const CAMPOS_CABECERA = [
@@ -21,6 +22,8 @@ function nuevaLinea() {
     key: `l${contadorLinea}`,
     modo: "producto", // "producto" | "concepto"
     id_producto: "",
+    codigo_producto: "",
+    nombre_completo: "",
     concepto: "",
     cantidad: "",
     precio_unitario: "",
@@ -46,7 +49,6 @@ function importeLinea(l) {
  *
  * @param {{
  *   cab: Record<string, string>,
- *   productos: Array<{ id_producto: string, nombre_completo: string }>,
  *   validarCabecera: () => boolean,
  *   setErrorCabecera: (campo: string, mensaje: string) => void,
  *   errorServer: string | null,
@@ -55,7 +57,6 @@ function importeLinea(l) {
  */
 export function FacturaCampos({
   cab,
-  productos,
   validarCabecera,
   setErrorCabecera,
   errorServer,
@@ -172,7 +173,7 @@ export function FacturaCampos({
   }
 
   return (
-    <div className="palacio-card mt-6 overflow-hidden">
+    <div className="palacio-card mt-6">
       <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
         <h2 className="text-sm font-semibold text-zinc-900">
           Detalle del comprobante
@@ -182,7 +183,7 @@ export function FacturaCampos({
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div>
         <table className="min-w-full text-left text-sm">
           <thead>
             <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -220,20 +221,32 @@ export function FacturaCampos({
                 </td>
                 <td className="px-3 py-2 align-top">
                   {l.modo === "producto" ? (
-                    <select
-                      value={l.id_producto}
-                      onChange={(e) =>
-                        setLinea(idx, { id_producto: e.target.value })
+                    <ProductoBuscadorLote
+                      etiqueta={null}
+                      producto={
+                        l.id_producto
+                          ? {
+                              id_producto: l.id_producto,
+                              codigo_producto: l.codigo_producto,
+                              nombre_completo: l.nombre_completo,
+                            }
+                          : null
                       }
-                      className="palacio-input"
-                    >
-                      <option value="">Seleccioná un artículo…</option>
-                      {productos.map((p) => (
-                        <option key={p.id_producto} value={p.id_producto}>
-                          {p.nombre_completo}
-                        </option>
-                      ))}
-                    </select>
+                      onSeleccionar={(p) =>
+                        setLinea(idx, {
+                          id_producto: p.id_producto,
+                          codigo_producto: p.codigo_producto ?? "",
+                          nombre_completo: p.nombre_completo ?? "",
+                        })
+                      }
+                      onQuitar={() =>
+                        setLinea(idx, {
+                          id_producto: "",
+                          codigo_producto: "",
+                          nombre_completo: "",
+                        })
+                      }
+                    />
                   ) : (
                     <input
                       type="text"

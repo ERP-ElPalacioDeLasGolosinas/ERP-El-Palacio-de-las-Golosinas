@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ProductoBuscadorLote } from "@/components/movimientos/ProductoBuscadorLote";
 import {
   registrarMovimientosLote,
-  listarProductosPorDeposito,
   validarStockDisponible,
 } from "@/lib/movimientos/actions";
 import { mapErrorMovimiento } from "@/lib/movimientos/errores";
@@ -67,14 +67,13 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
   const [idConcepto, setIdConcepto] = useState("");
   const [idDeposito, setIdDeposito] = useState("");
   const [idProducto, setIdProducto] = useState("");
+  const [productoElegido, setProductoElegido] = useState(null);
   const [idDepositoDestino, setIdDepositoDestino] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [remito, setRemito] = useState("");
   const [corrige, setCorrige] = useState(false);
   const [idMovimientoReferencia, setIdMovimientoReferencia] = useState("");
 
-  const [productos, setProductos] = useState([]);
-  const [cargandoProductos, setCargandoProductos] = useState(false);
   const [stockInfo, setStockInfo] = useState(null);
   const [errores, setErrores] = useState({});
   const [errorServer, setErrorServer] = useState(null);
@@ -93,40 +92,20 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
     [depositos, idDeposito]
   );
 
-  const depositoRequestRef = useRef(0);
-
-  /**
-   * Al cambiar el depósito: reset producto/stock, y trae el catálogo con
-   * stock disponible en ese depósito (fn_producto_listar_por_deposito).
-   */
   function onDepositoChange(valor) {
     setIdDeposito(valor);
     setIdProducto("");
+    setProductoElegido(null);
     setStockInfo(null);
     setIdDepositoDestino((prev) => (prev === valor ? "" : prev));
-
-    const requestId = ++depositoRequestRef.current;
-    if (!valor) {
-      setProductos([]);
-      setCargandoProductos(false);
-      return;
-    }
-
-    setCargandoProductos(true);
-    listarProductosPorDeposito(valor).then((res) => {
-      if (depositoRequestRef.current !== requestId) return;
-      setCargandoProductos(false);
-      setProductos(res.data ?? []);
-    });
   }
 
   function onConceptoChange(valor) {
     setIdConcepto(valor);
     setIdDeposito("");
     setIdProducto("");
+    setProductoElegido(null);
     setIdDepositoDestino("");
-    setProductos([]);
-    setCargandoProductos(false);
     setStockInfo(null);
     setCorrige(false);
     setIdMovimientoReferencia("");
@@ -184,7 +163,7 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
       ? depositos.find((d) => d.id_deposito === idDepositoDestino)?.nombre_deposito ?? ""
       : null;
     const nombreProducto =
-      productos.find((p) => p.id_producto === idProducto)?.nombre_completo ?? "";
+      productoElegido?.nombre_completo ?? "";
     const nombreConcepto = esTransferencia
       ? "Transferencia de mercadería"
       : tipoElegido?.nombre ?? "";
@@ -228,6 +207,7 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
     // Resetea Producto/Depósito destino/Cantidad/Remito; deja Concepto y
     // Depósito origen fijos por comodidad, pero siguen editables.
     setIdProducto("");
+    setProductoElegido(null);
     setIdDepositoDestino("");
     setCantidad("");
     setRemito("");
@@ -343,30 +323,24 @@ export function MovimientoForm({ tipos, depositos, movimientos }) {
           ) : null}
 
           <Campo label="Producto" error={errores.id_producto} requerido full>
-            <select
-              value={idProducto}
-              onChange={(e) => {
-                const valor = e.target.value;
-                setIdProducto(valor);
+            <ProductoBuscadorLote
+              etiqueta={null}
+              disabled={!idDeposito}
+              producto={productoElegido}
+              onSeleccionar={(p) => {
+                setIdProducto(p.id_producto);
+                setProductoElegido(p);
                 setErrores((prev) => ({ ...prev, id_producto: null }));
-                chequearStock(valor, idDeposito, cantidad);
+                chequearStock(p.id_producto, idDeposito, cantidad);
               }}
-              disabled={!idDeposito || cargandoProductos}
-              className="palacio-input"
-            >
-              <option value="">
-                {cargandoProductos ? "Cargando productos…" : "Seleccioná un producto…"}
-              </option>
-              {productos.map((p) => (
-                <option key={p.id_producto} value={p.id_producto}>
-                  {p.nombre_completo} — {numFmt.format(Number(p.cantidad_disponible ?? 0))} disp.
-                </option>
-              ))}
-            </select>
-            {idDeposito && !cargandoProductos && productos.length === 0 ? (
-              <p className="text-xs text-palacio-muted">
-                Este depósito no tiene productos con stock disponible.
-              </p>
+              onQuitar={() => {
+                setIdProducto("");
+                setProductoElegido(null);
+                setStockInfo(null);
+              }}
+            />
+            {!idDeposito ? (
+              <p className="text-xs text-palacio-muted">Elegí el depósito para buscar el producto.</p>
             ) : null}
           </Campo>
 

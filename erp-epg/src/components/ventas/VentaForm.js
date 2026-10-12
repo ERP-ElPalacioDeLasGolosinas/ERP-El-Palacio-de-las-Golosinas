@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ProductoBuscadorLote } from "@/components/movimientos/ProductoBuscadorLote";
 import { TIPOS_MEDIO_TESORERIA } from "@/lib/cajas/constantes";
 import { listarCuentasCompatibles } from "@/lib/medios-pago/actions";
-import { listarProductosPorDeposito } from "@/lib/movimientos/actions";
+import { validarStockDisponible } from "@/lib/movimientos/actions";
 import { registrarVenta } from "@/lib/ventas/actions";
 import { mapErrorVenta } from "@/lib/ventas/errores";
 import { TIPOS_VENTA, listaDeTipoVenta, seCobraEnCaja } from "@/lib/ventas/estado";
@@ -25,6 +26,9 @@ function nuevaLinea(base = {}) {
     key: `l${contadorLinea}`,
     id_deposito: base.id_deposito ?? "",
     id_producto: "",
+    codigo_producto: "",
+    nombre_completo: "",
+    cantidad_disponible: null,
     cantidad: "",
   };
 }
@@ -78,9 +82,6 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
     nuevaLinea({ id_deposito: depositos.length === 1 ? depositos[0].id_deposito : "" }),
   ]);
   const [mediosPago, setMediosPago] = useState(() => [nuevoMedio()]);
-
-  /** Productos con stock por depósito: `{ [id_deposito]: Array | "cargando" }`. */
-  const [productosPorDeposito, setProductosPorDeposito] = useState({});
   const [errores, setErrores] = useState({});
   const [errorServer, setErrorServer] = useState(null);
 
@@ -106,16 +107,30 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
     setIdCliente("");
     if (seCobraEnCaja(tipo)) {
       setFecha(hoy());
-      setLineas((prev) => prev.map((l) => ({ ...l, id_producto: "" })));
+      setLineas((prev) =>
+        prev.map((l) => ({
+          ...l,
+          id_producto: "",
+          codigo_producto: "",
+          nombre_completo: "",
+          cantidad_disponible: null,
+        }))
+      );
     }
     limpiarErrores();
   }
 
   function elegirCaja(id) {
     setIdCaja(id);
-    setLineas((prev) => prev.map((l) => ({ ...l, id_producto: "" })));
-    const deposito = cajasAbiertas.find((c) => c.id_caja === id)?.id_deposito;
-    if (deposito) cargarProductos(deposito);
+    setLineas((prev) =>
+      prev.map((l) => ({
+        ...l,
+        id_producto: "",
+        codigo_producto: "",
+        nombre_completo: "",
+        cantidad_disponible: null,
+      }))
+    );
     limpiarErrores();
   }
 
@@ -124,44 +139,7 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
     return enCaja ? (caja?.id_deposito ?? "") : linea.id_deposito;
   }
 
-  function cargarProductos(idDeposito) {
-    if (!idDeposito || productosPorDeposito[idDeposito]) return;
-    setProductosPorDeposito((prev) => ({ ...prev, [idDeposito]: "cargando" }));
-    startTransition(async () => {
-      const res = await listarProductosPorDeposito(idDeposito);
-      setProductosPorDeposito((prev) => ({ ...prev, [idDeposito]: res.data ?? [] }));
-    });
-  }
-
-  const depositoInicial = depositos.length === 1 ? depositos[0].id_deposito : "";
-  useEffect(() => {
-    if (!depositoInicial) return;
-    let cancelado = false;
-    listarProductosPorDeposito(depositoInicial).then((res) => {
-      if (cancelado) return;
-      setProductosPorDeposito((prev) =>
-        prev[depositoInicial] ? prev : { ...prev, [depositoInicial]: res.data ?? [] }
-      );
-    });
-    return () => {
-      cancelado = true;
-    };
-  }, [depositoInicial]);
-
   const depositoCaja = enCaja ? (caja?.id_deposito ?? "") : "";
-  useEffect(() => {
-    if (!depositoCaja) return;
-    let cancelado = false;
-    listarProductosPorDeposito(depositoCaja).then((res) => {
-      if (cancelado) return;
-      setProductosPorDeposito((prev) =>
-        prev[depositoCaja] ? prev : { ...prev, [depositoCaja]: res.data ?? [] }
-      );
-    });
-    return () => {
-      cancelado = true;
-    };
-  }, [depositoCaja]);
 
   function setLinea(idx, cambios) {
     setLineas((prev) => prev.map((l, i) => (i === idx ? { ...l, ...cambios } : l)));
@@ -169,8 +147,42 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
   }
 
   function elegirDeposito(idx, idDeposito) {
-    setLinea(idx, { id_deposito: idDeposito, id_producto: "" });
-    cargarProductos(idDeposito);
+    setLinea(idx, {
+      id_deposito: idDeposito,
+      id_producto: "",
+      codigo_producto: "",
+      nombre_completo: "",
+      cantidad_disponible: null,
+    });
+  }
+
+  function elegirProducto(idx, producto) {
+    const deposito = depositoDe(lineas[idx]);
+    setLinea(idx, {
+      id_producto: producto.id_producto,
+      codigo_producto: producto.codigo_producto ?? "",
+      nombre_completo: producto.nombre_completo ?? "",
+      cantidad_disponible: null,
+    });
+    if (!deposito) return;
+    validarStockDisponible(producto.id_producto, deposito, 0).then((res) => {
+      setLineas((prev) =>
+        prev.map((l, i) =>
+          i === idx && l.id_producto === producto.id_producto
+            ? { ...l, cantidad_disponible: Number(res.stockActual) || 0 }
+            : l
+        )
+      );
+    });
+  }
+
+  function quitarProducto(idx) {
+    setLinea(idx, {
+      id_producto: "",
+      codigo_producto: "",
+      nombre_completo: "",
+      cantidad_disponible: null,
+    });
   }
 
   function agregarLinea() {
@@ -183,15 +195,10 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
     limpiarErrores();
   }
 
-  /** Artículos con stock en el depósito que además tienen precio en la lista. */
-  function productosDe(idDeposito) {
-    const stock = productosPorDeposito[idDeposito];
-    return Array.isArray(stock) ? stock.filter((p) => p.id_producto in precios) : [];
-  }
-
   function disponibleDe(linea) {
-    const p = productosDe(linea.id_deposito).find((x) => x.id_producto === linea.id_producto);
-    return p ? Number(p.cantidad_disponible) || 0 : null;
+    return linea.id_producto && linea.cantidad_disponible != null
+      ? Number(linea.cantidad_disponible) || 0
+      : null;
   }
 
   /** Cantidad pedida por producto × depósito en todas las líneas. */
@@ -286,11 +293,18 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
           : "Cada línea necesita depósito, artículo y cantidad mayor a cero.";
         break;
       }
+      if (!(l.id_producto in precios)) {
+        next.detalle = `${l.nombre_completo || "El artículo"} no tiene precio en la lista ${tipoLista}.`;
+        break;
+      }
       const disponible = disponibleDe({ ...l, id_deposito: deposito });
+      if (disponible == null) {
+        next.detalle = "Esperá a que se consulte el stock del artículo.";
+        break;
+      }
       const pedido = pedidoPorClave[`${l.id_producto}|${deposito}`] ?? 0;
-      if (disponible != null && pedido > disponible) {
-        const p = productosDe(deposito).find((x) => x.id_producto === l.id_producto);
-        next.detalle = `Stock insuficiente de ${p?.nombre_completo ?? "un artículo"}: disponible ${disponible}, pedido ${pedido}.`;
+      if (pedido > disponible) {
+        next.detalle = `Stock insuficiente de ${l.nombre_completo || "un artículo"}: disponible ${disponible}, pedido ${pedido}.`;
         break;
       }
     }
@@ -364,10 +378,7 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
         const ui = mapErrorVenta(result);
         if (ui.field) setErrores((prev) => ({ ...prev, [ui.field]: ui.message }));
         else setErrorServer(ui.message);
-        if (ui.reload) {
-          setProductosPorDeposito({});
-          router.refresh();
-        }
+        if (ui.reload) router.refresh();
         return;
       }
 
@@ -531,11 +542,9 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
         <div className="space-y-3 p-4">
           {lineas.map((l, idx) => {
             const deposito = depositoDe(l);
-            const listaDeposito = productosPorDeposito[deposito];
-            const cargando = listaDeposito === "cargando";
-            const productos = productosDe(deposito);
             const disponible = disponibleDe({ ...l, id_deposito: deposito });
             const calc = calculadas[idx];
+            const sinPrecio = Boolean(l.id_producto) && !(l.id_producto in precios);
             return (
               <div
                 key={l.key}
@@ -559,27 +568,34 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
                 )}
 
                 <div>
-                  <select
-                    value={l.id_producto}
-                    onChange={(e) => setLinea(idx, { id_producto: e.target.value })}
-                    disabled={!deposito || cargando}
-                    className="palacio-input"
-                  >
-                    <option value="">{cargando ? "Cargando artículos…" : "Artículo…"}</option>
-                    {productos.map((p) => (
-                      <option key={p.id_producto} value={p.id_producto}>
-                        {p.codigo_producto} · {p.nombre_completo}
-                      </option>
-                    ))}
-                  </select>
-                  {deposito && !cargando && productos.length === 0 ? (
-                    <p className="mt-1 text-xs text-amber-700">
-                      Ese depósito no tiene artículos con stock y precio en la lista.
+                  <ProductoBuscadorLote
+                    etiqueta={null}
+                    disabled={!deposito}
+                    producto={
+                      l.id_producto
+                        ? {
+                            id_producto: l.id_producto,
+                            codigo_producto: l.codigo_producto,
+                            nombre_completo: l.nombre_completo,
+                          }
+                        : null
+                    }
+                    onSeleccionar={(p) => elegirProducto(idx, p)}
+                    onQuitar={() => quitarProducto(idx)}
+                  />
+                  {!deposito ? (
+                    <p className="mt-1 text-xs text-palacio-muted">
+                      {enCaja ? "Elegí la caja para buscar artículos." : "Elegí el depósito para buscar artículos."}
                     </p>
                   ) : null}
-                  {l.id_producto ? (
+                  {sinPrecio ? (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Este artículo no tiene precio en la lista {tipoLista}.
+                    </p>
+                  ) : null}
+                  {l.id_producto && !sinPrecio ? (
                     <p className="mt-1 text-xs text-palacio-muted">
-                      Disponible: {disponible ?? "—"} · Precio {monedaFmt.format(calc.precio)} · Importe{" "}
+                      Disponible: {disponible ?? "…"} · Precio {monedaFmt.format(calc.precio)} · Importe{" "}
                       {monedaFmt.format(calc.importe)}
                     </p>
                   ) : null}

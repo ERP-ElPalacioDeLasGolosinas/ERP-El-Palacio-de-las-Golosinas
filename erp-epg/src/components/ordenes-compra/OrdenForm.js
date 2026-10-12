@@ -3,20 +3,20 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Campo, Th, monedaFmt } from "@/components/comprobantes/alta/ui";
+import { ProductoBuscadorLote } from "@/components/movimientos/ProductoBuscadorLote";
 import { registrarOrden } from "@/lib/ordenes-compra/actions";
 import { mapErrorOrden } from "@/lib/ordenes-compra/errores";
 
 function lineaNueva(key) {
-  return { key, id_producto: "", cantidad: "", precio_estimado: "" };
+  return { key, id_producto: "", codigo_producto: "", nombre_completo: "", cantidad: "", precio_estimado: "" };
 }
 
 /**
  * @param {{
  *   proveedores: Array<{ id_proveedor: string, nombre_proveedor: string }>,
- *   productos: Array<{ id_producto: string, nombre_completo: string }>,
  * }} props
  */
-export function OrdenForm({ proveedores, productos }) {
+export function OrdenForm({ proveedores }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [cab, setCab] = useState({
@@ -148,14 +148,14 @@ export function OrdenForm({ proveedores, productos }) {
         </div>
       </div>
 
-      <div className="palacio-card overflow-hidden">
+      <div className="palacio-card">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Artículos</h2>
           <span className="text-xs text-palacio-muted">
             {lineas.length} línea{lineas.length === 1 ? "" : "s"}
           </span>
         </div>
-        <div className="overflow-x-auto">
+        <div>
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -177,18 +177,42 @@ export function OrdenForm({ proveedores, productos }) {
                 return (
                   <tr key={l.key} className="border-b border-palacio-border last:border-0">
                     <td className="px-3 py-2 align-top">
-                      <select
-                        value={l.id_producto}
-                        onChange={(e) => setLinea(l.key, "id_producto", e.target.value)}
-                        className="palacio-input"
-                      >
-                        <option value="">Seleccioná un artículo…</option>
-                        {productos.map((p) => (
-                          <option key={p.id_producto} value={p.id_producto}>
-                            {p.nombre_completo}
-                          </option>
-                        ))}
-                      </select>
+                      <ProductoBuscadorLote
+                        etiqueta={null}
+                        producto={
+                          l.id_producto
+                            ? {
+                                id_producto: l.id_producto,
+                                codigo_producto: l.codigo_producto,
+                                nombre_completo: l.nombre_completo,
+                              }
+                            : null
+                        }
+                        onSeleccionar={(p) => {
+                          setLineas((prev) =>
+                            prev.map((row) =>
+                              row.key === l.key
+                                ? {
+                                    ...row,
+                                    id_producto: p.id_producto,
+                                    codigo_producto: p.codigo_producto ?? "",
+                                    nombre_completo: p.nombre_completo ?? "",
+                                  }
+                                : row
+                            )
+                          );
+                          setErrores((prev) => ({ ...prev, detalle: null }));
+                        }}
+                        onQuitar={() =>
+                          setLineas((prev) =>
+                            prev.map((row) =>
+                              row.key === l.key
+                                ? { ...row, id_producto: "", codigo_producto: "", nombre_completo: "" }
+                                : row
+                            )
+                          )
+                        }
+                      />
                     </td>
                     <td className="px-3 py-2 text-right align-top">
                       <input

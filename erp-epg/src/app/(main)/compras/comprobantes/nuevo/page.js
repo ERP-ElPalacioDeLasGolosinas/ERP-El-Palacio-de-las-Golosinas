@@ -1,6 +1,5 @@
 import { listarProveedores } from "@/lib/proveedores/actions";
 import { listarTiposComprobante } from "@/lib/tipos-comprobante/actions";
-import { listarProductos } from "@/lib/productos/actions";
 import { listarComprobantes } from "@/lib/comprobantes/actions";
 import { listarOrdenes } from "@/lib/ordenes-compra/actions";
 import { ComprobanteForm } from "@/components/comprobantes/ComprobanteForm";
@@ -11,11 +10,10 @@ export const metadata = {
 };
 
 export default async function RegistrarComprobantePage() {
-  const [proveedoresRes, tiposRes, productosRes, comprobantesRes, ordenesRes] =
+  const [proveedoresRes, tiposRes, comprobantesRes, ordenesRes] =
     await Promise.all([
       listarProveedores(false),
       listarTiposComprobante(false),
-      listarProductos(false),
       listarComprobantes(),
       listarOrdenes(),
     ]);
@@ -33,14 +31,6 @@ export default async function RegistrarComprobantePage() {
     letra: t.letra ?? null,
     clase: t.clase ?? "factura",
   }));
-
-  const productos = (productosRes.data ?? [])
-    .filter((p) => p.activo)
-    .map((p) => ({
-      id_producto: p.id_producto,
-      nombre_completo: p.nombre_completo,
-      codigo_producto: p.codigo_producto ?? null,
-    }));
 
   // Facturas no anuladas para el selector de "comprobante asociado" de
   // notas de débito / crédito / remitos (se filtra por proveedor en el
@@ -79,7 +69,6 @@ export default async function RegistrarComprobantePage() {
       <ComprobanteForm
         proveedores={proveedores}
         tipos={tipos}
-        productos={productos}
         facturas={facturas}
         ordenes={ordenes}
       />

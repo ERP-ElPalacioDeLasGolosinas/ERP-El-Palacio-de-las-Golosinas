@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { registrarRemito } from "@/lib/comprobantes/actions";
 import { mapErrorComprobante } from "@/lib/comprobantes/errores";
+import { ProductoBuscadorLote } from "@/components/movimientos/ProductoBuscadorLote";
 import { Th } from "./ui";
 import { FacturaAsociadaSelect } from "./FacturaAsociada";
 
@@ -12,7 +13,7 @@ const CAMPOS_CABECERA = ["id_proveedor", "id_tipo_comprobante", "numero", "fecha
 let contadorLinea = 0;
 function nuevaLinea() {
   contadorLinea += 1;
-  return { key: `r${contadorLinea}`, id_producto: "", cantidad: "" };
+  return { key: `r${contadorLinea}`, id_producto: "", codigo_producto: "", nombre_completo: "", cantidad: "" };
 }
 
 /**
@@ -22,7 +23,6 @@ function nuevaLinea() {
  *
  * @param {{
  *   cab: Record<string, string>,
- *   productos: Array<{ id_producto: string, nombre_completo: string }>,
  *   facturas: Array<Record<string, any>>,
  *   validarCabecera: () => boolean,
  *   setErrorCabecera: (campo: string, mensaje: string) => void,
@@ -32,7 +32,6 @@ function nuevaLinea() {
  */
 export function RemitoCampos({
   cab,
-  productos,
   facturas,
   validarCabecera,
   setErrorCabecera,
@@ -120,7 +119,7 @@ export function RemitoCampos({
   }
 
   return (
-    <div className="palacio-card mt-6 overflow-hidden">
+    <div className="palacio-card mt-6">
       <div className="border-b border-palacio-border px-5 py-4">
         <h2 className="mb-4 text-sm font-semibold text-zinc-900">
           Datos del remito
@@ -147,7 +146,7 @@ export function RemitoCampos({
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div>
         <table className="min-w-full text-left text-sm">
           <thead>
             <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -163,18 +162,28 @@ export function RemitoCampos({
                 className="border-b border-palacio-border last:border-0"
               >
                 <td className="px-3 py-2 align-top">
-                  <select
-                    value={l.id_producto}
-                    onChange={(e) => setLinea(idx, { id_producto: e.target.value })}
-                    className="palacio-input"
-                  >
-                    <option value="">Seleccioná un artículo…</option>
-                    {productos.map((p) => (
-                      <option key={p.id_producto} value={p.id_producto}>
-                        {p.nombre_completo}
-                      </option>
-                    ))}
-                  </select>
+                  <ProductoBuscadorLote
+                    etiqueta={null}
+                    producto={
+                      l.id_producto
+                        ? {
+                            id_producto: l.id_producto,
+                            codigo_producto: l.codigo_producto,
+                            nombre_completo: l.nombre_completo,
+                          }
+                        : null
+                    }
+                    onSeleccionar={(p) =>
+                      setLinea(idx, {
+                        id_producto: p.id_producto,
+                        codigo_producto: p.codigo_producto ?? "",
+                        nombre_completo: p.nombre_completo ?? "",
+                      })
+                    }
+                    onQuitar={() =>
+                      setLinea(idx, { id_producto: "", codigo_producto: "", nombre_completo: "" })
+                    }
+                  />
                 </td>
                 <td className="px-3 py-2 text-right align-top">
                   <input

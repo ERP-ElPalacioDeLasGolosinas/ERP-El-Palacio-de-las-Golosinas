@@ -131,6 +131,9 @@ export default async function CajaDetallePage({ params }) {
                 <span className="text-palacio-muted">
                   {fechaHora(a.creado)} · {a.creado_por_nombre}
                   {a.observaciones ? ` · ${a.observaciones}` : ""}
+                  {Array.isArray(a.detalle_billetes) && a.detalle_billetes.length > 0
+                    ? ` · ${a.detalle_billetes.map((b) => `${b.cantidad} × ${moneda(b.denominacion)}`).join(", ")}`
+                    : ""}
                 </span>
                 <span>
                   Teórico {moneda(a.saldo_teorico)} · Contado {moneda(a.saldo_fisico)} ·{" "}

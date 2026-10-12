@@ -159,7 +159,7 @@ export async function registrarMovimientoCaja(entrada) {
 /**
  * V-17 · Arqueo: registra el efectivo contado contra el saldo teórico.
  *
- * @param {{ id_caja: string, saldo_fisico: number | string, observaciones?: string | null }} entrada
+ * @param {{ id_caja: string, saldo_fisico: number | string, observaciones?: string | null, detalle_billetes?: Array<{ denominacion: number, cantidad: number }> }} entrada
  * @returns {Promise<{ ok: boolean, error: string | null, code?: string | null }>}
  */
 export async function realizarArqueo(entrada) {
@@ -172,6 +172,7 @@ export async function realizarArqueo(entrada) {
     p_saldo_fisico: numero(entrada.saldo_fisico),
     p_observaciones: textoOpcional(entrada.observaciones),
     p_creado_por: user.id,
+    p_detalle_billetes: entrada.detalle_billetes ?? [],
   });
 
   if (error) return errorResult(error, "No se pudo registrar el arqueo.");
