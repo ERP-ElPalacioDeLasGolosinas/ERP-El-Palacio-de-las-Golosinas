@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * EXPERIMENTAL · Flujo de cajas con sesiones autorizadas por el gerente
- * (`fn_cajav2_*`, rama feat/ventas-cajas-nuevo-flujo).
+ * (`fn_sesion_caja_*`, rama feat/ventas-cajas-nuevo-flujo).
  */
 
 const PATH = "/ventas/cajas";
@@ -42,7 +42,7 @@ function revalidar(idCaja) {
  */
 export async function obtenerPanelCajas() {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_cajav2_panel");
+  const { data, error } = await supabase.rpc("fn_caja_panel");
   if (error) return { data: null, error: "No se pudieron cargar las cajas." };
   return { data: data ?? [], error: null };
 }
@@ -50,15 +50,15 @@ export async function obtenerPanelCajas() {
 /** Sesión viva del usuario actual (Pendiente, Abierta o Cierre solicitado), o null. */
 export async function obtenerMiSesion() {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_cajav2_mi_sesion");
+  const { data, error } = await supabase.rpc("fn_sesion_caja_mi_sesion");
   if (error) return { data: null, error: "No se pudo cargar tu sesión de caja." };
   return { data: data ?? null, error: null };
 }
 
-/** Sesión cajav2 de una caja (null si la caja se abrió con el flujo anterior). @param {string} idCaja */
+/** Sesión autorizada de una caja (null si la caja se abrió con el flujo anterior). @param {string} idCaja */
 export async function obtenerSesionDeCaja(idCaja) {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_cajav2_sesion_de_caja", { p_id_caja: idCaja });
+  const { data, error } = await supabase.rpc("fn_sesion_caja_sesion_de_caja", { p_id_caja: idCaja });
   if (error) return { data: null, error: "No se pudo cargar la sesión de la caja." };
   return { data: data ?? null, error: null };
 }
@@ -70,7 +70,7 @@ export async function obtenerSesionDeCaja(idCaja) {
  */
 export async function guardarCajaRegistradora(entrada) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_cajav2_registradora_guardar", {
+  const { error } = await supabase.rpc("fn_caja_registradora_guardar", {
     p_id_registradora: entrada.id_registradora || null,
     p_numero: numero(entrada.numero),
     p_nombre: textoOpcional(entrada.nombre),
@@ -89,7 +89,7 @@ export async function guardarCajaRegistradora(entrada) {
  */
 export async function solicitarAperturaCaja(entrada) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_cajav2_solicitar_apertura", {
+  const { error } = await supabase.rpc("fn_sesion_caja_solicitar_apertura", {
     p_id_registradora: entrada.id_registradora || null,
     p_monto_inicial: numero(entrada.monto_inicial),
     p_observaciones: textoOpcional(entrada.observaciones),
@@ -106,7 +106,7 @@ export async function solicitarAperturaCaja(entrada) {
  */
 export async function listarEmpleadosDisponibles() {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_cajav2_empleados_disponibles");
+  const { data, error } = await supabase.rpc("fn_sesion_caja_empleados_disponibles");
   if (error) return { data: null, error: "No se pudieron cargar los empleados disponibles." };
   return { data: data ?? [], error: null };
 }
@@ -118,7 +118,7 @@ export async function listarEmpleadosDisponibles() {
  */
 export async function levantarCaja(entrada) {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_cajav2_levantar", {
+  const { data, error } = await supabase.rpc("fn_sesion_caja_levantar", {
     p_id_registradora: entrada.id_registradora || null,
     p_id_empleado: entrada.id_empleado || null,
     p_monto_inicial: numero(entrada.monto_inicial),
@@ -132,7 +132,7 @@ export async function levantarCaja(entrada) {
 /** @param {{ id_sesion: string }} entrada */
 export async function aprobarAperturaCaja(entrada) {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_cajav2_aprobar_apertura", { p_id_sesion: entrada.id_sesion });
+  const { data, error } = await supabase.rpc("fn_sesion_caja_aprobar_apertura", { p_id_sesion: entrada.id_sesion });
   if (error) return errorResult(error, "No se pudo aprobar la apertura.");
   revalidar(data?.id_caja);
   return { ok: true, error: null, code: null };
@@ -141,7 +141,7 @@ export async function aprobarAperturaCaja(entrada) {
 /** @param {{ id_sesion: string, motivo?: string | null }} entrada */
 export async function rechazarAperturaCaja(entrada) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_cajav2_rechazar_apertura", {
+  const { error } = await supabase.rpc("fn_sesion_caja_rechazar_apertura", {
     p_id_sesion: entrada.id_sesion,
     p_motivo: textoOpcional(entrada.motivo),
   });
@@ -153,7 +153,7 @@ export async function rechazarAperturaCaja(entrada) {
 /** @param {{ id_sesion: string, id_caja: string, observaciones?: string | null }} entrada */
 export async function solicitarCierreCaja(entrada) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_cajav2_solicitar_cierre", {
+  const { error } = await supabase.rpc("fn_sesion_caja_solicitar_cierre", {
     p_id_sesion: entrada.id_sesion,
     p_observaciones: textoOpcional(entrada.observaciones),
   });
@@ -165,7 +165,7 @@ export async function solicitarCierreCaja(entrada) {
 /** @param {{ id_sesion: string, id_caja: string, motivo?: string | null }} entrada */
 export async function rechazarCierreCaja(entrada) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_cajav2_rechazar_cierre", {
+  const { error } = await supabase.rpc("fn_sesion_caja_rechazar_cierre", {
     p_id_sesion: entrada.id_sesion,
     p_motivo: textoOpcional(entrada.motivo),
   });
@@ -177,7 +177,7 @@ export async function rechazarCierreCaja(entrada) {
 /** Cierre definitivo (solo gerente). @param {{ id_sesion: string, id_caja: string, observaciones?: string | null }} entrada */
 export async function cerrarSesionCaja(entrada) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_cajav2_cerrar", {
+  const { error } = await supabase.rpc("fn_sesion_caja_cerrar", {
     p_id_sesion: entrada.id_sesion,
     p_observaciones: textoOpcional(entrada.observaciones),
   });

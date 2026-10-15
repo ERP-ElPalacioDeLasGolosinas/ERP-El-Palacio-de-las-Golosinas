@@ -69,7 +69,7 @@ function nuevoMedio(importe = "") {
  *   onRegistrada?: ((result: { id?: string | null }) => void) | null,
  * }} props
  *
- * `cajaFija` (POS de una caja, flujo cajav2): una sola caja en `cajasAbiertas`, sin
+ * `cajaFija` (POS de una caja, sesión autorizada): una sola caja en `cajasAbiertas`, sin
  * selector de caja ni venta mayorista. `onRegistrada` reemplaza la navegación al detalle.
  */
 export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbiertas, cajaFija = false, onRegistrada = null }) {

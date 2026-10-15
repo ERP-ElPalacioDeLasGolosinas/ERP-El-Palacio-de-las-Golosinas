@@ -18,7 +18,7 @@
  * | CAJ13  | —       | Movimientos y arqueos inmutables                           |
  * | CAJ14  | deposito| Depósito inválido, o la caja ya tiene uno                  |
  * | CAJ15  | medios  | Transferencia/cheque sin cuenta, o la cuenta no corresponde |
- * | CJV01…CJV06 | —  | Flujo experimental cajav2 (sesiones autorizadas por el gerente) |
+ * | SCJ01…SCJ06 | —  | Sesiones de caja autorizadas por el gerente |
  */
 
 /** @typedef {{ field: "monto" | "importe" | "medio" | "medios" | "deposito" | null, message: string, reload?: boolean }} ErrorUI */
@@ -39,15 +39,15 @@ const MAPA = {
   CAJ13: { field: null, message: "Los movimientos y arqueos de caja no se pueden modificar." },
   CAJ14: { field: "deposito", message: "Elegí un depósito activo. La caja vende el stock de esa sucursal." },
   CAJ15: { field: "medios", message: "Elegí la cuenta de tesorería en la que se acredita el medio." },
-  CJV01: { field: null, message: "Solo el gerente puede hacer esta operación." },
-  CJV02: { field: null, message: "Revisá los datos de la caja." },
-  CJV03: { field: null, message: "La caja está ocupada o ya tenés una sesión activa.", reload: true },
-  CJV04: { field: null, message: "La sesión cambió de estado. Actualizá la página.", reload: true },
-  CJV05: { field: null, message: "La caja tiene el cierre pedido y no admite movimientos.", reload: true },
-  CJV06: { field: null, message: "Solo el empleado asignado a la caja puede operarla." },
+  SCJ01: { field: null, message: "Solo el gerente puede hacer esta operación." },
+  SCJ02: { field: null, message: "Revisá los datos de la caja." },
+  SCJ03: { field: null, message: "La caja está ocupada o ya tenés una sesión activa.", reload: true },
+  SCJ04: { field: null, message: "La sesión cambió de estado. Actualizá la página.", reload: true },
+  SCJ05: { field: null, message: "La caja tiene el cierre pedido y no admite movimientos.", reload: true },
+  SCJ06: { field: null, message: "Solo el empleado asignado a la caja puede operarla." },
 };
 
-const CON_MENSAJE_DE_BASE = new Set(["CAJ01", "CAJ04", "CAJ06", "CAJ07", "CAJ08", "CAJ09", "CAJ12", "CAJ14", "CAJ15", "CJV02", "CJV03", "CJV04"]);
+const CON_MENSAJE_DE_BASE = new Set(["CAJ01", "CAJ04", "CAJ06", "CAJ07", "CAJ08", "CAJ09", "CAJ12", "CAJ14", "CAJ15", "SCJ02", "SCJ03", "SCJ04"]);
 
 /**
  * @param {{ code?: string | null, error?: string | null } | null | undefined} result

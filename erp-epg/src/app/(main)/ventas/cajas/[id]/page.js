@@ -137,7 +137,7 @@ export default async function CajaDetallePage({ params }) {
 }
 
 /**
- * Caja abierta con el flujo cajav2 (experimental). El empleado de la sesión ve
+ * Caja abierta con una sesión autorizada. El empleado de la sesión ve
  * el POS; el gerente ve el resumen y autoriza el cierre.
  *
  * @param {{ data: Record<string, any>, sesion: Record<string, any> }} props

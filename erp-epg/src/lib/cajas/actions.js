@@ -80,31 +80,6 @@ export async function listarCajas(filtros = {}) {
 }
 
 /**
- * V-14 · Abre la caja del punto de venta 1 con su monto inicial en efectivo.
- *
- * @param {{ monto_inicial: number | string, id_deposito: string, observaciones?: string | null }} entrada
- * @returns {Promise<{ ok: boolean, id?: string | null, error: string | null, code?: string | null }>}
- */
-export async function abrirCaja(entrada) {
-  const supabase = await createClient();
-  const user = await usuarioActual(supabase);
-  if (!user) return SIN_SESION;
-
-  const { data, error } = await supabase.rpc("fn_caja_abrir", {
-    p_monto_inicial: numero(entrada.monto_inicial),
-    p_observaciones: textoOpcional(entrada.observaciones),
-    p_creado_por: user.id,
-    p_id_deposito: entrada.id_deposito || null,
-  });
-
-  if (error) return errorResult(error, "No se pudo abrir la caja.");
-
-  revalidatePath(PATH);
-  revalidatePath(`${PATH}/historial`);
-  return { ok: true, id: data?.id_caja ?? null, error: null, code: null };
-}
-
-/**
  * Asigna el depósito a una caja abierta que todavía no lo tiene. Solo una vez.
  *
  * @param {{ id_caja: string, id_deposito: string }} entrada

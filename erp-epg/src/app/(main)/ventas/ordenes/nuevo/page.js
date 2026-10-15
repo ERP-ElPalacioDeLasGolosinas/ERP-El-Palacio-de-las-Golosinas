@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { getUserWithRole } from "@/lib/auth/roles";
 import { listarCajas } from "@/lib/cajas/actions";
+import { obtenerMiSesion } from "@/lib/cajas/v2-actions";
 import { cargarDatosFormularioVenta } from "@/lib/ventas/datos-formulario";
 import { VentaForm } from "@/components/ventas/VentaForm";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -9,8 +11,17 @@ export const metadata = {
 };
 
 export default async function RegistrarVentaPage() {
-  const [datos, cajasRes] = await Promise.all([cargarDatosFormularioVenta(), listarCajas({ estado: "Abierta" })]);
-  const error = datos.error || cajasRes.error;
+  const [datos, cajasRes, usuario] = await Promise.all([
+    cargarDatosFormularioVenta(),
+    listarCajas({ estado: "Abierta" }),
+    getUserWithRole(),
+  ]);
+  // Un empleado solo vende por su propia caja; el gerente ve todas las abiertas.
+  const miSesion = usuario?.rol === "Gerente" ? null : await obtenerMiSesion();
+  const error = datos.error || cajasRes.error || miSesion?.error;
+  const cajasVisibles = (cajasRes.data ?? []).filter(
+    (c) => !miSesion || (miSesion.data?.id_caja && c.id_caja === miSesion.data.id_caja),
+  );
   const { clientes, tipos, depositos, medios, listas } = datos;
 
   const faltantes = ["Mayorista", "Minorista"].filter((t) => !listas[t]);
@@ -53,7 +64,7 @@ export default async function RegistrarVentaPage() {
             depositos={depositos}
             listas={listas}
             medios={medios}
-            cajasAbiertas={(cajasRes.data ?? [])
+            cajasAbiertas={cajasVisibles
               .filter((c) => c.id_deposito)
               .map((c) => ({
                 id_caja: c.id_caja,

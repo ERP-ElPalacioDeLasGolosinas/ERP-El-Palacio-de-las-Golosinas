@@ -1,5 +1,5 @@
 /**
- * EXPERIMENTAL · Estados de la sesión cajav2 (`cajav2_sesion.estado`).
+ * Estados de la sesión de caja (`sesion_caja.estado`).
  *
  * @typedef {"Pendiente" | "Abierta" | "Cierre solicitado" | "Cerrada" | "Rechazada"} EstadoSesionCaja
  */

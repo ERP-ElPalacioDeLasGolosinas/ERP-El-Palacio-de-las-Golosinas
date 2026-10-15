@@ -13,7 +13,7 @@ export const metadata = {
 };
 
 /**
- * Flujo cajav2 (experimental): el gerente ve el panel de todas las cajas; el
+ * Sesiones de caja autorizadas: el gerente ve el panel de todas las cajas; el
  * empleado elige su caja y pide la apertura, espera la aprobación o entra a su POS.
  */
 export default async function CajasPage({ searchParams }) {
