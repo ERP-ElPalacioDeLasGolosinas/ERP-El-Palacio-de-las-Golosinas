@@ -61,7 +61,7 @@ export async function obtenerCaja(idCaja) {
 /**
  * Historial de cajas vía `fn_caja_listar`.
  *
- * @param {{ desde?: string | null, hasta?: string | null, estado?: string | null }} [filtros]
+ * @param {{ desde?: string | null, hasta?: string | null, estado?: string | null, idDeposito?: string | null, idEmpleado?: string | null }} [filtros]
  * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
  */
 export async function listarCajas(filtros = {}) {
@@ -70,12 +70,30 @@ export async function listarCajas(filtros = {}) {
     p_desde: filtros.desde || null,
     p_hasta: filtros.hasta || null,
     p_estado: filtros.estado || null,
+    p_id_deposito: filtros.idDeposito || null,
+    p_id_empleado: filtros.idEmpleado || null,
   });
 
   if (error) {
     return { data: null, error: "No se pudieron cargar las cajas." };
   }
 
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Busca empleados por nombre para el filtro del historial de cajas.
+ *
+ * @param {string} query
+ * @returns {Promise<{ data: Array<{ id_usuario: string, nombre_completo: string }> | null, error: string | null }>}
+ */
+export async function buscarEmpleados(query) {
+  const limpio = String(query ?? "").trim();
+  if (limpio.length < 2) return { data: [], error: null };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_usuario_buscar", { p_busqueda: limpio });
+  if (error) return { data: null, error: "No se pudieron buscar los empleados." };
   return { data: data ?? [], error: null };
 }
 

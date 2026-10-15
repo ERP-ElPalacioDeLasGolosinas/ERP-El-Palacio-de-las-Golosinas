@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { buscarEmpleados } from "@/lib/cajas/actions";
 import { ESTADOS_CAJA, badgeEstadoCaja } from "@/lib/cajas/constantes";
 import { fechaHora, moneda } from "@/components/cajas/formato";
 
@@ -10,26 +12,55 @@ import { fechaHora, moneda } from "@/components/cajas/formato";
  *
  * @param {{
  *   cajas: Array<Record<string, any>>,
- *   filtros: { desde: string, hasta: string, estado: string },
+ *   filtros: { desde: string, hasta: string, estado: string, deposito: string, empleado: string, empleadoNombre: string },
+ *   depositos: Array<{ id_deposito: string, nombre_deposito: string }>,
  * }} props
  */
-export function CajasTable({ cajas, filtros }) {
+export function CajasTable({ cajas, filtros, depositos = [] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  function setParam(key, value) {
+  function setParams(cambios) {
     const params = new URLSearchParams(searchParams);
-    if (value) params.set(key, value);
-    else params.delete(key);
+    for (const [key, value] of Object.entries(cambios)) {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
     const qs = params.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  function setParam(key, value) {
+    setParams({ [key]: value });
   }
 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+            Depósito
+            <select
+              value={filtros.deposito}
+              onChange={(e) => setParam("deposito", e.target.value)}
+              className="palacio-input min-w-44"
+            >
+              <option value="">Todos</option>
+              {depositos.map((d) => (
+                <option key={d.id_deposito} value={d.id_deposito}>
+                  {d.nombre_deposito}
+                </option>
+              ))}
+            </select>
+          </label>
+          <EmpleadoBuscador
+            nombre={filtros.empleadoNombre}
+            onElegir={(empleado) =>
+              setParams({ empleado: empleado.id_usuario, empleadoNombre: empleado.nombre_completo })
+            }
+            onQuitar={() => setParams({ empleado: "", empleadoNombre: "" })}
+          />
           <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
             Estado
             <select value={filtros.estado} onChange={(e) => setParam("estado", e.target.value)} className="palacio-input">
@@ -136,6 +167,86 @@ export function CajasTable({ cajas, filtros }) {
         </div>
       )}
     </>
+  );
+}
+
+function EmpleadoBuscador({ nombre, onElegir, onQuitar }) {
+  const [query, setQuery] = useState("");
+  const [resultados, setResultados] = useState([]);
+  const [abierto, setAbierto] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) return;
+    let vigente = true;
+    const t = setTimeout(() => {
+      buscarEmpleados(query.trim()).then(({ data, error }) => {
+        if (!vigente) return;
+        if (!error) {
+          setResultados(data ?? []);
+          setAbierto(true);
+        }
+      });
+    }, 300);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
+  }, [query]);
+
+  if (nombre) {
+    return (
+      <div className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+        Empleado
+        <div className="flex h-[42px] items-center justify-between gap-2 rounded-md border border-palacio-border bg-zinc-50 px-3">
+          <span className="text-sm text-zinc-900">{nombre}</span>
+          <button type="button" onClick={onQuitar} className="text-xs font-medium text-palacio-muted hover:text-zinc-900">
+            Quitar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+      Empleado
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => {
+          const valor = e.target.value;
+          setQuery(valor);
+          if (valor.trim().length < 2) {
+            setResultados([]);
+            setAbierto(false);
+          }
+        }}
+        onFocus={() => resultados.length > 0 && setAbierto(true)}
+        onBlur={() => setTimeout(() => setAbierto(false), 150)}
+        placeholder="Nombre del empleado…"
+        className="palacio-input min-w-52"
+      />
+      {abierto && resultados.length > 0 ? (
+        <ul className="absolute top-full z-10 mt-1 max-h-64 w-full overflow-auto rounded-md border border-palacio-border bg-white shadow-lg">
+          {resultados.map((e) => (
+            <li key={e.id_usuario}>
+              <button
+                type="button"
+                onMouseDown={() => onElegir(e)}
+                className="w-full border-b border-palacio-border px-3 py-2 text-left text-sm text-zinc-900 last:border-0 hover:bg-zinc-50"
+              >
+                {e.nombre_completo}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {abierto && query.trim().length >= 2 && resultados.length === 0 ? (
+        <div className="absolute top-full z-10 mt-1 w-full rounded-md border border-palacio-border bg-white px-3 py-2 text-sm text-palacio-muted shadow-lg">
+          Sin coincidencias.
+        </div>
+      ) : null}
+    </div>
   );
 }
 

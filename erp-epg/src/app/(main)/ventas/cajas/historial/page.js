@@ -1,4 +1,5 @@
 import { listarCajas } from "@/lib/cajas/actions";
+import { listarDepositos } from "@/lib/depositos/actions";
 import { CajasTable } from "@/components/cajas/CajasTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -7,7 +8,7 @@ export const metadata = {
 };
 
 /**
- * @param {{ searchParams: Promise<{ desde?: string, hasta?: string, estado?: string }> }} props
+ * @param {{ searchParams: Promise<{ desde?: string, hasta?: string, estado?: string, deposito?: string, empleado?: string, empleadoNombre?: string }> }} props
  */
 export default async function HistorialCajasPage({ searchParams }) {
   const sp = await searchParams;
@@ -15,9 +16,18 @@ export default async function HistorialCajasPage({ searchParams }) {
     desde: sp?.desde || null,
     hasta: sp?.hasta || null,
     estado: sp?.estado || null,
+    idDeposito: sp?.deposito || null,
+    idEmpleado: sp?.empleado || null,
   };
 
-  const { data, error } = await listarCajas(filtros);
+  const [{ data, error }, depositosRes] = await Promise.all([
+    listarCajas(filtros),
+    listarDepositos(true),
+  ]);
+  const depositos = (depositosRes.data ?? []).map((d) => ({
+    id_deposito: d.id_deposito,
+    nombre_deposito: d.nombre_deposito,
+  }));
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
@@ -35,10 +45,14 @@ export default async function HistorialCajasPage({ searchParams }) {
       ) : (
         <CajasTable
           cajas={data ?? []}
+          depositos={depositos}
           filtros={{
             desde: filtros.desde ?? "",
             hasta: filtros.hasta ?? "",
             estado: filtros.estado ?? "",
+            deposito: filtros.idDeposito ?? "",
+            empleado: filtros.idEmpleado ?? "",
+            empleadoNombre: sp?.empleadoNombre ?? "",
           }}
         />
       )}
