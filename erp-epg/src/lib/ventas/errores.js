@@ -100,7 +100,7 @@ const CON_MENSAJE_DE_BASE = new Set(["VTA02", "VTA04", "VTA05", "VTA08", "VTA10"
 export function mapErrorVenta(result) {
   const code = result?.code ?? null;
 
-  if (code?.startsWith("CAJ")) {
+  if (code?.startsWith("CAJ") || code?.startsWith("SCJ")) {
     const ui = mapErrorCaja(result);
     const enMedios = code === "CAJ06" || code === "CAJ07" || code === "CAJ08" || code === "CAJ09" || code === "CAJ15";
     return { ...ui, field: enMedios ? "medios" : "caja" };

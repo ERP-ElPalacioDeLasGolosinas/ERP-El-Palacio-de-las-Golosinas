@@ -77,20 +77,22 @@ export function CajasTable({ cajas, filtros }) {
               {cajas.length} caja{cajas.length === 1 ? "" : "s"}
             </span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-scroll pb-1 [scrollbar-width:thin]">
             <table className="min-w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
                   <Th>Apertura</Th>
+                  <Th>Estado</Th>
                   <Th>Depósito</Th>
                   <Th>Abrió</Th>
-                  <Th>Cierre</Th>
-                  <Th>Estado</Th>
+                  <Th className="text-right">Diferencia</Th>
                   <Th className="text-right">Inicial</Th>
                   <Th className="text-right">Ingresos</Th>
                   <Th className="text-right">Egresos</Th>
-                  <Th className="text-right">Diferencia</Th>
-                  <Th className="text-right">Acciones</Th>
+                  <Th>Cierre</Th>
+                  <Th className="sticky right-0 bg-zinc-50 text-right shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.12)]">
+                    Acciones
+                  </Th>
                 </tr>
               </thead>
               <tbody>
@@ -99,23 +101,23 @@ export function CajasTable({ cajas, filtros }) {
                   return (
                     <tr key={c.id_caja} className="border-b border-palacio-border last:border-0">
                       <td className="px-5 py-4 align-middle text-zinc-900">{fechaHora(c.fecha_apertura)}</td>
-                      <td className="px-5 py-4 align-middle text-zinc-800">{c.nombre_deposito || "Sin asignar"}</td>
-                      <td className="px-5 py-4 align-middle text-palacio-muted">{c.abierta_por_nombre}</td>
-                      <td className="px-5 py-4 align-middle text-palacio-muted">
-                        {c.fecha_cierre ? `${fechaHora(c.fecha_cierre)} · ${c.cerrada_por_nombre ?? "—"}` : "—"}
-                      </td>
                       <td className="px-5 py-4 align-middle">
                         <span className={badgeEstadoCaja(c.estado)}>{c.estado}</span>
                       </td>
-                      <td className="px-5 py-4 text-right align-middle">{moneda(c.monto_inicial)}</td>
-                      <td className="px-5 py-4 text-right align-middle text-emerald-700">{moneda(c.total_ingresos)}</td>
-                      <td className="px-5 py-4 text-right align-middle text-red-700">{moneda(c.total_egresos)}</td>
+                      <td className="px-5 py-4 align-middle text-zinc-800">{c.nombre_deposito || "Sin asignar"}</td>
+                      <td className="px-5 py-4 align-middle text-palacio-muted">{c.abierta_por_nombre}</td>
                       <td
                         className={`px-5 py-4 text-right align-middle font-medium ${dif ? "text-amber-700" : "text-zinc-900"}`}
                       >
                         {dif == null ? "—" : moneda(dif)}
                       </td>
-                      <td className="px-5 py-4 align-middle">
+                      <td className="px-5 py-4 text-right align-middle">{moneda(c.monto_inicial)}</td>
+                      <td className="px-5 py-4 text-right align-middle text-emerald-700">{moneda(c.total_ingresos)}</td>
+                      <td className="px-5 py-4 text-right align-middle text-red-700">{moneda(c.total_egresos)}</td>
+                      <td className="px-5 py-4 align-middle text-palacio-muted">
+                        {c.fecha_cierre ? `${fechaHora(c.fecha_cierre)} · ${c.cerrada_por_nombre ?? "—"}` : "—"}
+                      </td>
+                      <td className="sticky right-0 bg-white px-5 py-4 align-middle shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.12)]">
                         <div className="flex justify-end">
                           <Link
                             href={`/ventas/cajas/${c.id_caja}`}

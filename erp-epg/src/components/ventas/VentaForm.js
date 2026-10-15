@@ -65,13 +65,18 @@ function nuevoMedio(importe = "") {
  *   listas: Record<string, { id_lista_precio: string, nombre_lista_precio: string, precios: Record<string, number> } | null>,
  *   medios: Array<{ id_medio_pago: string, nombre_medio_pago: string, tipo: string, requiere_referencia: boolean }>,
  *   cajasAbiertas: Array<{ id_caja: string, id_deposito: string, nombre_deposito: string, abierta_por_nombre: string, fecha_apertura: string, monto_inicial: number }>,
+ *   cajaFija?: boolean,
+ *   onRegistrada?: ((result: { id?: string | null }) => void) | null,
  * }} props
+ *
+ * `cajaFija` (POS de una caja, sesión autorizada): una sola caja en `cajasAbiertas`, sin
+ * selector de caja ni venta mayorista. `onRegistrada` reemplaza la navegación al detalle.
  */
-export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbiertas }) {
+export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbiertas, cajaFija = false, onRegistrada = null }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const [tipoVenta, setTipoVenta] = useState(/** @type {"Mayorista" | "Minorista" | "Consumidor final"} */ ("Mayorista"));
+  const [tipoVenta, setTipoVenta] = useState(/** @type {"Mayorista" | "Minorista" | "Consumidor final"} */ (cajaFija ? "Consumidor final" : "Mayorista"));
   const [idCaja, setIdCaja] = useState(cajasAbiertas.length === 1 ? cajasAbiertas[0].id_caja : "");
   const [idCliente, setIdCliente] = useState("");
   const [idTipo, setIdTipo] = useState(tipos[0]?.id_tipo_comprobante ?? "");
@@ -382,6 +387,11 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
         return;
       }
 
+      if (onRegistrada) {
+        onRegistrada(result);
+        return;
+      }
+
       router.push(result.id ? `/ventas/ordenes/${result.id}` : "/ventas/ordenes");
       router.refresh();
     });
@@ -397,7 +407,7 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
             Tipo de venta <span className="text-palacio-red">*</span>
           </span>
           <div className="mt-1.5 inline-flex flex-wrap rounded-lg border border-palacio-border p-0.5 text-sm">
-            {TIPOS_VENTA.map((t) => (
+            {(cajaFija ? TIPOS_VENTA.filter((t) => t !== "Mayorista") : TIPOS_VENTA).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -417,7 +427,11 @@ export function VentaForm({ clientes, tipos, depositos, listas, medios, cajasAbi
           </p>
         </div>
 
-        {enCaja ? (
+        {cajaFija && errores.caja ? (
+          <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errores.caja}</p>
+        ) : null}
+
+        {enCaja && !cajaFija ? (
           cajasAbiertas.length === 0 ? (
             <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               No hay una caja abierta con depósito asignado, así que esta venta no se puede cobrar.{" "}

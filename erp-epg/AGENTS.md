@@ -278,6 +278,30 @@ Vigente = hoy dentro de `[inicio, fin]`. Vencida = solo lectura; futura y vigent
 
 **Medio "Mercado Pago (simulado)":** seed de la migración, tipo `Mercado Pago` (nuevo valor del enum `tipo_medio_pago`, también en `TIPOS_MEDIO_PAGO` del frontend). No mueve plata real: la referencia simulada la genera la base.
 
+### Sesiones de caja autorizadas (Sprint 4 — migraciones `20261014120000_cajav2_sesion_autorizada`, `…130000_cajav2_levantar`, `…140000_cajav2_adoptar_borrar_caja_abrir`, `…150000_cajav2_renombre_definitivo`; D-025)
+
+El Gerente levanta una caja para un `Empleado Ventas` o aprueba la apertura que pide el empleado, y
+confirma o rechaza el cierre. Reemplaza al flujo viejo (`fn_caja_abrir`, eliminada). Estados de
+`sesion_caja`: `Pendiente` → `Abierta` → `Cierre solicitado` → `Cerrada` (o `Rechazada`); al aprobar
+se crea una fila en `caja`. Se deshace con `supabase/rollback/sesion_caja_drop.sql`.
+
+| Objeto | Notas clave |
+|---|---|
+| `caja_registradora` | Caja física (`numero`, depósito, activa) |
+| `sesion_caja` / vista `vw_sesion_caja` | Sesión empleado-caja con monto inicial y autorizante; una activa por caja y por empleado |
+| `fn_caja_registradora_guardar`, `fn_caja_panel` | Alta/edición y panel del gerente (`total_egresos`, `cantidad_ventas`) |
+| `fn_sesion_caja_mi_sesion`, `_sesion_de_caja` | Lectura de la sesión propia / de una caja |
+| `fn_sesion_caja_levantar`, `_solicitar_apertura`, `_aprobar_apertura`, `_rechazar_apertura` | Apertura |
+| `fn_sesion_caja_solicitar_cierre`, `_rechazar_cierre`, `_cerrar` | Cierre con revisión del Gerente |
+| `fn_caja_es_gerente`, `fn_caja_es_empleado_ventas`, `fn_sesion_caja_empleados_disponibles` | Chequeos de rol |
+
+Errcodes: `SCJ01` solo gerente · `SCJ02` caja/empleado inválido · `SCJ03` caja ocupada o empleado con
+sesión activa · `SCJ04` estado de sesión incorrecto · `SCJ05` la sesión no admite movimientos ·
+`SCJ06` solo el empleado de la caja opera. Triggers `trg_sesion_caja_validar_movimiento`,
+`_validar_arqueo` y `_sincronizar_cierre`. Frontend: `src/lib/cajas/v2-actions.js`, `v2-estado.js`,
+`src/components/cajas/v2/*`, `/ventas/cajas` y `/ventas/cajas/[id]`; `VentaForm` con `cajaFija`;
+`/ventas/ordenes/nuevo` limita al empleado a su propia caja.
+
 ### Cuentas corrientes (Sprint 4 — migración `20261008160000_s4_cuentas_corrientes`; T-06, T-07)
 
 No hay asientos manuales. El saldo sale de los comprobantes.

@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { getUserWithRole } from "@/lib/auth/roles";
 import { obtenerCaja } from "@/lib/cajas/actions";
+import { obtenerSesionDeCaja } from "@/lib/cajas/v2-actions";
+import { cargarDatosFormularioVenta } from "@/lib/ventas/datos-formulario";
 import { TIPOS_MEDIO_NO_CAJA } from "@/lib/cajas/constantes";
 import { listarDepositos } from "@/lib/depositos/actions";
 import { listarMediosPago } from "@/lib/medios-pago/actions";
@@ -10,6 +13,10 @@ import { CierreCajaCard } from "@/components/cajas/CierreCajaCard";
 import { MovimientoCajaForm } from "@/components/cajas/MovimientoCajaForm";
 import { MovimientosCajaTable } from "@/components/cajas/MovimientosCajaTable";
 import { ResumenCaja } from "@/components/cajas/ResumenCaja";
+import { AutorizarCierreCard } from "@/components/cajas/v2/AutorizarCierreCard";
+import { PosVenta } from "@/components/cajas/v2/PosVenta";
+import { SesionCajaHeader } from "@/components/cajas/v2/SesionCajaHeader";
+import { SolicitarCierreCard } from "@/components/cajas/v2/SolicitarCierreCard";
 import { fechaHora, moneda } from "@/components/cajas/formato";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -28,8 +35,14 @@ const crumbs = [
  */
 export default async function CajaDetallePage({ params }) {
   const { id } = await params;
-  const { data, error } = await obtenerCaja(id);
+  const [{ data, error }, sesionRes] = await Promise.all([obtenerCaja(id), obtenerSesionDeCaja(id)]);
   const abierta = data?.caja?.estado === "Abierta";
+  const sesion = abierta ? sesionRes.data : null;
+
+  if (data && sesion) {
+    return <CajaSesionV2 data={data} sesion={sesion} />;
+  }
+
   const [mediosRes, depositosRes] = abierta
     ? await Promise.all([listarMediosPago(false), listarDepositos(false)])
     : [{ data: [] }, { data: [] }];
@@ -118,34 +131,144 @@ export default async function CajaDetallePage({ params }) {
         <MovimientosCajaTable movimientos={movimientos} />
       </div>
 
-      <div className="palacio-card mt-6 overflow-hidden">
-        <div className="border-b border-palacio-border px-5 py-3">
-          <h2 className="text-sm font-semibold text-zinc-900">Arqueos</h2>
-        </div>
-        {arqueos.length === 0 ? (
-          <p className="px-5 py-6 text-center text-sm text-palacio-muted">Sin arqueos.</p>
+      <ListaArqueos arqueos={arqueos} />
+    </div>
+  );
+}
+
+/**
+ * Caja abierta con una sesión autorizada. El empleado de la sesión ve
+ * el POS; el gerente ve el resumen y autoriza el cierre.
+ *
+ * @param {{ data: Record<string, any>, sesion: Record<string, any> }} props
+ */
+async function CajaSesionV2({ data, sesion }) {
+  const usuario = await getUserWithRole();
+  const esGerente = usuario?.rol === "Gerente";
+  const esEmpleado = usuario?.id === sesion.id_empleado;
+  const operando = sesion.estado === "Abierta";
+  const { caja, arqueos = [], movimientos = [], resumen } = data;
+
+  const [datosVenta, mediosRes] = await Promise.all([
+    esEmpleado && operando ? cargarDatosFormularioVenta() : Promise.resolve(null),
+    operando ? listarMediosPago(false) : Promise.resolve({ data: [] }),
+  ]);
+
+  const mediosCaja = (mediosRes.data ?? [])
+    .filter((m) => m.activo && !TIPOS_MEDIO_NO_CAJA.has(m.tipo))
+    .map((m) => ({
+      id_medio_pago: m.id_medio_pago,
+      nombre_medio_pago: m.nombre_medio_pago,
+      tipo: m.tipo,
+      requiere_referencia: Boolean(m.requiere_referencia),
+    }));
+
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
+      <PageHeader
+        crumbs={[{ label: "Ventas" }, { label: "Cajas", href: "/ventas/cajas" }, { label: `Caja ${sesion.numero}` }]}
+        title={esEmpleado ? "Punto de venta" : `Caja ${sesion.numero}`}
+        actions={
+          esGerente ? (
+            <Link href="/ventas/cajas" className="palacio-btn-secondary inline-flex px-4 py-2.5 text-sm">
+              Panel de cajas
+            </Link>
+          ) : null
+        }
+      />
+
+      <SesionCajaHeader sesion={sesion} />
+
+      {esEmpleado && operando && datosVenta ? (
+        datosVenta.error ? (
+          <div className="palacio-card mb-6 border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
+            <p className="font-medium">No se pudieron cargar los datos de venta</p>
+            <p className="mt-1 text-amber-900/80">{datosVenta.error}</p>
+          </div>
+        ) : !datosVenta.listas.Minorista ? (
+          <div className="palacio-card mb-6 border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
+            No hay lista de precios Minorista vigente, así que la caja no puede vender.
+          </div>
         ) : (
-          <ul className="divide-y divide-palacio-border text-sm">
-            {arqueos.map((a) => (
-              <li key={a.id_arqueo} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                <span className="text-palacio-muted">
-                  {fechaHora(a.creado)} · {a.creado_por_nombre}
-                  {a.observaciones ? ` · ${a.observaciones}` : ""}
-                  {Array.isArray(a.detalle_billetes) && a.detalle_billetes.length > 0
-                    ? ` · ${a.detalle_billetes.map((b) => `${b.cantidad} × ${moneda(b.denominacion)}`).join(", ")}`
-                    : ""}
-                </span>
-                <span>
-                  Teórico {moneda(a.saldo_teorico)} · Contado {moneda(a.saldo_fisico)} ·{" "}
-                  <span className={Number(a.diferencia) === 0 ? "font-medium" : "font-semibold text-amber-700"}>
-                    Dif. {moneda(a.diferencia)}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+          <div className="mb-6">
+            <PosVenta
+              clientes={datosVenta.clientes}
+              tipos={datosVenta.tipos}
+              depositos={datosVenta.depositos}
+              listas={datosVenta.listas}
+              medios={datosVenta.medios}
+              cajasAbiertas={[
+                {
+                  id_caja: caja.id_caja,
+                  id_deposito: caja.id_deposito,
+                  nombre_deposito: caja.nombre_deposito,
+                  abierta_por_nombre: caja.abierta_por_nombre,
+                  fecha_apertura: caja.fecha_apertura,
+                  monto_inicial: Number(caja.monto_inicial) || 0,
+                },
+              ]}
+            />
+          </div>
+        )
+      ) : null}
+
+      {esEmpleado && !operando ? (
+        <div className="palacio-card mb-6 border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-950">
+          Pediste el cierre de la caja. No se pueden registrar ventas ni movimientos hasta que el gerente lo confirme o lo
+          rechace.
+        </div>
+      ) : null}
+
+      <ResumenCaja resumen={resumen} />
+
+      {esEmpleado || esGerente ? (
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          {esEmpleado && operando ? <MovimientoCajaForm idCaja={caja.id_caja} resumen={resumen} medios={mediosCaja} /> : null}
+          {operando ? <ArqueoCajaForm idCaja={caja.id_caja} resumen={resumen} /> : null}
+          {esEmpleado ? <SolicitarCierreCard sesion={sesion} resumen={resumen} /> : null}
+          {esGerente ? <AutorizarCierreCard sesion={sesion} resumen={resumen} /> : null}
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        <MovimientosCajaTable movimientos={movimientos} />
       </div>
+
+      <ListaArqueos arqueos={arqueos} />
+    </div>
+  );
+}
+
+/** @param {{ arqueos: Array<Record<string, any>> }} props */
+function ListaArqueos({ arqueos }) {
+  return (
+    <div className="palacio-card mt-6 overflow-hidden">
+      <div className="border-b border-palacio-border px-5 py-3">
+        <h2 className="text-sm font-semibold text-zinc-900">Arqueos</h2>
+      </div>
+      {arqueos.length === 0 ? (
+        <p className="px-5 py-6 text-center text-sm text-palacio-muted">Sin arqueos.</p>
+      ) : (
+        <ul className="divide-y divide-palacio-border text-sm">
+          {arqueos.map((a) => (
+            <li key={a.id_arqueo} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+              <span className="text-palacio-muted">
+                {fechaHora(a.creado)} · {a.creado_por_nombre}
+                {a.observaciones ? ` · ${a.observaciones}` : ""}
+                {Array.isArray(a.detalle_billetes) && a.detalle_billetes.length > 0
+                  ? ` · ${a.detalle_billetes.map((b) => `${b.cantidad} × ${moneda(b.denominacion)}`).join(", ")}`
+                  : ""}
+              </span>
+              <span>
+                Teórico {moneda(a.saldo_teorico)} · Contado {moneda(a.saldo_fisico)} ·{" "}
+                <span className={Number(a.diferencia) === 0 ? "font-medium" : "font-semibold text-amber-700"}>
+                  Dif. {moneda(a.diferencia)}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
