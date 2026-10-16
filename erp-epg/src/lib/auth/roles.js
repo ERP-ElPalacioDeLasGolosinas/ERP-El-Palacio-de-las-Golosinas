@@ -5,6 +5,9 @@ export const PERMISOS = {
   "Empleado Compras": ["ver_compras", "crear_compra"],
   "Empleado Ventas": ["ver_ventas", "crear_venta"],
   "Empleado Deposito": ["ver_stock", "editar_stock"],
+  // Cliente de la tienda online (D-026): sin permisos sobre el ERP. No es un valor de
+  // `rol_usuario_enum` ni tiene fila en `usuario`; se identifica por `cliente.id_usuario`.
+  "Cliente web": [],
 };
 
 export function hasPermission(rol, permiso) {

@@ -6,8 +6,11 @@ import {
   eliminarProducto,
   habilitarProducto,
   inhabilitarProducto,
+  publicarProductoTienda,
 } from "@/lib/productos/actions";
 import { ProductoFormModal } from "./ProductoFormModal";
+import { ProductoTiendaModal } from "./ProductoTiendaModal";
+import { FotosMasivasModal } from "./FotosMasivasModal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -61,6 +64,8 @@ export function ProductosTable({
   const [filtroRubro, setFiltroRubro] = useState("");
   const [modalAbierto, setModalAbierto] = useState(false);
   const [enEdicion, setEnEdicion] = useState(null);
+  const [enTienda, setEnTienda] = useState(null);
+  const [fotosMasivas, setFotosMasivas] = useState(false);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -109,6 +114,20 @@ export function ProductosTable({
       const result = producto.activo
         ? await inhabilitarProducto(producto.id_producto)
         : await habilitarProducto(producto.id_producto);
+      if (!result.ok) {
+        manejarErrorAccion(result);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function togglePublicado(producto) {
+    startTransition(async () => {
+      const result = await publicarProductoTienda(
+        producto.id_producto,
+        !producto.publicado_tienda
+      );
       if (!result.ok) {
         manejarErrorAccion(result);
         return;
@@ -194,8 +213,15 @@ export function ProductosTable({
         </label>
         <button
           type="button"
+          onClick={() => setFotosMasivas(true)}
+          className="palacio-btn-secondary ml-auto inline-flex px-4 py-2.5 text-sm"
+        >
+          Cargar fotos en lote
+        </button>
+        <button
+          type="button"
           onClick={abrirAlta}
-          className="palacio-btn-primary ml-auto inline-flex px-4 py-2.5 text-sm"
+          className="palacio-btn-primary inline-flex px-4 py-2.5 text-sm"
         >
           Nuevo producto
         </button>
@@ -230,6 +256,7 @@ export function ProductosTable({
                   <Th>Editado</Th>
                   <Th>Creado por</Th>
                   <Th className="text-center">Estado</Th>
+                  <Th className="text-center">Publicado en tienda</Th>
                   <Th className="text-right">Acciones</Th>
                 </tr>
               </thead>
@@ -280,6 +307,19 @@ export function ProductosTable({
                         {p.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
+                    <td className="px-5 py-4 text-center align-middle">
+                      <label className="inline-flex items-center gap-2 text-xs text-zinc-700">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(p.publicado_tienda)}
+                          disabled={pending}
+                          onChange={() => togglePublicado(p)}
+                          className="size-4 accent-palacio-red"
+                          aria-label={`Publicado en tienda: ${p.nombre_completo ?? p.nombre_producto}`}
+                        />
+                        {p.publicado_tienda ? "Sí" : "No"}
+                      </label>
+                    </td>
                     <td className="px-5 py-4 align-middle">
                       <div className="flex flex-wrap justify-end gap-2">
                         <button
@@ -288,6 +328,13 @@ export function ProductosTable({
                           className="palacio-action-btn palacio-action-primary"
                         >
                           Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEnTienda(p)}
+                          className="palacio-action-btn"
+                        >
+                          Foto y ofertas
                         </button>
                         <button
                           type="button"
@@ -314,6 +361,18 @@ export function ProductosTable({
           </div>
         </div>
       )}
+
+      {fotosMasivas ? (
+        <FotosMasivasModal productos={productos} onClose={() => setFotosMasivas(false)} />
+      ) : null}
+
+      {enTienda ? (
+        <ProductoTiendaModal
+          key={enTienda.id_producto}
+          producto={enTienda}
+          onClose={() => setEnTienda(null)}
+        />
+      ) : null}
 
       {modalAbierto ? (
         <ProductoFormModal

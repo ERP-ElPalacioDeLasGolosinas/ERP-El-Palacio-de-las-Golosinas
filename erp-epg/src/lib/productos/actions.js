@@ -226,6 +226,31 @@ export async function inhabilitarProducto(id_producto) {
 }
 
 /**
+ * Publica o despublica el artículo en la tienda online (no afecta el catálogo interno).
+ *
+ * @param {string} id_producto
+ * @param {boolean} publicado
+ */
+export async function publicarProductoTienda(id_producto, publicado) {
+  if (!id_producto) {
+    return { ok: false, code: null, error: "Falta el identificador del producto." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_producto_publicar_tienda", {
+    p_id_producto: id_producto,
+    p_publicado: Boolean(publicado),
+  });
+
+  if (error) {
+    return errorResult(error, "No se pudo cambiar la publicación en la tienda.");
+  }
+
+  revalidatePath(PATH);
+  return { ok: true, error: null, code: null };
+}
+
+/**
  * @param {string} id_producto
  */
 export async function eliminarProducto(id_producto) {
@@ -244,5 +269,88 @@ export async function eliminarProducto(id_producto) {
   }
 
   revalidatePath(PATH);
+  return { ok: true, error: null, code: null };
+}
+
+/**
+ * Datos de tienda del artículo: foto, precio de lista Minorista y ofertas vigentes/futuras.
+ *
+ * @param {string} id_producto
+ * @returns {Promise<{ ok: boolean, error: string | null, data: { imagen_url: string | null, precio_lista: number | null, ofertas: Array<Record<string, any>> } | null }>}
+ */
+export async function obtenerTiendaProducto(id_producto) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_producto_tienda_obtener", {
+    p_id_producto: id_producto,
+  });
+  if (error || !data?.[0]) {
+    return { ok: false, error: "No se pudieron cargar los datos de la tienda.", data: null };
+  }
+  return { ok: true, error: null, data: data[0] };
+}
+
+/**
+ * Guarda la URL de la foto ya subida a Storage (o `null` para quitarla).
+ *
+ * @param {string} id_producto
+ * @param {string | null} imagen_url
+ */
+export async function asignarImagenProducto(id_producto, imagen_url) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_producto_asignar_imagen", {
+    p_id_producto: id_producto,
+    p_imagen_url: imagen_url || null,
+  });
+  if (error) return errorResult(error, "No se pudo guardar la foto.");
+  revalidatePath(PATH);
+  return { ok: true, error: null, code: null };
+}
+
+/**
+ * Crea una oferta (precio fijo por rango de fechas) para la tienda online.
+ *
+ * @param {string} id_producto
+ * @param {FormData | Record<string, unknown>} formData
+ */
+export async function guardarOfertaProducto(id_producto, formData) {
+  const precio = numero(formData, "precio_oferta");
+  const desde = texto(formData, "fecha_inicio");
+  const hasta = texto(formData, "fecha_fin");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_producto_oferta_guardar", {
+    p_id_producto: id_producto,
+    p_precio_oferta: precio,
+    // Sin fecha de inicio se omite el parámetro y la función usa current_date.
+    ...(desde ? { p_fecha_inicio: desde } : {}),
+    p_fecha_fin: hasta || null,
+  });
+  if (error) return errorResult(error, "No se pudo guardar la oferta.");
+  return { ok: true, error: null, code: null };
+}
+
+/** @param {string} id_oferta */
+export async function eliminarOfertaProducto(id_oferta) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_producto_oferta_eliminar", {
+    p_id_oferta: id_oferta,
+  });
+  if (error) return errorResult(error, "No se pudo quitar la oferta.");
+  return { ok: true, error: null, code: null };
+}
+
+/**
+ * Marca o desmarca el artículo como destacado en la portada de la tienda.
+ *
+ * @param {string} id_producto
+ * @param {boolean} destacado
+ */
+export async function destacarProductoTienda(id_producto, destacado) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_producto_destacar_tienda", {
+    p_id_producto: id_producto,
+    p_destacado: Boolean(destacado),
+  });
+  if (error) return errorResult(error, "No se pudo cambiar el destacado.");
   return { ok: true, error: null, code: null };
 }

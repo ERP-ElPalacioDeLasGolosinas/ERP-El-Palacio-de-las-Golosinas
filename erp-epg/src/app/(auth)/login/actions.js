@@ -22,5 +22,12 @@ export async function login(_prevState, formData) {
     return { error: "Credenciales inválidas." };
   }
 
+  // Un cliente web (sin fila en `usuario`) no entra al ERP (D-026).
+  const { data: esPersonal } = await supabase.rpc("es_personal_erp");
+  if (esPersonal !== true) {
+    await supabase.auth.signOut();
+    return { error: "Credenciales inválidas." };
+  }
+
   redirect("/");
 }

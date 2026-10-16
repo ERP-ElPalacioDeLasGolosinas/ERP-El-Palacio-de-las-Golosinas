@@ -156,6 +156,12 @@ const NAV = [
         ],
       },
       {
+        href: "/ventas/pedidos-web",
+        label: "Pedidos web",
+        icon: BagIcon,
+        match: (p) => p.startsWith("/ventas/pedidos-web"),
+      },
+      {
         label: "Cajas",
         icon: CashIcon,
         match: (p) => p.startsWith("/ventas/cajas"),
