@@ -78,7 +78,11 @@ export default async function CajasPage({ searchParams }) {
             cajas={todas.filter((c) => c.id_deposito === sucursal.id_deposito)}
             sucursal={sucursal}
             creando={nueva === "1"}
-            siguiente={todas.reduce((max, c) => Math.max(max, Number(c.numero) || 0), 0) + 1}
+            siguiente={
+              todas
+                .filter((c) => c.id_deposito === sucursal.id_deposito)
+                .reduce((max, c) => Math.max(max, Number(c.numero) || 0), 0) + 1
+            }
             depositos={depositos}
             empleados={empleadosRes.data ?? []}
           />
