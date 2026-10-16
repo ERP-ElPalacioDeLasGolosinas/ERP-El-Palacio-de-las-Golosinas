@@ -3,7 +3,7 @@ import { TAMANO_PAGINA } from "@/lib/tienda/catalogo";
 import FiltrosTienda from "@/components/tienda/FiltrosTienda";
 import TarjetaProducto from "@/components/tienda/TarjetaProducto";
 
-export const RUTA_CATALOGO = "/catalogo";
+export const RUTA_CATALOGO = "/tienda/catalogo";
 
 function hrefPagina(f, pagina) {
   const p = new URLSearchParams();

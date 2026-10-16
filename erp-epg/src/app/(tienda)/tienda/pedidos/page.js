@@ -13,14 +13,14 @@ export default async function MisPedidos() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || !(await obtenerClienteWeb(supabase))) redirect("/login");
+  if (!user || !(await obtenerClienteWeb(supabase))) redirect("/tienda/login");
 
   const { data, error } = await supabase.rpc("fn_pedido_web_mis_listar");
   const pedidos = data ?? [];
 
   return (
     <main className="mx-auto max-w-3xl p-6">
-      <p className="text-sm"><Link href="/">← Volver a la tienda</Link></p>
+      <p className="text-sm"><Link href="/tienda">← Volver a la tienda</Link></p>
       <h1 className="mt-3 text-2xl font-bold tracking-tight">Mis pedidos</h1>
 
       {error ? (
@@ -32,7 +32,7 @@ export default async function MisPedidos() {
           {pedidos.map((p) => (
             <li key={p.id_pedido} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
               <div>
-                <Link href={`/pedidos/${p.id_pedido}`} className="font-medium">Pedido N° {p.numero}</Link>
+                <Link href={`/tienda/pedidos/${p.id_pedido}`} className="font-medium">Pedido N° {p.numero}</Link>
                 <p className="text-sm text-palacio-muted">
                   {fechaFmt.format(new Date(p.creado))} · {p.cantidad_lineas}{" "}
                   {Number(p.cantidad_lineas) === 1 ? "artículo" : "artículos"}

@@ -27,7 +27,7 @@ export default async function TiendaProducto({ params }) {
         <TiendaHeader cliente={cliente} />
         <main className="mx-auto max-w-3xl p-6">
           <p className="text-palacio-muted">No se pudo cargar el artículo. Probá de nuevo en un rato.</p>
-          <p className="mt-4"><Link href="/">← Volver al catálogo</Link></p>
+          <p className="mt-4"><Link href="/tienda">← Volver al catálogo</Link></p>
         </main>
       </>
     );
@@ -39,7 +39,7 @@ export default async function TiendaProducto({ params }) {
     <>
     <TiendaHeader cliente={cliente} />
     <main className="mx-auto max-w-4xl p-6">
-      <p className="text-sm"><Link href="/">← Volver al catálogo</Link></p>
+      <p className="text-sm"><Link href="/tienda">← Volver al catálogo</Link></p>
       <article className="palacio-card mt-4 grid gap-6 p-6 md:grid-cols-2">
         <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#ffe1e3] to-[#ffc2c7]">
           {producto.imagen_url ? (

@@ -15,7 +15,7 @@ export async function completarDatosCliente(_prev, formData) {
     p_direccion_cliente: String(formData.get("direccion") ?? "") || null,
   });
   if (error) return { error: mensajeErrorRegistro(error) };
-  revalidatePath("/checkout");
+  revalidatePath("/tienda/checkout");
   return { error: null };
 }
 
@@ -42,5 +42,5 @@ export async function confirmarPedido() {
     importeTotal: pedido.importe_total,
   });
 
-  redirect(`/checkout/confirmado?pedido=${encodeURIComponent(pedido.id_pedido)}`);
+  redirect(`/tienda/checkout/confirmado?pedido=${encodeURIComponent(pedido.id_pedido)}`);
 }

@@ -34,7 +34,7 @@ export default function TarjetaProducto({ producto: p, enFila = false }) {
       }`}
     >
       <Link
-        href={`/producto/${p.id_producto}`}
+        href={`/tienda/producto/${p.id_producto}`}
         className={`relative flex aspect-square items-center justify-center bg-gradient-to-br ${FONDOS[h % FONDOS.length]}`}
         aria-label={p.nombre_producto}
       >
@@ -58,7 +58,7 @@ export default function TarjetaProducto({ producto: p, enFila = false }) {
       <div className="flex flex-1 flex-col gap-0.5 p-3">
         <span className="text-xs font-medium uppercase tracking-wide text-palacio-muted">{p.nombre_marca}</span>
         <h3 className="line-clamp-2 min-h-10 text-sm font-semibold leading-snug">
-          <Link href={`/producto/${p.id_producto}`}>{p.nombre_producto}</Link>
+          <Link href={`/tienda/producto/${p.id_producto}`}>{p.nombre_producto}</Link>
         </h3>
         <span className="text-xs text-palacio-muted">{p.presentacion}</span>
         <span className="mt-1 flex flex-wrap items-baseline gap-2">

@@ -7,12 +7,12 @@ export default function TiendaHeader({ cliente, q = "" }) {
   return (
     <header className="sticky top-0 z-30 border-b border-palacio-border bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-palacio-red">
+        <Link href="/tienda" className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-palacio-red">
           <span aria-hidden="true" className="text-2xl">🍬</span>
           <span className="leading-tight">El Palacio<span className="block text-xs font-semibold text-palacio-muted">de las Golosinas</span></span>
         </Link>
 
-        <form method="get" action="/catalogo" className="order-3 flex w-full flex-1 md:order-none md:w-auto">
+        <form method="get" action="/tienda/catalogo" className="order-3 flex w-full flex-1 md:order-none md:w-auto">
           <input
             type="search"
             name="q"
@@ -28,7 +28,7 @@ export default function TiendaHeader({ cliente, q = "" }) {
           {cliente ? (
             <>
               <span className="hidden text-palacio-muted sm:inline">Hola, {cliente.nombre_cliente}</span>
-              <Link href="/pedidos" className="hover:text-palacio-red">Mis pedidos</Link>
+              <Link href="/tienda/pedidos" className="hover:text-palacio-red">Mis pedidos</Link>
               <form action={logoutTienda}>
                 <button type="submit" className="hover:text-palacio-red">Salir</button>
               </form>

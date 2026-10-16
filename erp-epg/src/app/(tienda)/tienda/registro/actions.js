@@ -7,7 +7,7 @@ import { completarRegistroWeb } from "@/lib/tienda/registro";
 // Solo se vuelve a rutas internas conocidas (evita redirecciones abiertas).
 const destinoPostIngreso = (formData) => {
   const next = formData.get("next");
-  return next === "/checkout" || next === "/carrito" ? next : "/";
+  return next === "/checkout" || next === "/carrito" ? `/tienda${next}` : "/tienda";
 };
 
 export async function registrarClienteWeb(_prevState, formData) {

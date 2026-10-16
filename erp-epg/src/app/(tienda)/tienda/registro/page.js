@@ -16,7 +16,7 @@ function Formulario() {
         <h1 className="mb-5 text-xl font-bold tracking-tight text-zinc-900">Crear cuenta</h1>
         <FormularioRegistro next={next} />
         <p className="mt-4 text-sm text-palacio-muted">
-          ¿Ya tenés cuenta? <Link href={`/login${sufijo}`} className="font-medium text-palacio-red">Ingresá</Link>
+          ¿Ya tenés cuenta? <Link href={`/tienda/login${sufijo}`} className="font-medium text-palacio-red">Ingresá</Link>
         </p>
       </div>
     </main>

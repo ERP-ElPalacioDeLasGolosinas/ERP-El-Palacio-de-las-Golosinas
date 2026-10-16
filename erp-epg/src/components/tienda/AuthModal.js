@@ -32,7 +32,7 @@ export default function AuthModal() {
       await agregarAlCarrito(fd);
       abrirDrawer();
     }
-    if (next) router.push(next);
+    if (next) router.push(`/tienda${next}`);
     router.refresh();
   }, [cerrarModal, abrirDrawer, pendiente, next, router]);
 

@@ -16,11 +16,11 @@ export default async function TiendaCheckout() {
     data: { user },
   } = await supabase.auth.getUser();
   const cliente = user ? await obtenerClienteWeb(supabase) : null;
-  if (!cliente) redirect("/login?next=/checkout");
+  if (!cliente) redirect("/tienda/login?next=/checkout");
   const datosCompletos = Boolean(cliente.documento_cliente && cliente.telefono_cliente);
 
   const items = await leerCarrito();
-  if (items.length === 0) redirect("/carrito");
+  if (items.length === 0) redirect("/tienda/carrito");
   const { lineas, error } = await validarCarrito(supabase, items);
   if (error) {
     return (
@@ -32,12 +32,12 @@ export default async function TiendaCheckout() {
 
   const porId = new Map(lineas.map((l) => [l.id_producto, l]));
   const filas = items.map((it) => porId.get(it.id_producto)).filter(Boolean);
-  if (filas.some((l) => l.estado !== "ok")) redirect("/carrito");
+  if (filas.some((l) => l.estado !== "ok")) redirect("/tienda/carrito");
   const total = filas.reduce((acc, l) => acc + Number(l.precio) * Number(l.cantidad_solicitada), 0);
 
   return (
     <main className="mx-auto max-w-3xl p-6">
-      <p className="text-sm"><Link href="/carrito">← Volver al carrito</Link></p>
+      <p className="text-sm"><Link href="/tienda/carrito">← Volver al carrito</Link></p>
       <h1 className="mt-3 text-2xl font-bold tracking-tight">Finalizar compra</h1>
 
       <section className="mt-4">

@@ -148,7 +148,7 @@ export default function CarritoDrawer() {
             <button type="button" onClick={cerrarDrawer} className="palacio-btn-secondary flex-1 px-3 py-2 text-sm">
               Seguir comprando
             </button>
-            <Link href="/carrito" onClick={cerrarDrawer} className="palacio-btn-primary flex-1 px-3 py-2 text-center text-sm">
+            <Link href="/tienda/carrito" onClick={cerrarDrawer} className="palacio-btn-primary flex-1 px-3 py-2 text-center text-sm">
               Ver carrito
             </Link>
           </div>

@@ -17,7 +17,7 @@ export default async function DetallePedido({ params }) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || !(await obtenerClienteWeb(supabase))) redirect("/login");
+  if (!user || !(await obtenerClienteWeb(supabase))) redirect("/tienda/login");
 
   const { data, error } = await supabase.rpc("fn_pedido_web_mi_obtener", { p_id_pedido: id });
   if (error) {
@@ -32,7 +32,7 @@ export default async function DetallePedido({ params }) {
 
   return (
     <main className="mx-auto max-w-3xl p-6">
-      <p className="text-sm"><Link href="/pedidos">← Mis pedidos</Link></p>
+      <p className="text-sm"><Link href="/tienda/pedidos">← Mis pedidos</Link></p>
       <h1 className="mt-3 text-2xl font-bold tracking-tight">Pedido N° {pedido.numero}</h1>
       <p className="mt-1 text-sm text-palacio-muted">
         {fechaFmt.format(new Date(pedido.creado))} · {pedido.medio_pago}

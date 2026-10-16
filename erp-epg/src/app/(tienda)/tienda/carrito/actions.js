@@ -49,7 +49,7 @@ export async function agregarAlCarrito(formData) {
   if (linea) linea.cantidad = Math.min(linea.cantidad + cantidad, MAX_CANTIDAD);
   else if (items.length < MAX_LINEAS) items.push({ id_producto: id, cantidad });
   await guardarCarrito(items);
-  revalidatePath("/", "layout");
+  revalidatePath("/tienda", "layout");
 }
 
 export async function cambiarCantidad(formData) {
@@ -62,7 +62,7 @@ export async function cambiarCantidad(formData) {
   if (!linea) return;
   linea.cantidad = cantidad;
   await guardarCarrito(items);
-  revalidatePath("/", "layout");
+  revalidatePath("/tienda", "layout");
 }
 
 export async function quitarDelCarrito(formData) {
@@ -71,5 +71,5 @@ export async function quitarDelCarrito(formData) {
   if (!esUuid(id)) return;
   const items = await leerCarrito();
   await guardarCarrito(items.filter((l) => l.id_producto !== id));
-  revalidatePath("/", "layout");
+  revalidatePath("/tienda", "layout");
 }

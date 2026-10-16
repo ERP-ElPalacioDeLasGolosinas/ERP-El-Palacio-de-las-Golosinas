@@ -23,7 +23,7 @@ export default async function PedidoConfirmado({ searchParams }) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || !(await obtenerClienteWeb(supabase))) redirect("/login");
+  if (!user || !(await obtenerClienteWeb(supabase))) redirect("/tienda/login");
 
   const [{ data: pedidoData }, { data: datos }] = await Promise.all([
     supabase.rpc("fn_pedido_web_mi_obtener", { p_id_pedido: id }),
@@ -68,8 +68,8 @@ export default async function PedidoConfirmado({ searchParams }) {
       </section>
 
       <p className="mt-6 text-sm">
-        <Link href="/">← Volver a la tienda</Link> · <Link href={`/pedidos/${pedido.id_pedido}`}>Ver el pedido</Link> ·{" "}
-        <Link href="/pedidos">Mis pedidos</Link>
+        <Link href="/tienda">← Volver a la tienda</Link> · <Link href={`/tienda/pedidos/${pedido.id_pedido}`}>Ver el pedido</Link> ·{" "}
+        <Link href="/tienda/pedidos">Mis pedidos</Link>
       </p>
     </main>
   );

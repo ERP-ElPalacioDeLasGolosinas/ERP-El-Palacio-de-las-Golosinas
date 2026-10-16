@@ -14,5 +14,5 @@ export default function CarritoBoton({ unidades }) {
       </button>
     );
   }
-  return <Link href="/carrito">{texto}</Link>;
+  return <Link href="/tienda/carrito">{texto}</Link>;
 }

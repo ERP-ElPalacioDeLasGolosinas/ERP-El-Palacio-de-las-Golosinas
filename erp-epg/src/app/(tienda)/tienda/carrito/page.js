@@ -21,7 +21,7 @@ export default async function TiendaCarrito() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/?login=1&next=/carrito");
+  if (!user) redirect("/tienda?login=1&next=/carrito");
   const items = await leerCarrito();
   const [cliente, { lineas, error }] = await Promise.all([
     obtenerClienteWeb(supabase),
@@ -40,7 +40,7 @@ export default async function TiendaCarrito() {
     <>
     <TiendaHeader cliente={cliente} />
     <main className="mx-auto max-w-3xl p-6">
-      <p className="text-sm"><Link href="/">← Seguir comprando</Link></p>
+      <p className="text-sm"><Link href="/tienda">← Seguir comprando</Link></p>
       <h1 className="mt-3 text-2xl font-bold tracking-tight">Tu carrito</h1>
 
       {error ? (
@@ -111,7 +111,7 @@ export default async function TiendaCarrito() {
             </p>
           ) : (
             <p className="mt-4 text-right">
-              <Link href="/checkout" className="palacio-btn-primary px-5 py-2.5 text-sm">
+              <Link href="/tienda/checkout" className="palacio-btn-primary px-5 py-2.5 text-sm">
                 Continuar con la compra
               </Link>
             </p>
