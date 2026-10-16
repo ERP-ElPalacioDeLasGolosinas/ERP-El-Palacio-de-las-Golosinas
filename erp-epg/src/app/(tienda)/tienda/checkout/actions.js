@@ -1,10 +1,23 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { notificarEstadoPedido } from "@/lib/email/pedido";
 import { createClient } from "@/lib/supabase/server";
 import { guardarCarrito, leerCarrito } from "@/lib/tienda/carrito";
-import { mensajeErrorPedido } from "@/lib/tienda/errores";
+import { mensajeErrorPedido, mensajeErrorRegistro } from "@/lib/tienda/errores";
+
+export async function completarDatosCliente(_prev, formData) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_cliente_web_completar_datos", {
+    p_documento_cliente: String(formData.get("documento") ?? ""),
+    p_telefono_cliente: String(formData.get("telefono") ?? ""),
+    p_direccion_cliente: String(formData.get("direccion") ?? "") || null,
+  });
+  if (error) return { error: mensajeErrorRegistro(error) };
+  revalidatePath("/checkout");
+  return { error: null };
+}
 
 export async function confirmarPedido() {
   const items = await leerCarrito();

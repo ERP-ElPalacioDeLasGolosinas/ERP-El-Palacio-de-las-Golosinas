@@ -7,6 +7,7 @@ const MENSAJES = {
   CLW05: "Ya existe un cliente con ese documento.",
   CLW06: "El mail de la cuenta no es válido para registrarse.",
   CLW07: "La tienda no está disponible por el momento. Probá más tarde.",
+  CLW08: "Primero tenés que crear tu cuenta de cliente.",
 };
 
 export function mensajeErrorRegistro(error) {
@@ -19,6 +20,7 @@ const MENSAJES_PEDIDO = {
   PWB02: "Ese medio de pago no está disponible por el momento.",
   PWB03: "Tu carrito está vacío.",
   PWB04: "Hay artículos sin stock o que ya no están disponibles. Revisá tu carrito.",
+  PWB11: "Completá tu DNI/CUIT y teléfono para finalizar el pedido.",
   CAR01: "Tu carrito tiene datos inválidos. Revisalo.",
   CAR02: "Tu carrito tiene demasiados artículos.",
 };

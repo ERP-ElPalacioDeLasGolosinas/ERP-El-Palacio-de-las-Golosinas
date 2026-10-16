@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { leerCarrito, validarCarrito } from "@/lib/tienda/carrito";
+import { obtenerClienteWeb } from "@/lib/tienda/registro";
+import TiendaHeader from "@/components/tienda/TiendaHeader";
 import { cambiarCantidad, quitarDelCarrito } from "./actions";
 
 export const metadata = { title: "Carrito — El Palacio de las Golosinas" };
@@ -14,9 +17,16 @@ const AVISOS = {
 };
 
 export default async function TiendaCarrito() {
-  const items = await leerCarrito();
   const supabase = await createClient();
-  const { lineas, error } = await validarCarrito(supabase, items);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/?login=1&next=/carrito");
+  const items = await leerCarrito();
+  const [cliente, { lineas, error }] = await Promise.all([
+    obtenerClienteWeb(supabase),
+    validarCarrito(supabase, items),
+  ]);
 
   // Se conserva el orden en que se agregaron los artículos.
   const porId = new Map(lineas.map((l) => [l.id_producto, l]));
@@ -27,6 +37,8 @@ export default async function TiendaCarrito() {
   const conProblemas = filas.some((l) => l.estado !== "ok");
 
   return (
+    <>
+    <TiendaHeader cliente={cliente} />
     <main className="mx-auto max-w-3xl p-6">
       <p className="text-sm"><Link href="/">← Seguir comprando</Link></p>
       <h1 className="mt-3 text-2xl font-bold tracking-tight">Tu carrito</h1>
@@ -107,5 +119,6 @@ export default async function TiendaCarrito() {
         </>
       )}
     </main>
+    </>
   );
 }

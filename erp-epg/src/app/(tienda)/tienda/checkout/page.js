@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { leerCarrito, validarCarrito } from "@/lib/tienda/carrito";
 import { obtenerClienteWeb } from "@/lib/tienda/registro";
+import CompletarDatos from "@/components/tienda/CompletarDatos";
 import ConfirmarPedido from "@/components/tienda/ConfirmarPedido";
 
 export const metadata = { title: "Finalizar compra — El Palacio de las Golosinas" };
@@ -14,7 +15,9 @@ export default async function TiendaCheckout() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || !(await obtenerClienteWeb(supabase))) redirect("/login?next=/checkout");
+  const cliente = user ? await obtenerClienteWeb(supabase) : null;
+  if (!cliente) redirect("/login?next=/checkout");
+  const datosCompletos = Boolean(cliente.documento_cliente && cliente.telefono_cliente);
 
   const items = await leerCarrito();
   if (items.length === 0) redirect("/carrito");
@@ -69,7 +72,18 @@ export default async function TiendaCheckout() {
         </p>
       </section>
 
-      <ConfirmarPedido />
+      {datosCompletos ? (
+        <ConfirmarPedido />
+      ) : (
+        <section className="mt-6">
+          <h2 className="font-semibold">Completá tus datos</h2>
+          <CompletarDatos
+            documento={cliente.documento_cliente}
+            telefono={cliente.telefono_cliente}
+            direccion={cliente.direccion_cliente}
+          />
+        </section>
+      )}
     </main>
   );
 }

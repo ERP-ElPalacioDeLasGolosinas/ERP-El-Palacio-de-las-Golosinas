@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CarritoLink from "@/components/tienda/CarritoLink";
+import AccesoBotones from "@/components/tienda/AccesoBotones";
 import { logoutTienda } from "@/app/(tienda)/tienda/actions";
 
 export default function TiendaHeader({ cliente, q = "" }) {
@@ -33,12 +34,7 @@ export default function TiendaHeader({ cliente, q = "" }) {
               </form>
             </>
           ) : (
-            <>
-              <Link href="/login" className="hover:text-palacio-red">Ingresar</Link>
-              <Link href="/registro" className="rounded-full border border-palacio-red px-4 py-1.5 text-palacio-red transition hover:bg-palacio-red-soft">
-                Registrarme
-              </Link>
-            </>
+            <AccesoBotones />
           )}
           <span className="rounded-full bg-palacio-red px-4 py-1.5 text-white">
             <CarritoLink />

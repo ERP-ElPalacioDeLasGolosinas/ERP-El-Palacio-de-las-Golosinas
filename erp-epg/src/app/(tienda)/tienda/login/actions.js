@@ -7,8 +7,10 @@ import { completarRegistroWeb, obtenerClienteWeb } from "@/lib/tienda/registro";
 const CREDENCIALES = "Credenciales inválidas.";
 
 // Solo se vuelve a rutas internas conocidas (evita redirecciones abiertas).
-const destinoPostIngreso = (formData) =>
-  formData.get("next") === "/checkout" ? "/checkout" : "/";
+const destinoPostIngreso = (formData) => {
+  const next = formData.get("next");
+  return next === "/checkout" || next === "/carrito" ? next : "/";
+};
 
 export async function loginTienda(_prevState, formData) {
   const email = String(formData.get("email") ?? "").trim();
@@ -38,5 +40,7 @@ export async function loginTienda(_prevState, formData) {
     }
   }
 
+  // Desde el modal no se redirige: el cliente cierra el modal y sigue donde estaba.
+  if (formData.get("modal") === "1") return { ok: true };
   redirect(destinoPostIngreso(formData));
 }

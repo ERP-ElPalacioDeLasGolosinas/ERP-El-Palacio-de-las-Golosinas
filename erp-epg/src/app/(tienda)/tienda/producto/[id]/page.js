@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { esUuid, obtenerProducto } from "@/lib/tienda/catalogo";
-import CarritoLink from "@/components/tienda/CarritoLink";
+import { obtenerClienteWeb } from "@/lib/tienda/registro";
+import TiendaHeader from "@/components/tienda/TiendaHeader";
 import AgregarAlCarrito from "@/components/tienda/AgregarAlCarrito";
 
 export const metadata = { title: "Artículo — El Palacio de las Golosinas" };
@@ -13,24 +14,32 @@ export default async function TiendaProducto({ params }) {
   const { id } = await params;
   if (!esUuid(id)) notFound();
   const supabase = await createClient();
-  const { producto, error } = await obtenerProducto(supabase, id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [cliente, { producto, error }] = await Promise.all([
+    user ? obtenerClienteWeb(supabase) : null,
+    obtenerProducto(supabase, id),
+  ]);
   if (error) {
     return (
-      <main className="mx-auto max-w-3xl p-6">
-        <p className="text-palacio-muted">No se pudo cargar el artículo. Probá de nuevo en un rato.</p>
-        <p className="mt-4"><Link href="/">← Volver al catálogo</Link></p>
-      </main>
+      <>
+        <TiendaHeader cliente={cliente} />
+        <main className="mx-auto max-w-3xl p-6">
+          <p className="text-palacio-muted">No se pudo cargar el artículo. Probá de nuevo en un rato.</p>
+          <p className="mt-4"><Link href="/">← Volver al catálogo</Link></p>
+        </main>
+      </>
     );
   }
   if (!producto) notFound();
   const agotado = Number(producto.stock_disponible) <= 0;
 
   return (
+    <>
+    <TiendaHeader cliente={cliente} />
     <main className="mx-auto max-w-4xl p-6">
-      <p className="flex justify-between text-sm">
-        <Link href="/">← Volver al catálogo</Link>
-        <CarritoLink />
-      </p>
+      <p className="text-sm"><Link href="/">← Volver al catálogo</Link></p>
       <article className="palacio-card mt-4 grid gap-6 p-6 md:grid-cols-2">
         <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#ffe1e3] to-[#ffc2c7]">
           {producto.imagen_url ? (
@@ -72,5 +81,6 @@ export default async function TiendaProducto({ params }) {
         </div>
       </article>
     </main>
+    </>
   );
 }

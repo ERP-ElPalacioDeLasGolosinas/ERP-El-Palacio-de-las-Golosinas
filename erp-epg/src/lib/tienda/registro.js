@@ -7,8 +7,8 @@ export async function completarRegistroWeb(supabase, user) {
   const meta = user?.user_metadata ?? {};
   const { error } = await supabase.rpc("fn_cliente_web_registrar", {
     p_nombre_cliente: meta.nombre ?? "",
-    p_documento_cliente: meta.documento ?? "",
-    p_telefono_cliente: meta.telefono ?? "",
+    p_documento_cliente: meta.documento || null,
+    p_telefono_cliente: meta.telefono || null,
     p_direccion_cliente: meta.direccion ?? null,
   });
   return error ? mensajeErrorRegistro(error) : null;

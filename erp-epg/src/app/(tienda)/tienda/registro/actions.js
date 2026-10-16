@@ -5,22 +5,20 @@ import { createClient } from "@/lib/supabase/server";
 import { completarRegistroWeb } from "@/lib/tienda/registro";
 
 // Solo se vuelve a rutas internas conocidas (evita redirecciones abiertas).
-const destinoPostIngreso = (formData) =>
-  formData.get("next") === "/checkout" ? "/checkout" : "/";
+const destinoPostIngreso = (formData) => {
+  const next = formData.get("next");
+  return next === "/checkout" || next === "/carrito" ? next : "/";
+};
 
 export async function registrarClienteWeb(_prevState, formData) {
   const campo = (n) => String(formData.get(n) ?? "").trim();
   const email = campo("email");
   const password = String(formData.get("password") ?? "");
-  const datos = {
-    nombre: campo("nombre"),
-    documento: campo("documento"),
-    telefono: campo("telefono"),
-    direccion: campo("direccion") || null,
-  };
+  // DNI/CUIT, teléfono y dirección se piden recién en el checkout (S5-16d).
+  const datos = { nombre: campo("nombre") };
 
-  if (!email || !datos.nombre || !datos.documento || !datos.telefono) {
-    return { error: "Completá nombre, documento, teléfono y email." };
+  if (!email || !datos.nombre) {
+    return { error: "Completá nombre y email." };
   }
   if (password.length < 8) {
     return { error: "La contraseña debe tener al menos 8 caracteres." };
@@ -45,5 +43,7 @@ export async function registrarClienteWeb(_prevState, formData) {
     return { error: mensaje };
   }
 
+  // Desde el modal no se redirige: el cliente cierra el modal y sigue donde estaba.
+  if (formData.get("modal") === "1") return { ok: true };
   redirect(destinoPostIngreso(formData));
 }

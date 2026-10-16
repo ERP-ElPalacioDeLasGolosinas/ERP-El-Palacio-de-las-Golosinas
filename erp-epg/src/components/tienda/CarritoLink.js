@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { contarUnidades } from "@/lib/tienda/carrito";
+import CarritoBoton from "./CarritoBoton";
 
 export default async function CarritoLink() {
   const unidades = await contarUnidades();
-  return (
-    <Link href="/carrito">Carrito{unidades > 0 ? ` (${unidades})` : ""}</Link>
-  );
+  return <CarritoBoton unidades={unidades} />;
 }
