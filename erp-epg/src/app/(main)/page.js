@@ -73,15 +73,15 @@ export default async function Home({ searchParams }) {
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <article className="palacio-card p-5">
-          <p className="text-sm text-palacio-muted">Vendí</p>
+          <p className="text-sm text-palacio-muted">Ingresos</p>
           <p className="mt-1 text-2xl font-semibold text-green-800">{moneda(vendido)}</p>
         </article>
         <article className="palacio-card p-5">
-          <p className="text-sm text-palacio-muted">Gasté</p>
+          <p className="text-sm text-palacio-muted">Egresos</p>
           <p className="mt-1 text-2xl font-semibold text-red-800">{moneda(gastado)}</p>
         </article>
         <article className="palacio-card p-5">
-          <p className="text-sm text-palacio-muted">Gané</p>
+          <p className="text-sm text-palacio-muted">Balance</p>
           <p className={`mt-1 text-2xl font-semibold ${ganado >= 0 ? "text-green-800" : "text-red-800"}`}>
             {moneda(ganado)}
           </p>
