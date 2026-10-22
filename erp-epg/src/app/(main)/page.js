@@ -82,7 +82,7 @@ export default async function Home({ searchParams }) {
         </article>
         <article className="palacio-card p-5">
           <p className="text-sm text-palacio-muted">Balance</p>
-          <p className={`mt-1 text-2xl font-semibold ${ganado >= 0 ? "text-green-800" : "text-red-800"}`}>
+          <p className={`mt-1 text-2xl font-semibold ${ganado > 0 ? "text-green-800" : ganado < 0 ? "text-red-800" : "text-zinc-900"}`}>
             {moneda(ganado)}
           </p>
         </article>
