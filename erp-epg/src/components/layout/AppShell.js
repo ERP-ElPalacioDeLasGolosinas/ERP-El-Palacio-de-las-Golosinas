@@ -7,13 +7,19 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 
 const NAV = [
   {
-    section: "INICIO",
+    section: "DASHBOARD",
     items: [
       {
         href: "/",
-        label: "Dashboard",
-        icon: HomeIcon,
+        label: "Resultado",
+        icon: ChartIcon,
         match: (p) => p === "/",
+      },
+      {
+        href: "/dashboard/gestion",
+        label: "Gestión",
+        icon: WalletIcon,
+        match: (p) => p.startsWith("/dashboard/gestion"),
       },
     ],
   },
@@ -387,18 +393,6 @@ function iconProps(className) {
     viewBox: "0 0 24 24",
     "aria-hidden": true,
   };
-}
-
-function HomeIcon({ className }) {
-  return (
-    <svg {...iconProps(className)}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 11.5 12 4l9 7.5M5 10v10h14V10M9.5 20v-6h5v6"
-      />
-    </svg>
-  );
 }
 
 function BoxIcon({ className }) {
