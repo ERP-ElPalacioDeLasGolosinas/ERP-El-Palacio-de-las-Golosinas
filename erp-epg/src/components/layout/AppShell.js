@@ -168,6 +168,12 @@ const NAV = [
         match: (p) => p.startsWith("/ventas/pedidos-web"),
       },
       {
+        href: "/ventas/tickets",
+        label: "Tickets",
+        icon: ListIcon,
+        match: (p) => p.startsWith("/ventas/tickets"),
+      },
+      {
         label: "Cajas",
         icon: CashIcon,
         match: (p) => p.startsWith("/ventas/cajas"),

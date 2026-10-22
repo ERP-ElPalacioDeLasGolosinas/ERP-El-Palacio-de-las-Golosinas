@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import EstadoPedidoBadge from "@/components/tienda/EstadoPedidoBadge";
 import { obtenerClienteWeb } from "@/lib/tienda/registro";
 
 export const metadata = { title: "Mis pedidos — El Palacio de las Golosinas" };
@@ -19,9 +20,8 @@ export default async function MisPedidos() {
   const pedidos = data ?? [];
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <p className="text-sm"><Link href="/tienda">← Volver a la tienda</Link></p>
-      <h1 className="mt-3 text-2xl font-bold tracking-tight">Mis pedidos</h1>
+    <div>
+      <h2 className="text-lg font-semibold">Mis pedidos</h2>
 
       {error ? (
         <p className="mt-6 text-palacio-muted">No se pudieron cargar tus pedidos. Probá de nuevo en un rato.</p>
@@ -32,7 +32,7 @@ export default async function MisPedidos() {
           {pedidos.map((p) => (
             <li key={p.id_pedido} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
               <div>
-                <Link href={`/tienda/pedidos/${p.id_pedido}`} className="font-medium">Pedido N° {p.numero}</Link>
+                <Link href={`/tienda/cuenta/pedidos/${p.id_pedido}`} className="font-medium">Pedido N° {p.numero}</Link>
                 <p className="text-sm text-palacio-muted">
                   {fechaFmt.format(new Date(p.creado))} · {p.cantidad_lineas}{" "}
                   {Number(p.cantidad_lineas) === 1 ? "artículo" : "artículos"}
@@ -40,12 +40,12 @@ export default async function MisPedidos() {
               </div>
               <div className="text-right">
                 <span className="font-semibold">{precioFmt.format(p.importe_total)}</span>
-                <p className="text-sm text-palacio-muted">{p.estado}</p>
+                <p className="mt-1"><EstadoPedidoBadge estado={p.estado} /></p>
               </div>
             </li>
           ))}
         </ul>
       )}
-    </main>
+    </div>
   );
 }

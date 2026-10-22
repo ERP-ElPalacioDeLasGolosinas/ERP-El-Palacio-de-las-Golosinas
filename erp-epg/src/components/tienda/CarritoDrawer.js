@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   cambiarCantidad,
   obtenerResumenCarrito,
@@ -21,6 +22,12 @@ export default function CarritoDrawer() {
   const { drawerAbierto, cerrarDrawer, abrirLogin } = useTienda();
   const [resumen, setResumen] = useState(null);
   const [ocupado, empezar] = useTransition();
+  const pathname = usePathname();
+
+  // Si se navega estando abierto (p. ej. con atrás/adelante), el drawer no debe quedar colgado.
+  useEffect(() => {
+    cerrarDrawer();
+  }, [pathname, cerrarDrawer]);
 
   const cargar = useCallback(async () => {
     const res = await obtenerResumenCarrito();
@@ -115,6 +122,7 @@ export default function CarritoDrawer() {
                         type="number"
                         min="1"
                         max="9999"
+                        key={`${l.id_producto}-${Number(l.cantidad_solicitada)}`}
                         defaultValue={Number(l.cantidad_solicitada)}
                         disabled={ocupado}
                         aria-label={`Cantidad de ${l.nombre_producto}`}
@@ -144,14 +152,12 @@ export default function CarritoDrawer() {
           {filas.length > 0 && !resumen?.error ? (
             <p className="text-right text-lg font-bold">Total: {precioFmt.format(resumen.total)}</p>
           ) : null}
-          <div className="flex gap-2">
-            <button type="button" onClick={cerrarDrawer} className="palacio-btn-secondary flex-1 px-3 py-2 text-sm">
-              Seguir comprando
-            </button>
-            <Link href="/tienda/carrito" onClick={cerrarDrawer} className="palacio-btn-primary flex-1 px-3 py-2 text-center text-sm">
-              Ver carrito
-            </Link>
-          </div>
+          <Link href="/tienda/carrito" onClick={cerrarDrawer} className="palacio-btn-primary w-full px-3 py-3 text-center">
+            Ver carrito
+          </Link>
+          <button type="button" onClick={cerrarDrawer} className="palacio-btn-secondary w-full px-3 py-2 text-sm">
+            Seguir comprando
+          </button>
         </div>
       </aside>
     </div>

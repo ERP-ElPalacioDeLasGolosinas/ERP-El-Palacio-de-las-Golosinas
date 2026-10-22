@@ -1,7 +1,7 @@
 import Link from "next/link";
 import CarritoLink from "@/components/tienda/CarritoLink";
 import AccesoBotones from "@/components/tienda/AccesoBotones";
-import { logoutTienda } from "@/app/(tienda)/tienda/actions";
+import MenuUsuario from "@/components/tienda/MenuUsuario";
 
 export default function TiendaHeader({ cliente, q = "" }) {
   return (
@@ -26,19 +26,11 @@ export default function TiendaHeader({ cliente, q = "" }) {
 
         <nav className="ml-auto flex items-center gap-4 text-sm font-medium">
           {cliente ? (
-            <>
-              <span className="hidden text-palacio-muted sm:inline">Hola, {cliente.nombre_cliente}</span>
-              <Link href="/tienda/pedidos" className="hover:text-palacio-red">Mis pedidos</Link>
-              <form action={logoutTienda}>
-                <button type="submit" className="hover:text-palacio-red">Salir</button>
-              </form>
-            </>
+            <MenuUsuario nombre={cliente.nombre_cliente} />
           ) : (
             <AccesoBotones />
           )}
-          <span className="rounded-full bg-palacio-red px-4 py-1.5 text-white">
-            <CarritoLink />
-          </span>
+          <CarritoLink />
         </nav>
       </div>
     </header>

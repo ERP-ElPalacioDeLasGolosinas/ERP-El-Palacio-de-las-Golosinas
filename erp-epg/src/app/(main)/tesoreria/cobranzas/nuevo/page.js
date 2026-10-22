@@ -52,7 +52,7 @@ export default async function NuevoCobroPage({ searchParams }) {
         ) : (
           <VentasTable
             modo="cobro"
-            ventas={data ?? []}
+            ventas={(data ?? []).filter((v) => Number(v.saldo_pendiente) > 0)}
             clientes={clientes}
             filtros={{
               cliente: filtros.idCliente ?? "",

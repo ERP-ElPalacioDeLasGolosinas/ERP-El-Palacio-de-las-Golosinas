@@ -33,7 +33,14 @@ export default async function TiendaCheckout() {
   const porId = new Map(lineas.map((l) => [l.id_producto, l]));
   const filas = items.map((it) => porId.get(it.id_producto)).filter(Boolean);
   if (filas.some((l) => l.estado !== "ok")) redirect("/tienda/carrito");
-  const total = filas.reduce((acc, l) => acc + Number(l.precio) * Number(l.cantidad_solicitada), 0);
+  const subtotal = filas.reduce((acc, l) => acc + Number(l.precio) * Number(l.cantidad_solicitada), 0);
+  const [{ data: costo }, { data: sucursales }] = await Promise.all([
+    supabase.rpc("fn_tienda_costo_envio"),
+    supabase.rpc("fn_tienda_sucursales_retiro", {
+      p_items: items.map((l) => ({ id_producto: l.id_producto, cantidad: l.cantidad })),
+    }),
+  ]);
+  const costoEnvio = Number(costo ?? 0);
 
   return (
     <main className="mx-auto max-w-3xl p-6">
@@ -58,22 +65,17 @@ export default async function TiendaCheckout() {
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-right text-xl font-bold">Total: {precioFmt.format(total)}</p>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="font-semibold">Medio de pago</h2>
-        <label className="palacio-card mt-2 flex items-center gap-3 p-4">
-          <input type="radio" name="medio" checked readOnly />
-          <span>Transferencia bancaria</span>
-        </label>
-        <p className="mt-2 text-sm text-palacio-muted">
-          Al confirmar, tu pedido queda pendiente de pago. El stock se descuenta cuando se acredita la transferencia.
-        </p>
+        <p className="mt-3 text-right text-sm text-palacio-muted">Subtotal: {precioFmt.format(subtotal)}</p>
       </section>
 
       {datosCompletos ? (
-        <ConfirmarPedido />
+        <ConfirmarPedido
+          subtotal={subtotal}
+          costoEnvio={costoEnvio}
+          sucursales={Array.isArray(sucursales) ? sucursales : []}
+          nombre={cliente.nombre_cliente}
+          direccion={cliente.direccion_cliente}
+        />
       ) : (
         <section className="mt-6">
           <h2 className="font-semibold">Completá tus datos</h2>

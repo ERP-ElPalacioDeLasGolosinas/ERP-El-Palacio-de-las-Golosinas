@@ -92,7 +92,7 @@ export async function obtenerListaVigenteVenta(tipoLista = "Mayorista") {
 /**
  * Lista ventas vía `fn_venta_listar` (V-19).
  *
- * @param {{ idCliente?: string | null, desde?: string | null, hasta?: string | null, estado?: string | null, tipoVenta?: string | null }} [filtros]
+ * @param {{ idCliente?: string | null, desde?: string | null, hasta?: string | null, estado?: string | null, tipoVenta?: string | null, canal?: string | null }} [filtros]
  * @returns {Promise<{ data: Array<Record<string, unknown>> | null, error: string | null }>}
  */
 export async function listarVentas(filtros = {}) {
@@ -103,6 +103,7 @@ export async function listarVentas(filtros = {}) {
     p_hasta: filtros.hasta || null,
     p_estado: filtros.estado || null,
     p_tipo_venta: filtros.tipoVenta || null,
+    p_canal: filtros.canal || null,
   });
 
   if (error) {

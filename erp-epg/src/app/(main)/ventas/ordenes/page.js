@@ -1,6 +1,6 @@
 import { listarClientes } from "@/lib/clientes/actions";
 import { listarVentas } from "@/lib/ventas/actions";
-import { ESTADOS_VENTA, TIPOS_VENTA } from "@/lib/ventas/estado";
+import { CANALES_VENTA, ESTADOS_VENTA, TIPOS_VENTA } from "@/lib/ventas/estado";
 import { VentasTable } from "@/components/ventas/VentasTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 /**
- * @param {{ searchParams: Promise<{ cliente?: string, desde?: string, hasta?: string, estado?: string, tipo?: string }> }} props
+ * @param {{ searchParams: Promise<{ cliente?: string, desde?: string, hasta?: string, estado?: string, tipo?: string, canal?: string }> }} props
  */
 export default async function HistorialVentasPage({ searchParams }) {
   const sp = await searchParams;
@@ -19,6 +19,7 @@ export default async function HistorialVentasPage({ searchParams }) {
     hasta: sp?.hasta || null,
     estado: ESTADOS_VENTA.includes(sp?.estado) ? sp.estado : null,
     tipoVenta: TIPOS_VENTA.includes(sp?.tipo) ? sp.tipo : null,
+    canal: CANALES_VENTA.includes(sp?.canal) ? sp.canal : null,
   };
 
   const [{ data, error }, clientesRes] = await Promise.all([
@@ -57,6 +58,7 @@ export default async function HistorialVentasPage({ searchParams }) {
             hasta: filtros.hasta ?? "",
             estado: filtros.estado ?? "",
             tipo: filtros.tipoVenta ?? "",
+            canal: filtros.canal ?? "",
           }}
         />
       )}

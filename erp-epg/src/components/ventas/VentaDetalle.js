@@ -98,6 +98,9 @@ export function VentaDetalle({ venta, detalle, cobro, cobroCaja = null }) {
           <Dato label="Tipo de venta" valor={venta.tipo_venta} />
           <Dato label="Cliente" valor={venta.nombre_cliente} />
           <Dato label="Documento" valor={venta.documento_cliente} />
+          <Dato label="Teléfono" valor={venta.telefono_cliente} />
+          <Dato label="Mail" valor={venta.mail_cliente} />
+          <Dato label="Dirección" valor={venta.direccion_cliente} />
           <Dato label="Tipo de cliente" valor={venta.nombre_tipo_cliente} />
           <Dato label="Fecha" valor={formatFecha(venta.fecha_comprobante)} />
           <Dato label="Canal" valor={venta.canal} />
@@ -157,7 +160,7 @@ export function VentaDetalle({ venta, detalle, cobro, cobroCaja = null }) {
 
       <div className="palacio-card mt-6 p-5 md:p-6">
         <h2 className="mb-3 text-sm font-semibold text-zinc-900">
-          {seCobraEnCaja(venta.tipo_venta) ? "Cobro en caja" : "Cobro"}
+          {venta.canal === "Online" ? "Cobro online" : seCobraEnCaja(venta.tipo_venta) ? "Cobro en caja" : "Cobro"}
         </h2>
         {cobroCaja?.length ? (
           <>

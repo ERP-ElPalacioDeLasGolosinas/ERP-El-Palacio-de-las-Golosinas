@@ -5,4 +5,6 @@ export const TIPOS_MEDIO_PAGO = [
   "Cheque propio",
   "Cheque de terceros",
   "Mercado Pago",
+  "Tarjeta de débito",
+  "Tarjeta de crédito",
 ];

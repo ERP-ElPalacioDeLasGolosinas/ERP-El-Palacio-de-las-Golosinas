@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { badgeEstadoVenta, ESTADOS_VENTA, TIPOS_VENTA } from "@/lib/ventas/estado";
+import { badgeEstadoVenta, CANALES_VENTA, ESTADOS_VENTA, TIPOS_VENTA } from "@/lib/ventas/estado";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -28,7 +28,7 @@ function formatFecha(valor) {
  * @param {{
  *   ventas: Array<Record<string, any>>,
  *   clientes: Array<{ id_cliente: string, nombre_cliente: string }>,
- *   filtros: { cliente: string, desde: string, hasta: string, estado?: string, tipo?: string },
+ *   filtros: { cliente: string, desde: string, hasta: string, estado?: string, tipo?: string, canal?: string },
  *   modo?: "historial" | "cobro",
  * }} props
  */
@@ -46,7 +46,7 @@ export function VentasTable({ ventas, clientes, filtros, modo = "historial" }) {
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
-  const hayFiltros = filtros.cliente || filtros.desde || filtros.hasta || filtros.estado;
+  const hayFiltros = filtros.cliente || filtros.desde || filtros.hasta || filtros.estado || filtros.canal;
   const total = ventas.reduce((acc, v) => acc + (Number(v.importe_total) || 0), 0);
 
   return (
@@ -80,6 +80,23 @@ export function VentasTable({ ventas, clientes, filtros, modo = "historial" }) {
                 {TIPOS_VENTA.map((tipo) => (
                   <option key={tipo} value={tipo}>
                     {tipo}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {esCobro ? null : (
+            <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
+              Canal
+              <select
+                value={filtros.canal ?? ""}
+                onChange={(e) => setParam("canal", e.target.value)}
+                className="palacio-input"
+              >
+                <option value="">Todos</option>
+                {CANALES_VENTA.map((canal) => (
+                  <option key={canal} value={canal}>
+                    {canal}
                   </option>
                 ))}
               </select>
@@ -162,6 +179,7 @@ export function VentasTable({ ventas, clientes, filtros, modo = "historial" }) {
                   <Th>Fecha</Th>
                   <Th>Comprobante</Th>
                   {esCobro ? null : <Th>Tipo</Th>}
+                  {esCobro ? null : <Th>Canal</Th>}
                   <Th>Cliente</Th>
                   <Th className="text-center">Artículos</Th>
                   <Th className="text-right">Total</Th>
@@ -182,6 +200,19 @@ export function VentasTable({ ventas, clientes, filtros, modo = "historial" }) {
                     </td>
                     {esCobro ? null : (
                       <td className="px-5 py-4 align-middle text-palacio-muted">{v.tipo_venta ?? "—"}</td>
+                    )}
+                    {esCobro ? null : (
+                      <td className="px-5 py-4 align-middle">
+                        <span
+                          className={
+                            v.canal === "Online"
+                              ? "inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-800"
+                              : "text-palacio-muted"
+                          }
+                        >
+                          {v.canal ?? "—"}
+                        </span>
+                      </td>
                     )}
                     <td className="px-5 py-4 align-middle font-medium text-zinc-900">{v.nombre_cliente}</td>
                     <td className="px-5 py-4 text-center align-middle text-palacio-muted">

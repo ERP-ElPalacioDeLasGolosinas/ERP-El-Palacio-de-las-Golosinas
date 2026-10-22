@@ -34,6 +34,9 @@ export function badgeEstadoVenta(estado) {
 /** @type {TipoVenta[]} */
 export const TIPOS_VENTA = ["Mayorista", "Minorista", "Consumidor final"];
 
+/** Valores del enum `canal_venta`. */
+export const CANALES_VENTA = ["Presencial", "Online"];
+
 /** @param {string | null | undefined} tipo */
 export function seCobraEnCaja(tipo) {
   return tipo === "Minorista" || tipo === "Consumidor final";

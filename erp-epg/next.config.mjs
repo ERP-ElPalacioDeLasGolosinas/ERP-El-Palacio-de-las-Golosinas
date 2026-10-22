@@ -9,6 +9,12 @@ const nextConfig = {
   outputFileTracingRoot: appRoot,
   reactCompiler: true,
   allowedDevOrigins: ["tienda.localhost"],
+  async redirects() {
+    return [
+      { source: "/tienda/pedidos", destination: "/tienda/cuenta/pedidos", permanent: true },
+      { source: "/tienda/pedidos/:id", destination: "/tienda/cuenta/pedidos/:id", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
