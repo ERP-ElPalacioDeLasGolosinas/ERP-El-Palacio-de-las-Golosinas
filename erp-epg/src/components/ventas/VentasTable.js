@@ -210,7 +210,7 @@ export function VentasTable({ ventas, clientes, filtros, modo = "historial" }) {
                               : "text-palacio-muted"
                           }
                         >
-                          {v.canal ?? "—"}
+                          {v.canal === "Online" ? "Web" : (v.canal ?? "—")}
                         </span>
                       </td>
                     )}

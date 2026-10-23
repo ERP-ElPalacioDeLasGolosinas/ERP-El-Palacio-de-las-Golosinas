@@ -192,3 +192,20 @@ body {
   font-weight: 600;
   padding: 0.15rem 0.55rem;
 }
+
+/* Hoja de preparacion de pedidos web (S5-20h): al imprimir solo se ve la hoja, sin el shell del ERP. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .hoja-preparacion,
+  .hoja-preparacion * {
+    visibility: visible;
+  }
+  .hoja-preparacion {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}

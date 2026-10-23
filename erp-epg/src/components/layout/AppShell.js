@@ -163,8 +163,9 @@ const NAV = [
       },
       {
         href: "/ventas/pedidos-web",
-        label: "Pedidos web",
-        icon: BagIcon,
+        label: "Preparación de pedidos",
+        icon: PackageCheckIcon,
+        badge: "porPreparar",
         match: (p) => p.startsWith("/ventas/pedidos-web"),
       },
       {
@@ -242,9 +243,10 @@ const NAV = [
 ];
 
 /**
- * @param {{ user?: { nombre?: string, apellido?: string, rol?: string } | null, children: import('react').ReactNode }} props
+ * @param {{ user?: { nombre?: string, apellido?: string, rol?: string } | null, porPreparar?: number, children: import('react').ReactNode }} props
  */
-export function AppShell({ user, children }) {
+export function AppShell({ user, porPreparar = 0, children }) {
+  const contadores = { porPreparar };
   const pathname = usePathname();
 
   const nombreCompleto = user
@@ -299,7 +301,12 @@ export function AppShell({ user, children }) {
                 </p>
                 <ul className="flex flex-col gap-0.5">
                   {group.items.map((item) => (
-                    <NavItem key={item.label} item={item} pathname={pathname} />
+                    <NavItem
+                      key={item.label}
+                      item={item}
+                      pathname={pathname}
+                      contadores={contadores}
+                    />
                   ))}
                 </ul>
               </div>
@@ -315,8 +322,9 @@ export function AppShell({ user, children }) {
   );
 }
 
-function NavItem({ item, pathname }) {
+function NavItem({ item, pathname, contadores }) {
   const active = item.match(pathname);
+  const cantidad = item.badge ? (contadores?.[item.badge] ?? 0) : 0;
   const [open, setOpen] = useState(active);
 
   if (item.children) {
@@ -385,6 +393,14 @@ function NavItem({ item, pathname }) {
       >
         <item.icon className={active ? "text-palacio-red" : "text-zinc-500"} />
         <span className="flex-1 truncate text-left">{item.label}</span>
+        {cantidad > 0 ? (
+          <span
+            className="shrink-0 rounded-full bg-palacio-red px-1.5 py-0.5 text-[10px] leading-none font-bold text-white"
+            title={`${cantidad} pedido${cantidad === 1 ? "" : "s"} por preparar`}
+          >
+            {cantidad}
+          </span>
+        ) : null}
       </Link>
     </li>
   );
@@ -541,6 +557,18 @@ function BagIcon({ className }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M5 8h14l-1 12H6L5 8Zm3 0V6a4 4 0 0 1 8 0v2"
+      />
+    </svg>
+  );
+}
+
+function PackageCheckIcon({ className }) {
+  return (
+    <svg {...iconProps(className)}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 10V8l-9-5-9 5v8l9 5 2-1.1M3 8l9 5 9-5M12 13v8m3.5-1.5 2 2 4-4"
       />
     </svg>
   );

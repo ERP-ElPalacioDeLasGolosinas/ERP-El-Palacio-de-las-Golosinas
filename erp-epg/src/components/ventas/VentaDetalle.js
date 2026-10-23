@@ -103,7 +103,20 @@ export function VentaDetalle({ venta, detalle, cobro, cobroCaja = null }) {
           <Dato label="Dirección" valor={venta.direccion_cliente} />
           <Dato label="Tipo de cliente" valor={venta.nombre_tipo_cliente} />
           <Dato label="Fecha" valor={formatFecha(venta.fecha_comprobante)} />
-          <Dato label="Canal" valor={venta.canal} />
+          <Dato label="Canal" valor={venta.canal === "Online" ? "Web" : venta.canal} />
+          {venta.id_pedido_web ? (
+            <Dato
+              label="Pedido web"
+              valor={
+                <Link
+                  href={`/ventas/pedidos-web/${venta.id_pedido_web}`}
+                  className="font-medium text-sky-800 hover:underline"
+                >
+                  Ver pedido web N.º {venta.numero_pedido_web}
+                </Link>
+              }
+            />
+          ) : null}
           <Dato label="Despachada" valor={venta.fecha_despacho ? formatFecha(venta.fecha_despacho) : "—"} />
           <Dato label="Registrada por" valor={venta.creado_por_nombre} />
           <Dato label="Registrada" valor={formatFecha(venta.creado)} />

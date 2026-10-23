@@ -18,6 +18,12 @@ export async function actualizarDatosCuenta(_prev, formData) {
   return { error: null, ok: true };
 }
 
+export async function marcarNotificacionesVistas() {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_cliente_web_notificaciones_marcar_vistas");
+  if (!error) revalidatePath("/tienda", "layout");
+}
+
 export async function crearTicket(_prev, formData) {
   const supabase = await createClient();
   const { data: idTicket, error } = await supabase.rpc("fn_ticket_crear", {

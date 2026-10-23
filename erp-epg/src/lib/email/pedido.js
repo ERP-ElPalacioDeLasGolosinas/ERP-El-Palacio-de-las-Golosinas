@@ -15,6 +15,11 @@ const MENSAJES = {
     titulo: "Pago confirmado",
     cuerpo: "Ya acreditamos tu pago. Estamos preparando tu pedido.",
   },
+  "Listo para retirar": {
+    asunto: (n) => `Tu pedido #${n} está listo para retirar`,
+    titulo: "Tu pedido está listo para retirar",
+    cuerpo: "Ya podés pasar a retirarlo por la sucursal que elegiste. Llevá tu DNI y el número de pedido.",
+  },
   Despachado: {
     asunto: (n) => `Tu pedido #${n} fue despachado`,
     titulo: "Tu pedido está en camino",

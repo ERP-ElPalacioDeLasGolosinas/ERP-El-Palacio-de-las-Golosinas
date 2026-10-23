@@ -8,7 +8,8 @@ export const metadata = { title: "Detalle del pedido — El Palacio de las Golos
 
 const precioFmt = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
 const fechaFmt = new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" });
-const PASOS = ["Pendiente de pago", "Pagado", "En preparación", "Despachado"];
+const PASOS_ENVIO = ["Pendiente de pago", "Pagado", "En preparación", "Despachado"];
+const PASOS_RETIRO = ["Pendiente de pago", "Pagado", "En preparación", "Listo para retirar", "Retirado"];
 const UUID =/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function DetallePedido({ params }) {
@@ -38,6 +39,10 @@ export default async function DetallePedido({ params }) {
   const fechaDe = {};
   for (const h of pedido.historial ?? []) fechaDe[h.estado] ??= h.fecha;
   const cancelado = pedido.estado === "Cancelado";
+  const esRetiro =
+    ["Listo para retirar", "Retirado"].includes(pedido.estado) ||
+    Boolean(fechaDe["Listo para retirar"] || fechaDe.Retirado);
+  const PASOS = esRetiro ? PASOS_RETIRO : PASOS_ENVIO;
   const idxActual = PASOS.indexOf(pedido.estado);
 
   return (

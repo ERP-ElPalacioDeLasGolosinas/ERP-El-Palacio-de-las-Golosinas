@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ESTADOS_PEDIDO_WEB, badgeEstadoPedidoWeb } from "@/lib/pedidos-web/estado";
+import { badgeEstadoPedidoWeb } from "@/lib/pedidos-web/estado";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -25,7 +25,7 @@ function formatFecha(valor) {
 /**
  * @param {{
  *   pedidos: Array<Record<string, any>>,
- *   filtros: { estado: string, desde: string, hasta: string },
+ *   filtros: { desde: string, hasta: string },
  * }} props
  */
 export function PedidosWebTable({ pedidos, filtros }) {
@@ -44,21 +44,6 @@ export function PedidosWebTable({ pedidos, filtros }) {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
-          Estado
-          <select
-            value={filtros.estado}
-            onChange={(e) => setParam("estado", e.target.value)}
-            className="palacio-input max-w-xs"
-          >
-            <option value="">Todos</option>
-            {ESTADOS_PEDIDO_WEB.map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </select>
-        </label>
         <label className="flex flex-col gap-1 text-xs font-medium text-palacio-muted">
           Desde
           <input
@@ -87,7 +72,7 @@ export function PedidosWebTable({ pedidos, filtros }) {
         <div className="palacio-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Listado</h2>
-            <span className="text-xs text-palacio-muted">
+            <span className="flex items-center gap-3 text-xs text-palacio-muted">
               {pedidos.length} pedido{pedidos.length === 1 ? "" : "s"}
             </span>
           </div>
@@ -99,6 +84,7 @@ export function PedidosWebTable({ pedidos, filtros }) {
                   <Th>Fecha</Th>
                   <Th>Cliente</Th>
                   <Th>Estado</Th>
+                  <Th>Entrega</Th>
                   <Th>Medio de pago</Th>
                   <Th className="text-right">Líneas</Th>
                   <Th className="text-right">Importe</Th>
@@ -113,6 +99,11 @@ export function PedidosWebTable({ pedidos, filtros }) {
                     <td className="px-5 py-4 align-middle font-medium text-zinc-900">{p.nombre_cliente}</td>
                     <td className="px-5 py-4 align-middle">
                       <span className={badgeEstadoPedidoWeb(p.estado)}>{p.estado}</span>
+                    </td>
+                    <td className="px-5 py-4 align-middle text-palacio-muted">
+                      {p.tipo_entrega === "Retiro por sucursal" && p.nombre_deposito_retiro
+                        ? `Retiro · ${p.nombre_deposito_retiro}`
+                        : (p.tipo_entrega ?? "—")}
                     </td>
                     <td className="px-5 py-4 align-middle text-palacio-muted">{p.medio_pago}</td>
                     <td className="px-5 py-4 text-right align-middle text-palacio-muted">

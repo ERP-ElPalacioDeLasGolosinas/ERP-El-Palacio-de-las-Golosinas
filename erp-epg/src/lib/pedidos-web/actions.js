@@ -3,17 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { notificarEstadoPedido } from "@/lib/email/pedido";
 import { createClient } from "@/lib/supabase/server";
-import { ESTADOS_PEDIDO_WEB } from "@/lib/pedidos-web/estado";
+import { ESTADOS_PEDIDO_WEB, FILTRO_A_PREPARAR } from "@/lib/pedidos-web/estado";
 
 const PATH = "/ventas/pedidos-web";
 
 // Estados cuyo cambio se avisa por mail al cliente (S5-8b). "En preparación" no tiene mensaje.
-const ESTADOS_QUE_NOTIFICAN = ["Pagado", "Despachado", "Cancelado"];
+const ESTADOS_QUE_NOTIFICAN = ["Pagado", "Listo para retirar", "Despachado", "Cancelado"];
 
 /**
  * Lista pedidos web vía `fn_pedido_web_listar`.
  *
- * @param {{ estado?: string | null, desde?: string | null, hasta?: string | null }} [filtros]
+ * @param {{ estado?: string | null, desde?: string | null, hasta?: string | null, deposito?: string | null }} [filtros]
  * @returns {Promise<{ data: Array<Record<string, any>> | null, error: string | null }>}
  */
 export async function listarPedidosWeb(filtros = {}) {
@@ -22,13 +22,18 @@ export async function listarPedidosWeb(filtros = {}) {
     p_estado: ESTADOS_PEDIDO_WEB.includes(filtros.estado) ? filtros.estado : null,
     p_desde: filtros.desde || null,
     p_hasta: filtros.hasta || null,
+    p_deposito: filtros.deposito || null,
   });
 
   if (error) {
     return { data: null, error: "No se pudieron cargar los pedidos web." };
   }
 
-  return { data: data ?? [], error: null };
+  const filas = data ?? [];
+  return {
+    data: filtros.estado === FILTRO_A_PREPARAR ? filas.filter((p) => p.a_preparar) : filas,
+    error: null,
+  };
 }
 
 /**
