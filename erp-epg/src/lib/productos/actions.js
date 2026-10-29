@@ -122,10 +122,7 @@ export async function crearProducto(formData) {
     p_numero_medida: numero(formData, "numero_medida"),
     p_creado_por: user.id,
     p_id_categoria: texto(formData, "id_categoria") || null,
-    p_precio_producto: 0,
     p_costo_producto: numero(formData, "costo_producto") ?? 0,
-    p_precio_mayorista_producto: 0,
-    p_precio_minorista_producto: 0,
   });
 
   if (error) {
@@ -148,18 +145,6 @@ export async function actualizarProducto(id_producto, formData) {
 
   const supabase = await createClient();
 
-  // fn_producto_modificar pisa los precios con 0 si no se mandan (COALESCE(p, 0)):
-  // se reenvían los valores actuales para no tocarlos (los precios viven en las listas).
-  const { data: actual, error: errorActual } = await supabase
-    .from("producto")
-    .select("precio_mayorista_producto, precio_minorista_producto")
-    .eq("id_producto", id_producto)
-    .maybeSingle();
-
-  if (errorActual || !actual) {
-    return { ok: false, code: null, error: "No se pudo guardar el producto." };
-  }
-
   const { error } = await supabase.rpc("fn_producto_modificar", {
     p_id_producto: id_producto,
     p_id_marca: texto(formData, "id_marca") || null,
@@ -169,10 +154,7 @@ export async function actualizarProducto(id_producto, formData) {
     p_id_unidad_medida: texto(formData, "id_unidad_medida") || null,
     p_numero_medida: numero(formData, "numero_medida"),
     p_id_categoria: texto(formData, "id_categoria") || null,
-    p_precio_producto: 0,
     p_costo_producto: numero(formData, "costo_producto") ?? 0,
-    p_precio_mayorista_producto: actual.precio_mayorista_producto ?? 0,
-    p_precio_minorista_producto: actual.precio_minorista_producto ?? 0,
   });
 
   if (error) {
