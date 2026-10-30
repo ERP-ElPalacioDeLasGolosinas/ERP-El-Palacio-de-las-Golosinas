@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { pagarPedido } from "@/app/(tienda)/tienda/checkout/actions";
 
 const CAMPOS_TRANSFERENCIA = [
@@ -122,9 +123,14 @@ export default function PasarelaPago({ idPedido, metodo, numeroPedido, datosTran
             {state.error}
           </p>
         ) : null}
-        <button type="submit" disabled={pending} className="palacio-btn-primary px-5 py-2.5 text-sm">
-          {pending ? "Procesando pago…" : esTarjeta ? "Pagar" : "Ya transferí — simular acreditación"}
-        </button>
+        <div className="flex flex-wrap justify-end gap-3">
+          <Link href="/tienda/cuenta/pedidos" className="palacio-btn-secondary px-5 py-2.5 text-sm">
+            Pagar más tarde
+          </Link>
+          <button type="submit" disabled={pending} className="palacio-btn-primary px-5 py-2.5 text-sm">
+            {pending ? "Procesando pago…" : esTarjeta ? "Pagar" : "Transferir"}
+          </button>
+        </div>
       </div>
     </form>
   );

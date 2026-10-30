@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import PasarelaPago from "@/components/tienda/PasarelaPago";
 import { createClient } from "@/lib/supabase/server";
@@ -62,10 +61,6 @@ export default async function PagarPedido({ searchParams }) {
         numeroPedido={pedido.numero}
         datosTransferencia={datosTransferencia}
       />
-
-      <p className="mt-6 text-sm">
-        <Link href="/tienda/cuenta/pedidos">Pagar más tarde</Link>
-      </p>
     </main>
   );
 }
