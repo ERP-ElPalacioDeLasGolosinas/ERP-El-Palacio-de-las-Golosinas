@@ -67,6 +67,14 @@ export function VentaDetalle({ venta, detalle, cobro, cobroCaja = null }) {
             <span className={badgeEstadoVenta(venta.estado)}>{venta.estado}</span>
           </div>
           <div className="flex flex-wrap gap-2">
+            <a
+              href={`/comprobante-venta/${venta.id_comprobante}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="palacio-btn-secondary inline-flex px-4 py-2 text-sm"
+            >
+              Imprimir comprobante
+            </a>
             {!seCobraEnCaja(venta.tipo_venta) && venta.estado === "En preparación" ? (
               <button
                 type="button"

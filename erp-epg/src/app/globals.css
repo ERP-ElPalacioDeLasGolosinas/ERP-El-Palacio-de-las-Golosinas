@@ -209,3 +209,134 @@ body {
     width: 100%;
   }
 }
+
+/* Comprobante de venta imprimible (ruta /comprobante-venta/[id]): hoja A4. */
+@page {
+  size: A4;
+  margin: 15mm;
+}
+
+.hoja-comprobante {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 15mm;
+  background: #fff;
+  color: #111;
+  font-size: 11pt;
+  line-height: 1.4;
+}
+.hoja-comprobante p {
+  margin: 0;
+}
+.comprobante-encabezado {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  padding-bottom: 5mm;
+  border-bottom: 1px solid #111;
+}
+.comprobante-logo {
+  display: block;
+  height: 48px;
+  width: auto;
+  margin-bottom: 2mm;
+}
+.comprobante-razon {
+  font-size: 14pt;
+  font-weight: 700;
+}
+.comprobante-recuadro {
+  min-width: 62mm;
+  border: 1.5px solid #111;
+  padding: 3mm 4mm;
+  text-align: center;
+}
+.comprobante-letra {
+  font-size: 26pt;
+  font-weight: 700;
+  line-height: 1;
+}
+.comprobante-tipo {
+  font-weight: 600;
+}
+.comprobante-numero {
+  font-family: ui-monospace, monospace;
+}
+.comprobante-bloque {
+  margin-top: 5mm;
+  padding-bottom: 4mm;
+  border-bottom: 1px solid #ccc;
+}
+.comprobante-bloque ul {
+  margin: 1mm 0 0;
+  padding: 0;
+  list-style: none;
+}
+.comprobante-bloque li {
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+}
+.comprobante-tabla {
+  width: 100%;
+  margin-top: 5mm;
+  border-collapse: collapse;
+  font-size: 10pt;
+}
+.comprobante-tabla th,
+.comprobante-tabla td {
+  padding: 1.5mm 2mm;
+  border-bottom: 1px solid #ccc;
+  text-align: left;
+}
+.comprobante-tabla thead th {
+  border-bottom: 1px solid #111;
+  font-size: 9pt;
+  text-transform: uppercase;
+}
+.comprobante-tabla .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.comprobante-tabla tr {
+  break-inside: avoid;
+}
+.comprobante-totales {
+  width: 80mm;
+  margin: 5mm 0 0 auto;
+}
+.comprobante-totales p {
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+}
+.comprobante-total {
+  margin-top: 1mm !important;
+  padding-top: 1mm;
+  border-top: 1px solid #111;
+  font-size: 13pt;
+  font-weight: 700;
+}
+.comprobante-pie {
+  margin-top: 10mm;
+  text-align: center;
+  font-size: 8pt;
+  color: #555;
+}
+
+@media print {
+  .hoja-comprobante,
+  .hoja-comprobante * {
+    visibility: visible;
+  }
+  .hoja-comprobante {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+  }
+}
