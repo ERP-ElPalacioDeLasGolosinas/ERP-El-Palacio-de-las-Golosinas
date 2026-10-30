@@ -242,8 +242,6 @@ const NAV = [
   },
   {
     section: "USUARIOS",
-    // Solo visible para estos roles (sin `roles`, la sección la ve cualquiera).
-    roles: ["Gerente"],
     items: [
       {
         href: "/usuarios/gestion",
@@ -254,6 +252,38 @@ const NAV = [
     ],
   },
 ];
+
+// Qué ve cada empleado en el menú: secciones enteras y, de otras secciones, ítems sueltos
+// (por label). El Gerente ve todo; un rol que no está acá no ve nada.
+const MENU_POR_ROL = {
+  "Empleado Deposito": {
+    secciones: ["INVENTARIO", "CATÁLOGO"],
+    items: ["Preparación de pedidos"],
+  },
+  "Empleado Compras": {
+    secciones: ["COMPRAS"],
+    items: ["Productos", "Stock"],
+  },
+  "Empleado Ventas": {
+    secciones: ["VENTAS"],
+    items: ["Stock", "Cobranzas"],
+  },
+};
+
+function menuDeRol(rol) {
+  if (rol === "Gerente") return NAV;
+  const permitido = MENU_POR_ROL[rol];
+  if (!permitido) return [];
+
+  return NAV.map((group) =>
+    permitido.secciones.includes(group.section)
+      ? group
+      : {
+          ...group,
+          items: group.items.filter((item) => permitido.items.includes(item.label)),
+        }
+  ).filter((group) => group.items.length > 0);
+}
 
 /**
  * @param {{ user?: { nombre?: string, apellido?: string, rol?: string } | null, porPreparar?: number, children: import('react').ReactNode }} props
@@ -307,9 +337,7 @@ export function AppShell({ user, porPreparar = 0, children }) {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside className="hidden w-56 shrink-0 border-r border-palacio-border bg-white md:flex md:flex-col md:overflow-hidden">
           <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain px-3 py-5">
-            {NAV.filter(
-              (group) => !group.roles || group.roles.includes(user?.rol)
-            ).map((group) => (
+            {menuDeRol(user?.rol).map((group) => (
               <div key={group.section}>
                 <p className="mb-2 px-2 text-[10px] font-semibold tracking-[0.14em] text-palacio-muted">
                   {group.section}
