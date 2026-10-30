@@ -253,8 +253,9 @@ const NAV = [
   },
 ];
 
-// Qué ve cada empleado en el menú: secciones enteras y, de otras secciones, ítems sueltos
-// (por label). El Gerente ve todo; un rol que no está acá no ve nada.
+// Qué ve cada empleado en el menú: secciones enteras, ítems sueltos de otras secciones (por label)
+// y, de un ítem con submenú, solo algunos hijos (`subitems`: label del ítem → labels de los hijos).
+// El Gerente ve todo; un rol que no está acá no ve nada.
 const MENU_POR_ROL = {
   "Empleado Deposito": {
     secciones: ["INVENTARIO", "CATÁLOGO"],
@@ -263,10 +264,12 @@ const MENU_POR_ROL = {
   "Empleado Compras": {
     secciones: ["COMPRAS"],
     items: ["Productos", "Stock"],
+    subitems: { "Cuentas corrientes": ["Proveedores"] },
   },
   "Empleado Ventas": {
     secciones: ["VENTAS"],
     items: ["Stock", "Cobranzas"],
+    subitems: { "Cuentas corrientes": ["Clientes"] },
   },
 };
 
@@ -274,15 +277,19 @@ function menuDeRol(rol) {
   if (rol === "Gerente") return NAV;
   const permitido = MENU_POR_ROL[rol];
   if (!permitido) return [];
+  const subitems = permitido.subitems ?? {};
 
-  return NAV.map((group) =>
-    permitido.secciones.includes(group.section)
-      ? group
-      : {
-          ...group,
-          items: group.items.filter((item) => permitido.items.includes(item.label)),
-        }
-  ).filter((group) => group.items.length > 0);
+  return NAV.map((group) => {
+    if (permitido.secciones.includes(group.section)) return group;
+
+    const items = group.items.flatMap((item) => {
+      if (permitido.items.includes(item.label)) return [item];
+      const hijos = subitems[item.label];
+      if (!hijos || !item.children) return [];
+      return [{ ...item, children: item.children.filter((c) => hijos.includes(c.label)) }];
+    });
+    return { ...group, items };
+  }).filter((group) => group.items.length > 0);
 }
 
 /**
