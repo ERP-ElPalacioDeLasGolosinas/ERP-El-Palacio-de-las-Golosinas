@@ -10,6 +10,7 @@ import {
   labelEstadoComprobante,
 } from "@/lib/comprobantes/estado";
 import { badgeEstadoOrdenPago } from "@/lib/ordenes-pago/constantes";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 /** Motivos de ND (`NotaDebitoCampos`) y NC (`NotaCreditoCampos`), para mostrar la etiqueta en el detalle. */
 const MOTIVOS_LABEL = {
@@ -204,7 +205,7 @@ export function ComprobanteDetalle({
       </div>
 
       {/* Detalle */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">
             Detalle del comprobante
@@ -223,7 +224,7 @@ export function ComprobanteDetalle({
             El comprobante no tiene líneas de detalle.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -287,7 +288,7 @@ export function ComprobanteDetalle({
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         )}
 
         <div className="flex flex-wrap items-center justify-end gap-x-8 gap-y-1 border-t border-palacio-border px-5 py-3 text-right text-sm">
@@ -319,13 +320,13 @@ export function ComprobanteDetalle({
       </div>
 
       {ordenesPago.length > 0 ? (
-        <div className="palacio-card mt-6 overflow-hidden">
+        <div className="palacio-card mt-6">
           <div className="border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">
               Órdenes de pago
             </h2>
           </div>
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -364,7 +365,7 @@ export function ComprobanteDetalle({
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         </div>
       ) : null}
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 });
 
@@ -83,7 +84,7 @@ export function AlertasStock({ alertas, depositos, deposito }) {
           </p>
         </div>
       ) : (
-        <div className="palacio-card overflow-x-auto">
+        <DesplazamientoHorizontal className="palacio-card">
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -128,7 +129,7 @@ export function AlertasStock({ alertas, depositos, deposito }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
       )}
     </>
   );

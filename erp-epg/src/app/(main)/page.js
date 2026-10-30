@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ResultadoChart, mesLabel, moneda } from "@/components/dashboard/ResultadoChart";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 import {
   listarProductosMasVendidos,
   listarResultadoMensual,
@@ -110,7 +111,7 @@ export default async function Home({ searchParams }) {
         ) : (
           <>
             <ResultadoChart meses={meses} />
-            <div className="mt-4 overflow-x-auto">
+            <DesplazamientoHorizontal className="mt-4">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-palacio-muted">
@@ -133,7 +134,7 @@ export default async function Home({ searchParams }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DesplazamientoHorizontal>
           </>
         )}
       </section>

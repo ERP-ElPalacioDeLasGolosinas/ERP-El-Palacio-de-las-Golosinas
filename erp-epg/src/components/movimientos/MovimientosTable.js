@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { listarProductosPorDepositoMovimientos } from "@/lib/movimientos/actions";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -225,7 +226,7 @@ export function MovimientosTable({
           </p>
         </div>
       ) : (
-        <div className="palacio-card overflow-hidden">
+        <div className="palacio-card">
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Historial</h2>
             <span className="text-xs text-palacio-muted">
@@ -233,7 +234,7 @@ export function MovimientosTable({
               {movimientos.length === 1 ? "" : "s"}
             </span>
           </div>
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -303,7 +304,7 @@ export function MovimientosTable({
                 })}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         </div>
       )}
 

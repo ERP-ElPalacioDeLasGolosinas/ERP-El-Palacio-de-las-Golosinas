@@ -13,6 +13,7 @@ import {
   listarNotasCreditoDisponibles,
 } from "@/lib/ordenes-pago/actions";
 import { mapErrorOrdenPago } from "@/lib/ordenes-pago/errores";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const monedaFmt = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -416,7 +417,7 @@ export function OrdenPagoForm({ proveedores, medios }) {
       </div>
 
       {/* Paso 2 · Comprobantes a imputar */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">
             Comprobantes pendientes
@@ -443,7 +444,7 @@ export function OrdenPagoForm({ proveedores, medios }) {
             Este proveedor no tiene comprobantes con saldo pendiente.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -503,7 +504,7 @@ export function OrdenPagoForm({ proveedores, medios }) {
                 })}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         )}
 
         {errores.comprobantes ? (
@@ -521,7 +522,7 @@ export function OrdenPagoForm({ proveedores, medios }) {
       </div>
 
       {/* Paso 3 · Medios de pago */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Medios de pago</h2>
           <span className="text-xs text-palacio-muted">

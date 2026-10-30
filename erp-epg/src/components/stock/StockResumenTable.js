@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
 
@@ -142,14 +143,14 @@ export function StockResumenTable({
           </p>
         </div>
       ) : (
-        <div className="palacio-card overflow-hidden">
+        <div className="palacio-card">
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Listado</h2>
             <span className="text-xs text-palacio-muted">
               {filtradas.length} producto{filtradas.length === 1 ? "" : "s"}
             </span>
           </div>
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -199,7 +200,7 @@ export function StockResumenTable({
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         </div>
       )}
     </>

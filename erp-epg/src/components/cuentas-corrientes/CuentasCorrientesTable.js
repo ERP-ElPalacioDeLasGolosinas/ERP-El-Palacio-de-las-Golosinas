@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 import { posicionCuenta } from "@/lib/cuentas-corrientes/posicion";
 
 const monedaFmt = new Intl.NumberFormat("es-AR", {
@@ -54,8 +55,9 @@ export function CuentasCorrientesTable({ lado, basePath, cuentas }) {
         </label>
       </div>
 
-      <div className="palacio-card overflow-hidden">
-        <table className="w-full text-left text-sm">
+      <div className="palacio-card">
+        <DesplazamientoHorizontal>
+        <table className="min-w-full whitespace-nowrap text-left text-sm">
           <thead className="border-b border-palacio-border bg-zinc-50 text-xs uppercase tracking-wide text-palacio-muted">
             <tr>
               <th className="px-4 py-3 font-medium">{lado === "proveedor" ? "Proveedor" : "Cliente"}</th>
@@ -102,6 +104,7 @@ export function CuentasCorrientesTable({ lado, basePath, cuentas }) {
             )}
           </tbody>
         </table>
+        </DesplazamientoHorizontal>
       </div>
     </>
   );

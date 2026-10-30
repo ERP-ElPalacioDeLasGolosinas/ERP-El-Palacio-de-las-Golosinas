@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { CancelarOrdenButton } from "@/components/ordenes-compra/CancelarOrdenButton";
 import { obtenerOrden } from "@/lib/ordenes-compra/actions";
 import { badgeEstadoOrden } from "@/lib/ordenes-compra/estado";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 export const metadata = { title: "Orden de compra | Palacio · ERP" };
 
@@ -85,10 +86,11 @@ export default async function OrdenDetallePage({ params }) {
         </dl>
       </section>
 
-      <section className="palacio-card mb-6 overflow-x-auto">
+      <section className="palacio-card mb-6">
         <div className="border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Artículos</h2>
         </div>
+        <DesplazamientoHorizontal>
         <table className="min-w-full text-left text-sm">
           <thead>
             <tr className="border-b border-palacio-border">
@@ -125,15 +127,17 @@ export default async function OrdenDetallePage({ params }) {
             })}
           </tbody>
         </table>
+        </DesplazamientoHorizontal>
       </section>
 
-      <section className="palacio-card overflow-x-auto">
+      <section className="palacio-card">
         <div className="border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Facturas vinculadas</h2>
         </div>
         {facturas.length === 0 ? (
           <p className="px-5 py-6 text-sm text-palacio-muted">Todavía no hay facturas contra esta orden.</p>
         ) : (
+          <DesplazamientoHorizontal>
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-palacio-border">
@@ -159,6 +163,7 @@ export default async function OrdenDetallePage({ params }) {
               ))}
             </tbody>
           </table>
+          </DesplazamientoHorizontal>
         )}
       </section>
     </div>

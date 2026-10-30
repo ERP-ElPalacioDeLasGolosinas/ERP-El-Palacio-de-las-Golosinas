@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { badgeEstadoComprobante } from "@/lib/comprobantes/estado";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -88,7 +89,7 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos, notas = [
       </div>
 
       {/* Comprobantes cancelados */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">
             Comprobantes cancelados
@@ -98,7 +99,7 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos, notas = [
             {aplicaciones.length === 1 ? "" : "s"}
           </span>
         </div>
-        <div className="overflow-x-auto">
+        <DesplazamientoHorizontal>
           <table className="min-w-full text-left text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -155,15 +156,15 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos, notas = [
               </tr>
             </tfoot>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
       </div>
 
       {/* Medios usados */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Medios de pago</h2>
         </div>
-        <div className="overflow-x-auto">
+        <DesplazamientoHorizontal>
           <table className="min-w-full text-left text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -224,16 +225,16 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos, notas = [
               </tr>
             </tfoot>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
       </div>
 
       {/* Cheques */}
       {cheques.length > 0 ? (
-        <div className="palacio-card mt-6 overflow-hidden">
+        <div className="palacio-card mt-6">
           <div className="border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Cheques</h2>
           </div>
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -276,12 +277,12 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos, notas = [
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         </div>
       ) : null}
 
       {/* Movimientos de tesorería */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">
             Movimientos de tesorería generados
@@ -292,7 +293,7 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos, notas = [
             Este pago no generó movimientos.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -328,7 +329,7 @@ export function PagoDetalle({ pago, medios, aplicaciones, movimientos, notas = [
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         )}
       </div>
 

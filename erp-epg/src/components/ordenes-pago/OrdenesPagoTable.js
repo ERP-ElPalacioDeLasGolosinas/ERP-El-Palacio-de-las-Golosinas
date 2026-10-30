@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { cancelarOrdenPago } from "@/lib/ordenes-pago/actions";
 import { mapErrorOrdenPago } from "@/lib/ordenes-pago/errores";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 import {
   ESTADOS_ORDEN_PAGO,
   badgeEstadoOrdenPago,
@@ -139,14 +140,14 @@ export function OrdenesPagoTable({ ordenes, proveedores, filtros }) {
           </p>
         </div>
       ) : (
-        <div className="palacio-card overflow-hidden">
+        <div className="palacio-card">
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Listado</h2>
             <span className="text-xs text-palacio-muted">
               {ordenes.length} orden{ordenes.length === 1 ? "" : "es"}
             </span>
           </div>
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -213,7 +214,7 @@ export function OrdenesPagoTable({ ordenes, proveedores, filtros }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         </div>
       )}
     </>

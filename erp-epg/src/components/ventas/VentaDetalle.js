@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { despacharVenta } from "@/lib/ventas/actions";
 import { mapErrorVenta } from "@/lib/ventas/errores";
 import { badgeEstadoVenta, seCobraEnCaja } from "@/lib/ventas/estado";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -127,14 +128,14 @@ export function VentaDetalle({ venta, detalle, cobro, cobroCaja = null }) {
         </dl>
       </div>
 
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Artículos</h2>
           <span className="text-xs text-palacio-muted">
             {detalle.length} línea{detalle.length === 1 ? "" : "s"} · stock descontado con “Salida por venta”
           </span>
         </div>
-        <div className="overflow-x-auto">
+        <DesplazamientoHorizontal>
           <table className="min-w-full text-left text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -168,7 +169,7 @@ export function VentaDetalle({ venta, detalle, cobro, cobroCaja = null }) {
               <FilaTotal label="Total" valor={venta.importe_total} fuerte />
             </tfoot>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
       </div>
 
       <div className="palacio-card mt-6 p-5 md:p-6">

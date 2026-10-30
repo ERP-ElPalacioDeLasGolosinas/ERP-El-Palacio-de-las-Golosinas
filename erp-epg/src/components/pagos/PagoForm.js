@@ -6,6 +6,7 @@ import { listarCuentasCompatibles } from "@/lib/medios-pago/actions";
 import { NotasCreditoAplicar } from "@/components/ordenes-pago/NotasCreditoAplicar";
 import { registrarPago } from "@/lib/pagos/actions";
 import { mapErrorPago } from "@/lib/pagos/errores";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const monedaFmt = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -441,7 +442,7 @@ export function PagoForm({
       </div>
 
       {/* Aplicaciones */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">
             Comprobantes a cancelar
@@ -451,7 +452,7 @@ export function PagoForm({
             en la orden
           </span>
         </div>
-        <div className="overflow-x-auto">
+        <DesplazamientoHorizontal>
           <table className="min-w-full text-left text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -517,7 +518,7 @@ export function PagoForm({
               })}
             </tbody>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
 
         {errores.aplicaciones ? (
           <p className="mx-5 my-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -534,7 +535,7 @@ export function PagoForm({
       </div>
 
       {/* Medios */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Medios de pago</h2>
         </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { badgeEstadoVenta } from "@/lib/ventas/estado";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -59,11 +60,11 @@ export function CobroDetalle({ cobro, medios, movimientos }) {
         </dl>
       </div>
 
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Medios de pago</h2>
         </div>
-        <div className="overflow-x-auto">
+        <DesplazamientoHorizontal>
           <table className="min-w-full text-left text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -88,14 +89,14 @@ export function CobroDetalle({ cobro, medios, movimientos }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
       </div>
 
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Movimientos de tesorería generados</h2>
         </div>
-        <div className="overflow-x-auto">
+        <DesplazamientoHorizontal>
           <table className="min-w-full text-left text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -124,7 +125,7 @@ export function CobroDetalle({ cobro, medios, movimientos }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">

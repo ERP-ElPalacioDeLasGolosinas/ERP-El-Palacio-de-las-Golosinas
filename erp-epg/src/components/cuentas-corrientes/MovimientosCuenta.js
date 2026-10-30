@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 import { posicionCuenta } from "@/lib/cuentas-corrientes/posicion";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
@@ -85,8 +86,9 @@ export function MovimientosCuenta({ lado, saldo, movimientos, filtros, hayMovimi
         </label>
       </div>
 
-      <div className="palacio-card overflow-hidden">
-        <table className="w-full text-left text-sm">
+      <div className="palacio-card">
+        <DesplazamientoHorizontal>
+        <table className="min-w-full whitespace-nowrap text-left text-sm">
           <thead className="border-b border-palacio-border bg-zinc-50 text-xs uppercase tracking-wide text-palacio-muted">
             <tr>
               <th className="px-4 py-3 font-medium">Fecha</th>
@@ -152,6 +154,7 @@ export function MovimientosCuenta({ lado, saldo, movimientos, filtros, hayMovimi
             )}
           </tbody>
         </table>
+        </DesplazamientoHorizontal>
       </div>
     </>
   );

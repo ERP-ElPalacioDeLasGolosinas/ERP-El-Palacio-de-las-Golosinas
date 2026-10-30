@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { guardarUmbral } from "@/lib/stock/actions";
 import { mapErrorLote } from "@/lib/stock/errores";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const numFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 });
 
@@ -92,7 +93,7 @@ export function UmbralStockForm({ idProducto, filas }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <DesplazamientoHorizontal>
       <table className="min-w-full text-left text-sm">
         <thead>
           <tr className="border-b border-palacio-border">
@@ -165,6 +166,6 @@ export function UmbralStockForm({ idProducto, filas }) {
           })}
         </tbody>
       </table>
-    </div>
+    </DesplazamientoHorizontal>
   );
 }

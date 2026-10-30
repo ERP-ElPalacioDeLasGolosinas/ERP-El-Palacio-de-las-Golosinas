@@ -6,6 +6,7 @@ import { registrarNotaDebito } from "@/lib/comprobantes/actions";
 import { mapErrorComprobante } from "@/lib/comprobantes/errores";
 import { Campo, Th, monedaFmt } from "./ui";
 import { FacturaAsociadaSelect } from "./FacturaAsociada";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const CAMPOS_CABECERA = ["id_proveedor", "id_tipo_comprobante", "numero", "fechas"];
 
@@ -148,7 +149,7 @@ export function NotaDebitoCampos({
   }
 
   return (
-    <div className="palacio-card mt-6 overflow-hidden">
+    <div className="palacio-card mt-6">
       <div className="border-b border-palacio-border px-5 py-4">
         <h2 className="mb-4 text-sm font-semibold text-zinc-900">
           Datos de la nota de débito
@@ -192,7 +193,7 @@ export function NotaDebitoCampos({
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <DesplazamientoHorizontal>
         <table className="min-w-full text-left text-sm">
           <thead>
             <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -258,7 +259,7 @@ export function NotaDebitoCampos({
             ))}
           </tbody>
         </table>
-      </div>
+      </DesplazamientoHorizontal>
 
       <div className="flex flex-wrap items-start justify-between gap-3 border-t border-palacio-border px-5 py-3">
         <button

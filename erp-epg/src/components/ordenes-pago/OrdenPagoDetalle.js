@@ -10,6 +10,7 @@ import {
 import { mapErrorOrdenPago } from "@/lib/ordenes-pago/errores";
 import { badgeEstadoOrdenPago } from "@/lib/ordenes-pago/constantes";
 import { badgeEstadoComprobante } from "@/lib/comprobantes/estado";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -99,7 +100,7 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios, notas = [] }) {
       </div>
 
       {/* Comprobantes imputados */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">
             Comprobantes imputados
@@ -108,7 +109,7 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios, notas = [] }) {
             {comprobantes.length} comprobante{comprobantes.length === 1 ? "" : "s"}
           </span>
         </div>
-        <div className="overflow-x-auto">
+        <DesplazamientoHorizontal>
           <table className="min-w-full text-left text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -162,11 +163,11 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios, notas = [] }) {
               </tr>
             </tfoot>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
       </div>
 
       {/* Medios de pago */}
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Medios de pago</h2>
         </div>
@@ -177,7 +178,7 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios, notas = [] }) {
               : "La orden todavía no tiene medios de pago cargados."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -232,7 +233,7 @@ export function OrdenPagoDetalle({ orden, comprobantes, medios, notas = [] }) {
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         )}
       </div>
 

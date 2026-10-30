@@ -9,6 +9,7 @@ import {
 } from "@/lib/stock/actions";
 import { UmbralStockForm } from "@/components/stock/UmbralStockForm";
 import { EliminarLoteButton } from "@/components/stock/EliminarLoteButton";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 export const metadata = {
   title: "Detalle de stock | Palacio · ERP",
@@ -183,7 +184,7 @@ export default async function StockDetallePage({ params }) {
         </div>
       </section>
 
-      <section className="palacio-card mb-6 overflow-hidden p-5 md:p-6">
+      <section className="palacio-card mb-6 p-5 md:p-6">
         <h2 className="text-sm font-semibold text-zinc-900">
           Stock mínimo y máximo
         </h2>
@@ -228,7 +229,7 @@ export default async function StockDetallePage({ params }) {
           {seccionesLotes.map((s) => (
             <section
               key={s.id_deposito}
-              className="palacio-card overflow-hidden"
+              className="palacio-card"
             >
               <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
                 <h3 className="text-sm font-semibold text-zinc-900">
@@ -246,7 +247,7 @@ export default async function StockDetallePage({ params }) {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <DesplazamientoHorizontal>
                   <table className="min-w-full text-left text-sm whitespace-nowrap">
                     <thead>
                       <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -289,7 +290,7 @@ export default async function StockDetallePage({ params }) {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </DesplazamientoHorizontal>
               )}
             </section>
           ))}

@@ -8,6 +8,7 @@ import {
   quitarPrecioLista,
 } from "@/lib/listas-precio/actions";
 import { mapErrorListaPrecio } from "@/lib/listas-precio/errores";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 import {
   BADGE_POR_VENCER,
   badgeEstadoLista,
@@ -275,7 +276,7 @@ export function ListaPrecioDetalle({ lista, productos }) {
         )}
       </form>
 
-      <div className="palacio-card overflow-hidden">
+      <div className="palacio-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-palacio-border px-5 py-3">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-semibold text-zinc-900">Precios</h2>
@@ -343,7 +344,7 @@ export function ListaPrecioDetalle({ lista, productos }) {
             Ningún artículo coincide con la búsqueda.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -404,7 +405,7 @@ export function ListaPrecioDetalle({ lista, productos }) {
                 })}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         )}
 
         {errorPrecios ? (

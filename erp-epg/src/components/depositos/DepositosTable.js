@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 import {
   desmarcarLlenoDeposito,
   eliminarDeposito,
@@ -90,14 +91,14 @@ export function DepositosTable({ depositos }) {
   }
 
   return (
-    <div className="palacio-card overflow-hidden">
+    <div className="palacio-card">
       <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
         <h2 className="text-sm font-semibold text-zinc-900">Listado</h2>
         <span className="text-xs text-palacio-muted">
           {depositos.length} depósito{depositos.length === 1 ? "" : "s"}
         </span>
       </div>
-      <div className="overflow-x-auto">
+      <DesplazamientoHorizontal>
         <table className="min-w-full text-left text-sm">
           <thead>
             <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -208,7 +209,7 @@ export function DepositosTable({ depositos }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </DesplazamientoHorizontal>
     </div>
   );
 }

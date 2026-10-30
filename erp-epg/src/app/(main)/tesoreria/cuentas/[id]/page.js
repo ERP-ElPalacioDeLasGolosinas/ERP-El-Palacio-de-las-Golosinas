@@ -4,6 +4,7 @@ import {
   listarMovimientosCuenta,
 } from "@/lib/cuentas-tesoreria/actions";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 export const metadata = {
   title: "Movimientos de la cuenta | Palacio · ERP",
@@ -113,8 +114,8 @@ export default async function MovimientosCuentaPage({ params }) {
           </p>
         </div>
       ) : (
-        <div className="palacio-card overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="palacio-card">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -154,7 +155,7 @@ export default async function MovimientosCuentaPage({ params }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         </div>
       )}
     </div>

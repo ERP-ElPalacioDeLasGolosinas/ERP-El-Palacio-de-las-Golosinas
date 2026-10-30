@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { cambiarEstadoPedidoWeb } from "@/lib/pedidos-web/actions";
 import { mensajeErrorPedidoWeb } from "@/lib/pedidos-web/errores";
 import { badgeEstadoPedidoWeb } from "@/lib/pedidos-web/estado";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -204,7 +205,7 @@ export function PedidoWebDetalle({ pedido }) {
         </div>
       </div>
 
-      <div className="palacio-card mt-6 overflow-hidden">
+      <div className="palacio-card mt-6">
         <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
           <h2 className="text-sm font-semibold text-zinc-900">Artículos a preparar</h2>
           <span className={`text-sm font-semibold ${completo ? "text-emerald-700" : "text-palacio-muted"}`}>
@@ -258,7 +259,7 @@ export function PedidoWebDetalle({ pedido }) {
           <Dato label="Pago confirmado" valor={formatFecha(pedido.fecha_pago)} />
           <Dato label="Total" valor={monedaFmt.format(Number(pedido.importe_total) || 0)} />
         </dl>
-        <div className="mt-4 overflow-x-auto">
+        <DesplazamientoHorizontal className="mt-4">
           <table className="min-w-full text-left text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -307,7 +308,7 @@ export function PedidoWebDetalle({ pedido }) {
               </tr>
             </tfoot>
           </table>
-        </div>
+        </DesplazamientoHorizontal>
       </details>
 
       {historial.length > 0 ? (

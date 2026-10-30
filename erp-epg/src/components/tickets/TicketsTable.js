@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ESTADOS_TICKET } from "@/lib/tickets/estado";
 import EstadoTicketBadge from "@/components/tienda/EstadoTicketBadge";
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
 
 const fechaFmt = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
@@ -55,14 +56,14 @@ export function TicketsTable({ tickets, estado }) {
           <p className="text-sm text-palacio-muted">No hay tickets que coincidan con el filtro.</p>
         </div>
       ) : (
-        <div className="palacio-card overflow-hidden">
+        <div className="palacio-card">
           <div className="flex items-center justify-between border-b border-palacio-border px-5 py-3">
             <h2 className="text-sm font-semibold text-zinc-900">Listado</h2>
             <span className="text-xs text-palacio-muted">
               {tickets.length} ticket{tickets.length === 1 ? "" : "s"}
             </span>
           </div>
-          <div className="overflow-x-auto">
+          <DesplazamientoHorizontal>
             <table className="min-w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -104,7 +105,7 @@ export function TicketsTable({ tickets, estado }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </DesplazamientoHorizontal>
         </div>
       )}
     </>

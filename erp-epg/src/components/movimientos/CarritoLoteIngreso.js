@@ -1,5 +1,7 @@
 "use client";
 
+import { DesplazamientoHorizontal } from "@/components/ui/DesplazamientoHorizontal";
+
 /**
  * Carrito propio del flujo "ingreso por compra", como tabla: una fila por
  * producto, con cantidad, fechas de elaboración / vencimiento y observaciones
@@ -36,7 +38,7 @@ export function CarritoLoteIngreso({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border border-palacio-border">
+    <DesplazamientoHorizontal className="rounded-md border border-palacio-border">
       <table className="min-w-[720px] text-left text-sm">
         <thead>
           <tr className="border-b border-palacio-border bg-zinc-50/80">
@@ -125,7 +127,7 @@ export function CarritoLoteIngreso({
           ))}
         </tbody>
       </table>
-    </div>
+    </DesplazamientoHorizontal>
   );
 }
 
