@@ -19,6 +19,10 @@ export async function login(_prevState, formData) {
   });
 
   if (error) {
+    // Empleado inhabilitado desde Usuarios › Gestión (fn_usuario_inhabilitar banea la cuenta).
+    if (error.code === "user_banned") {
+      return { error: "Tu usuario está inhabilitado. Consultá con el gerente." };
+    }
     return { error: "Credenciales inválidas." };
   }
 

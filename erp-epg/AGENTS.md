@@ -23,7 +23,7 @@ Este documento reemplaza al doc de contexto anterior para todo lo referido al **
 
 | Tabla | Rol | PK | Notas clave |
 |---|---|---|---|
-| `usuario` | Usuarios del sistema | `id_usuario` (uuid, FK → `auth.users.id`) | `nombre_usuario`, `apellido_usuario`, `fecha_nacimiento_usuario`, `dni_usuario` (unique, >0), `telefono_usuario`, `mail_usuario` (check regex), `rol_usuario` (enum `rol_usuario_enum`) |
+| `usuario` | Usuarios del sistema | `id_usuario` (uuid, FK → `auth.users.id`) | `nombre_usuario`, `apellido_usuario`, `fecha_nacimiento_usuario`, `dni_usuario` (unique, >0), `telefono_usuario`, `mail_usuario` (check regex), `rol_usuario` (enum `rol_usuario_enum`), `activo` (default `true`; ver sección Usuarios) |
 | `marca` | Marcas de producto | `id_marca` | `nombre_marca`, `activo` |
 | `rubro` | Rubro de producto | `id_rubro` | `nombre_rubro`, `activo` |
 | `categoria` | Categoría de producto | `id_categoria` | `nombre_categoria`, `activo`, FK → `rubro` |
@@ -302,6 +302,16 @@ sesión activa · `SCJ04` estado de sesión incorrecto · `SCJ05` la sesión no 
 `_validar_arqueo` y `_sincronizar_cierre`. Frontend: `src/lib/cajas/v2-actions.js`, `v2-estado.js`,
 `src/components/cajas/v2/*`, `/ventas/cajas` y `/ventas/cajas/[id]`; `VentaForm` con `cajaFija`;
 `/ventas/ordenes/nuevo` limita al empleado a su propia caja.
+
+### Usuarios (Sprint 5 — migración `20261030024122_s5_usuario_gestion`)
+
+Solo el Gerente gestiona empleados (`Empleado Deposito` / `Compras` / `Ventas`); los gerentes no se tocan desde acá (`USR06`).
+
+- **Alta:** edge function `crear-usuario` (service role): crea la cuenta de Auth con `email_confirm` y la fila de `usuario`; verifica que quien llama sea Gerente.
+- **Funciones (SECURITY DEFINER, chequean Gerente con `fn_caja_es_gerente`, EXECUTE `authenticated`/`service_role`):** `fn_usuario_listar(p_incluir_inactivos)` (sin gerentes, con `ultimo_ingreso` = `auth.users.last_sign_in_at`), `fn_usuario_modificar(p_id_usuario, p_nombre_usuario, p_apellido_usuario, p_fecha_nacimiento_usuario, p_dni_usuario, p_telefono_usuario, p_rol_usuario)` (el mail no se edita), `fn_usuario_habilitar`, `fn_usuario_inhabilitar` (banea la cuenta con `auth.users.banned_until` y borra sus `auth.sessions`; el login muestra "usuario inhabilitado"), `fn_usuario_eliminar` (borra la cuenta de Auth; `usuario` cae en cascada; si tiene operaciones, las FK lo impiden → `USR11`). Internas: `_fn_usuario_validar_gestion`, `_fn_usuario_validar_sin_caja`.
+- `fn_sesion_caja_empleados_disponibles` excluye empleados inactivos.
+- Errores: `USR01` solo gerente, `USR02` nombre/apellido, `USR03` DNI (7–8 dígitos), `USR04` DNI duplicado, `USR05` inexistente, `USR06` no es empleado, `USR07` rol, `USR08` fecha de nacimiento (≥ 16 años), `USR09` teléfono (6–15 dígitos), `USR10` caja en curso, `USR11` tiene operaciones.
+- **Frontend:** sección `USUARIOS › Gestión` del sidebar, visible solo para Gerente (`roles` en el grupo de `NAV`). `/usuarios/gestion` (redirige a `/` si no es Gerente), `components/usuarios/{UsuariosTable,UsuarioFormModal}.js`, `lib/usuarios/{actions,errores,constantes}.js`.
 
 ### Cuentas corrientes (Sprint 4 — migración `20261008160000_s4_cuentas_corrientes`; T-06, T-07)
 

@@ -240,6 +240,19 @@ const NAV = [
       },
     ],
   },
+  {
+    section: "USUARIOS",
+    // Solo visible para estos roles (sin `roles`, la sección la ve cualquiera).
+    roles: ["Gerente"],
+    items: [
+      {
+        href: "/usuarios/gestion",
+        label: "Gestión",
+        icon: UsersIcon,
+        match: (p) => p.startsWith("/usuarios/gestion"),
+      },
+    ],
+  },
 ];
 
 /**
@@ -294,7 +307,9 @@ export function AppShell({ user, porPreparar = 0, children }) {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside className="hidden w-56 shrink-0 border-r border-palacio-border bg-white md:flex md:flex-col md:overflow-hidden">
           <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain px-3 py-5">
-            {NAV.map((group) => (
+            {NAV.filter(
+              (group) => !group.roles || group.roles.includes(user?.rol)
+            ).map((group) => (
               <div key={group.section}>
                 <p className="mb-2 px-2 text-[10px] font-semibold tracking-[0.14em] text-palacio-muted">
                   {group.section}
